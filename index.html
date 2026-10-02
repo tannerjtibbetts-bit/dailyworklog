@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1A2B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Work Log">
+<title>Daily Work Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='96' fill='%231A2F4D'/%3E%3Ccircle cx='100' cy='100' r='89' fill='none' stroke='%23F2C200' stroke-width='8'/%3E%3Cpath d='M66 96L88 118L132 72' fill='none' stroke='%23F2C200' stroke-width='16' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#EAF2FB; --card:#fff; --stroke:#D3E1F1; --navy:#0F1A2B; --text:#111827; --grey:#55667D; --grey2:#8FA1B8;
+  --blue:#1268D6; --deep:#174A8B; --sky:#DCEBFB; --chip:#DAE6F4; --green:#1DB04B; --green-bg:#F3FBF6; --green-stroke:#C9EBD5;
+  --red:#E5484D; --yellow:#F2C200; --intro:#0F1A2B;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{overscroll-behavior-y:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:8px}
+#app{position:fixed;inset:0;overflow:hidden}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);padding-top:var(--safe-t);
+  animation:pushIn .28s cubic-bezier(.2,.8,.2,1)}
+.screen.back{animation:popIn .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes pushIn{from{transform:translateX(28%);opacity:.4}to{transform:none;opacity:1}}
+@keyframes popIn{from{transform:translateX(-18%);opacity:.4}to{transform:none;opacity:1}}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(140px + var(--safe-b))}
+.top{display:flex;align-items:center;gap:6px;min-height:64px;padding:0 8px;position:relative}
+.top h1{flex:1;margin:0 0 0 6px;font-size:26px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none}
+.iconbtn:active{background:rgba(23,74,139,.1)}
+.ic{width:26px;height:26px;fill:currentColor;display:block}
+.ic.sm{width:18px;height:18px}
+.big{font-size:34px;font-weight:800;color:var(--navy);margin:14px 24px 0;letter-spacing:-.5px}
+.sub{color:var(--grey);font-size:16px;margin:2px 24px 0}
+.pin{display:flex;align-items:center;gap:4px;color:var(--grey);font-size:15px}
+.list{padding:18px 18px 0}
+.card{background:var(--card);border:1px solid var(--stroke);border-radius:22px;padding:18px;display:flex;align-items:center;gap:16px;
+  margin-bottom:12px;width:100%;text-align:left;transition:transform .12s}
+.card:active{transform:scale(.985)}
+.card .t{font-size:20px;font-weight:700;color:var(--navy)}
+.card .s{font-size:15px;color:var(--grey);margin-top:3px}
+.grow{flex:1;min-width:0}
+.soft{width:52px;height:52px;border-radius:16px;background:var(--sky);display:grid;place-items:center;color:var(--deep);flex:none}
+.fab{position:absolute;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%);width:156px;height:70px;border-radius:40px;
+  background:var(--deep);color:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(15,26,43,.25);z-index:5}
+.fab:active{transform:translateX(-50%) scale(.96)}
+.fab.blue{background:var(--blue);width:150px}
+.pills{display:flex;gap:8px;padding:14px 20px 0;overflow-x:auto;scrollbar-width:none}
+.pill{padding:11px 20px;border-radius:40px;background:#fff;border:1px solid var(--stroke);font-size:17px;white-space:nowrap}
+.pill.on{background:var(--deep);border-color:var(--deep);color:#fff}
+.search{margin:16px 20px 0;height:58px;border-radius:30px;background:#fff;border:1px solid var(--stroke);display:flex;align-items:center;padding:0 18px;gap:12px}
+.search input{flex:1;border:0;outline:0;font-size:17px;background:none;min-width:0}
+.empty{color:var(--grey);text-align:center;padding:40px 28px;font-size:17px;line-height:1.5;white-space:pre-line}
+.badges{display:flex;flex:none}
+.badge{width:42px;height:42px;border-radius:50%;background:var(--sky);border:2px solid #fff;color:var(--deep);font-weight:700;font-size:14px;
+  display:grid;place-items:center;margin-left:-8px}
+.badges .badge:first-child{margin-left:0}
+.ring{flex:none;display:block}
+/* checklist */
+.loghead{padding:2px 0 0}
+.loghead .row{display:flex;gap:18px;padding:12px 24px 0;align-items:flex-start}
+.chips{display:flex;gap:10px;overflow-x:auto;padding:16px 20px 14px;scrollbar-width:none}
+.chip{padding:11px 20px;border-radius:40px;background:var(--chip);color:var(--grey);font-size:17px;white-space:nowrap}
+.chip.on{background:var(--deep);color:#fff}
+.divider{height:1px;background:var(--stroke);margin:16px 24px 0}
+.task{margin:0 14px 12px;background:#fff;border:1px solid var(--stroke);border-radius:22px;display:flex;overflow:hidden;
+  transition:background .2s,border-color .2s}
+.task.done{background:var(--green-bg);border-color:var(--green-stroke)}
+.task .bar{width:5px;background:var(--sky);flex:none}
+.task.done .bar{background:var(--green)}
+.task .body{flex:1;min-width:0;padding:16px 10px 16px 14px}
+.task .line1{display:flex;align-items:flex-start;gap:12px}
+.task .title{flex:1;font-size:21px;font-weight:700;color:var(--navy);line-height:1.25;padding-top:5px;word-wrap:break-word;min-width:0}
+.check{width:38px;height:38px;flex:none;border-radius:50%;border:2.4px solid #9DB4CF;display:grid;place-items:center;background:#fff;transition:all .15s}
+.check svg{width:22px;height:22px;opacity:0;transform:scale(.4);transition:all .2s}
+.check.on{background:var(--green);border-color:var(--green)}
+.check.on svg{opacity:1;transform:scale(1)}
+.check.pop{animation:pop .32s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.6)}100%{transform:scale(1)}}
+.act{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--blue);flex:none}
+.indent{margin-left:50px}
+.meta{display:flex;align-items:center;gap:6px;font-size:15px;color:var(--grey2);margin-top:8px}
+.meta.blue{color:var(--blue)}
+.notes{font-size:18px;margin-top:10px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}
+.tag{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 14px;border-radius:40px;font-size:15px;margin-right:6px}
+.tag.req{background:#EEF4FB;border:1.5px solid #C7D7EA}
+.tag.req.miss{color:var(--red)}
+.tag.sec{background:#E6F6EC;color:#148A3A;font-weight:600}
+.thumbs{display:flex;gap:10px;overflow-x:auto;margin-top:12px;scrollbar-width:none}
+.thumbs img{width:100px;height:100px;border-radius:10px;object-fit:cover;flex:none;background:var(--chip)}
+.newfield{display:flex;align-items:center;gap:14px;color:var(--blue);font-size:23px;padding:16px 28px}
+.toptitle{position:absolute;left:64px;right:64px;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .16s;pointer-events:none}
+.toptitle.show{opacity:1}
+.toptitle .p{font-size:12px;letter-spacing:.06em;color:var(--grey);text-transform:uppercase;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toptitle .l{font-size:18px;color:var(--navy);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* edit field */
+.editcard{margin:0 14px 24px;background:#fff;border:1px solid var(--stroke);border-radius:22px;padding:8px 20px 16px}
+.edittitle{flex:1;border:0;outline:0;font-size:27px;font-weight:700;color:var(--navy);resize:none;background:none;padding:6px 0;min-width:0}
+.editnotes{flex:1;border:0;outline:0;font-size:19px;resize:none;background:none;min-height:60px;line-height:1.4;min-width:0}
+.hr{height:1px;background:var(--stroke)}
+.rowbtn{display:flex;align-items:center;gap:14px;width:100%;padding:20px 0;color:var(--blue);font-size:22px}
+.person{display:flex;align-items:center;gap:14px;padding:0 0 14px;font-size:19px;width:100%}
+.person .badge{margin:0}
+.switch{position:relative;width:52px;height:32px;border-radius:20px;background:#C7D3E2;transition:background .2s;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on{background:var(--blue)}
+.switch.on::after{transform:translateX(20px)}
+.ptile{position:relative;flex:none;padding:10px 10px 0 0}
+.ptile img{width:140px;height:140px;border-radius:12px;object-fit:cover;display:block;background:var(--chip)}
+.ptile .rm{position:absolute;top:0;right:0;width:34px;height:34px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center}
+.addtile{width:140px;height:140px;margin-top:10px;border-radius:12px;border:2px dashed #9DB7D8;background:#F2F7FD;display:grid;place-items:center;color:var(--blue);flex:none}
+.box{width:28px;height:28px;border-radius:7px;border:2.4px solid #9DB4CF;display:grid;place-items:center;flex:none;transition:all .15s}
+.box.on{background:var(--green);border-color:var(--green)}
+.box svg{width:20px;height:20px;opacity:0}.box.on svg{opacity:1}
+.danger{color:var(--red);display:flex;align-items:center;gap:12px;font-size:18px;padding:14px 0}
+/* sheets & dialogs */
+.scrim{position:fixed;inset:0;background:rgba(15,26,43,.42);z-index:50;animation:fade .2s}
+.scrim.closing{animation:fadeOut .2s forwards}
+@keyframes fade{from{opacity:0}}
+@keyframes fadeOut{to{opacity:0}}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;background:#fff;border-radius:28px 28px 0 0;z-index:51;
+  padding:10px 22px calc(26px + var(--safe-b));animation:up .28s cubic-bezier(.2,.8,.2,1)}
+.sheet.closing{animation:down .2s forwards}
+@keyframes up{from{transform:translateY(100%)}}
+@keyframes down{to{transform:translateY(100%)}}
+.handle{width:44px;height:5px;border-radius:3px;background:#C2D2E6;margin:4px auto 14px}
+.sheet .cap{color:var(--grey);font-size:16px;margin-bottom:8px}
+.srow{display:flex;align-items:center;gap:20px;width:100%;padding:8px 0;font-size:20px;font-weight:500;text-align:left}
+.srow .tile{width:64px;height:64px;border-radius:18px;background:#F2F7FD;border:1px solid var(--stroke);display:grid;place-items:center;color:var(--deep);flex:none}
+.srow.danger{color:var(--red)}.srow.danger .tile{color:var(--red)}
+.dialog{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,420px);background:#fff;border-radius:26px;z-index:61;padding:24px;
+  animation:dlg .2s cubic-bezier(.2,.8,.2,1)}
+@keyframes dlg{from{opacity:0;transform:translate(-50%,-46%)}}
+.dialog h2{margin:0 0 6px;font-size:22px;font-weight:600}
+.dialog p{margin:0 0 6px;color:var(--grey);line-height:1.45}
+.field{width:100%;border:0;border-bottom:2px solid var(--stroke);outline:0;font-size:18px;padding:12px 2px;margin-top:8px;background:none}
+.field:focus{border-color:var(--blue)}
+.field.err{border-color:var(--red)}
+.btns{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.btn{padding:12px 18px;border-radius:22px;font-size:17px;font-weight:600;color:var(--blue)}
+.btn.fill{background:var(--blue);color:#fff}
+.btn.red{color:var(--red)}
+.assignhead{display:flex;align-items:center;justify-content:space-between;padding:6px 0 10px}
+.assignhead b{font-size:21px;color:var(--navy)}
+.urow{display:flex;align-items:center;gap:14px;width:100%;padding:12px 4px;font-size:19px;text-align:left}
+.toast{position:fixed;left:50%;bottom:calc(104px + var(--safe-b));transform:translateX(-50%);background:#1E2A3B;color:#fff;border-radius:14px;
+  padding:14px 18px;z-index:70;display:flex;align-items:center;gap:16px;max-width:92vw;font-size:16px;animation:up .25s}
+.toast button{color:#8DC2FF;font-weight:700;white-space:nowrap}
+.viewer{position:fixed;inset:0;background:#000;z-index:80;display:flex;flex-direction:column;justify-content:center;animation:fade .2s}
+.viewer img{width:100%;max-height:85vh;object-fit:contain}
+.viewer .c{position:absolute;left:0;right:0;bottom:0;padding:16px 20px calc(24px + var(--safe-b));color:#fff;background:rgba(0,0,0,.6)}
+.busy{position:fixed;inset:0;z-index:90;background:rgba(15,26,43,.42);display:grid;place-items:center}
+.busy div{background:#fff;border-radius:20px;padding:22px 26px;font-size:17px;display:flex;gap:14px;align-items:center}
+.spin{width:26px;height:26px;border-radius:50%;border:3px solid var(--sky);border-top-color:var(--blue);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* intro */
+.intro{position:absolute;inset:0;background:var(--intro);color:#fff;display:flex;flex-direction:column;align-items:center;
+  padding:calc(24px + var(--safe-t)) 24px calc(30px + var(--safe-b));text-align:center;overflow-y:auto}
+.intro .logo{width:min(230px,58vw);height:auto;animation:logoIn .7s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes logoIn{from{opacity:0;transform:scale(.6) rotate(-20deg)}}
+.intro .name{font-size:40px;font-weight:900;margin-top:24px;letter-spacing:-.5px}
+.intro .ul{width:64px;height:4px;background:var(--yellow);border-radius:2px;margin-top:14px;animation:grow .4s .5s both}
+@keyframes grow{from{transform:scaleX(0)}}
+.intro .tagline{color:var(--grey2);font-size:14px;letter-spacing:.2em;margin-top:14px}
+.intro .mlabel{color:var(--yellow);font-size:12px;letter-spacing:.2em;margin-top:30px}
+.intro .mission{color:#D3DCE7;font-size:17px;line-height:1.45;max-width:340px;margin-top:8px}
+.rise{animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(28px)}}
+.enter{width:min(300px,84vw);height:64px;border-radius:40px;background:var(--yellow);color:#14233A;font-size:21px;font-weight:700;margin-top:auto}
+.enter:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.hidden{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input id="camIn" type="file" accept="image/*" capture="environment" class="hidden">
+<input id="galIn" type="file" accept="image/*" multiple class="hidden">
+<script>
+"use strict";
+/* ---------- icons (Material paths, same as the Android app) ---------- */
+const P = {
+  back:"M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z",
+  more:"M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
+  addc:"M13,7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z",
+  cam:"M9,2L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5 5,2.24 5,5 -2.24,5 -5,5zM12,9.2c-1.55,0 -2.8,1.25 -2.8,2.8s1.25,2.8 2.8,2.8 2.8,-1.25 2.8,-2.8 -1.25,-2.8 -2.8,-2.8z",
+  mic:"M12,14c1.66,0 2.99,-1.34 2.99,-3L15,5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v6c0,1.66 1.34,3 3,3zM17.3,11c0,3 -2.54,5.1 -5.3,5.1S6.7,14 6.7,11H5c0,3.41 2.72,6.23 6,6.72V21h2v-3.28c3.28,-0.48 6,-3.3 6,-6.72h-1.7z",
+  add:"M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
+  info:"M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-6h2v6zM13,9h-2V7h2v2z",
+  search:"M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z",
+  edit:"M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z",
+  del:"M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z",
+  copy:"M16,1H4c-1.1,0 -2,0.9 -2,2v14h2V3h12V1zM19,5H8c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2zM19,21H8V7h11v14z",
+  pdf:"M20,2H8c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2zM20,16H8V4h12v12zM4,6H2v14c0,1.1 0.9,2 2,2h14v-2H4V6z",
+  word:"M14,2H6c-1.1,0 -1.99,0.9 -1.99,2L4,20c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,18H8v-2h8v2zM16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z",
+  tmpl:"M14,2H6c-1.1,0 -1.99,0.9 -1.99,2L4,20c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,16h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zM13,9V3.5L18.5,9H13z",
+  reorder:"M16,17.01V10h-2v7.01h-3L15,21l4,-3.99h-3zM9,3L5,6.99h3V14h2V6.99h3L9,3z",
+  personadd:"M15,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zM6,10V7H4v3H1v2h3v3h2v-3h3v-2H6zM15,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z",
+  person:"M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zM12,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z",
+  gallery:"M21,19V5c0,-1.1 -0.9,-2 -2,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2zM8.5,13.5l2.5,3.01L14.5,12l4.5,6H5l3.5,-4.5z",
+  remove:"M19,13H5v-2h14v2z",
+  chev:"M10,6L8.59,7.41 13.17,12l-4.58,4.59L10,18l6,-6z",
+  folder:"M10,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8l-2,-2z",
+  pin:"M12,2C8.13,2 5,5.13 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.87 -3.13,-7 -7,-7zM12,11.5c-1.38,0 -2.5,-1.12 -2.5,-2.5s1.12,-2.5 2.5,-2.5 2.5,1.12 2.5,2.5 -1.12,2.5 -2.5,2.5z",
+  share:"M18,16.08c-0.76,0 -1.44,0.3 -1.96,0.77L8.91,12.7c0.05,-0.23 0.09,-0.46 0.09,-0.7s-0.04,-0.47 -0.09,-0.7l7.05,-4.11c0.54,0.5 1.25,0.81 2.04,0.81 1.66,0 3,-1.34 3,-3s-1.34,-3 -3,-3 -3,1.34 -3,3c0,0.24 0.04,0.47 0.09,0.7L8.04,9.81C7.5,9.31 6.79,9 6,9c-1.66,0 -3,1.34 -3,3s1.34,3 3,3c0.79,0 1.5,-0.31 2.04,-0.81l7.12,4.16c-0.05,0.21 -0.08,0.43 -0.08,0.65 0,1.61 1.31,2.92 2.92,2.92 1.61,0 2.92,-1.31 2.92,-2.92s-1.31,-2.92 -2.92,-2.92z",
+  download:"M19,9h-4V3H9v6H5l7,7 7,-7zM5,18v2h14v-2H5z",
+  open:"M19,19H5V5h7V3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2v-7h-2v7zM14,3v2h3.59l-9.83,9.83 1.41,1.41L19,6.41V10h2V3h-7z",
+  carry:"M12,5V1L7,6l5,5V7c3.31,0 6,2.69 6,6s-2.69,6 -6,6 -6,-2.69 -6,-6H4c0,4.42 3.58,8 8,8s8,-3.58 8,-8 -3.58,-8 -8,-8z",
+  link:"M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8v2zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5s-2.24,-5 -5,-5z",
+  check:"M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z",
+  up:"M7.41,15.41L12,10.83l4.59,4.58L18,14l-6,-6 -6,6z",
+  down:"M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6z"
+};
+const ic = (n, cls="") => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+const tick = `<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/* ---------- logo (same geometry as the Android vector) ---------- */
+function logoSVG(cls){
+  let d=""; const r=3.3;
+  for(let i=-5;i<=5;i++)for(let j=-5;j<=5;j++){const x=100+i*14,y=100+j*14;
+    if((x-100)**2+(y-100)**2<=54*54) d+=`M${x-r},${y}a${r},${r} 0 1,0 ${2*r},0a${r},${r} 0 1,0 ${-2*r},0z`;}
+  const sig="M26,70C50,57 80,52 104,56M72,56C68,84 62,112 53,132C48,143 38,146 35,137M96,94C102,86 111,85 112,93C113,110 106,134 96,152C87,168 66,168 65,156C64,143 98,137 132,133C150,131 164,125 176,115M118,74C136,64 156,61 174,66M154,63C150,88 144,110 135,127C131,135 137,140 146,133M46,161C80,169 120,169 156,158";
+  return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="Daily Work Log logo">
+  <circle cx="100" cy="100" r="96" fill="#1A2F4D"/><circle cx="100" cy="100" r="89" fill="none" stroke="#F2C200" stroke-width="5"/>
+  <path d="${d}" fill="#4F6E96" fill-opacity=".55"/>
+  <g transform="translate(77.8,141) scale(0.22)"><path d="${sig}" fill="none" stroke="#B4C0CF" stroke-opacity=".5" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <path d="M66,96L88,118L132,72" fill="none" stroke="#14233A" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M66,96L88,118L132,72" fill="none" stroke="#F2C200" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/* ---------- small helpers ---------- */
+const $ = (s, el=document) => el.querySelector(s);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const Fmt = {
+  logDate(iso){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||""); return m?`${m[3]}/${m[2]}/${m[1]}`:(iso||""); },
+  time(d){ let h=d.getHours(); const ap=h<12?"AM":"PM"; h=h%12||12; return `${h}:${pad(d.getMinutes())} ${ap}`; },
+  stamp(t){ const d=new Date(t); return `${pad(d.getMonth()+1)}/${pad(d.getDate())}/${d.getFullYear()} at ${Fmt.time(d)}`; },
+  longStamp(t){ const d=new Date(t); const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+    return `${m} ${d.getDate()}, ${d.getFullYear()} at ${Fmt.time(d)}`; },
+  today(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; },
+  initials(n){ const p=String(n).trim().split(/\s+/).filter(Boolean); if(!p.length) return "?";
+    return (p[0][0]+(p.length>1?p[p.length-1][0]:"")).toUpperCase(); },
+  plural(n,one,many){ return `${n} ${n===1?one:many}`; },
+  cap(s){ s=String(s).trim(); return s?s[0].toUpperCase()+s.slice(1):s; },
+  fileSafe(s){ return (String(s).replace(/[^A-Za-z0-9 _-]/g,"-").trim())||"report"; }
+};
+
+/* ---------- storage: IndexedDB for data + photo blobs, memory fallback ---------- */
+const Store = {
+  db:null, mem:{kv:{},photos:{}},
+  async open(){
+    try{
+      this.db = await new Promise((res,rej)=>{ const r=indexedDB.open("dailyworklog",1);
+        r.onupgradeneeded=()=>{ r.result.createObjectStore("kv"); r.result.createObjectStore("photos"); };
+        r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+    }catch(e){ this.db=null; }
+  },
+  tx(store,mode,fn){ return new Promise((res,rej)=>{ const t=this.db.transaction(store,mode); const s=t.objectStore(store);
+    const r=fn(s); t.oncomplete=()=>res(r&&r.result); t.onerror=()=>rej(t.error); }); },
+  async get(store,key){ if(!this.db) return this.mem[store][key]; try{ return await this.tx(store,"readonly",s=>s.get(key)); }catch(e){ return undefined; } },
+  async put(store,key,val){ if(!this.db){ this.mem[store][key]=val; return; } try{ await this.tx(store,"readwrite",s=>s.put(val,key)); }catch(e){ this.mem[store][key]=val; } },
+  async del(store,key){ if(!this.db){ delete this.mem[store][key]; return; } try{ await this.tx(store,"readwrite",s=>s.delete(key)); }catch(e){} }
+};
+
+/* ---------- data model (same shape as the Android app) ---------- */
+let S = { userName:"", projects:[], links:[] };
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(()=>Store.put("kv","state",JSON.parse(JSON.stringify(S))), 250); }
+const me = () => S.userName || "Me";
+function newTask(title){ return {id:uid(),title,notes:"",done:false,completedBy:"",completedAt:0,createdBy:me(),createdAt:Date.now(),
+  photosRequired:false,loadSecured:false,securedBy:"",securedAt:0,assignees:[],photos:[]}; }
+const freshCopy = t => ({...newTask(t.title), photosRequired:!!t.photosRequired, assignees:[...(t.assignees||[])]});
+const carryCopy = t => ({...freshCopy(t), notes:t.notes||""});
+const logTitle = l => l.name || `Daily work log ${Fmt.logDate(l.date)}`;
+const doneCount = l => l.tasks.filter(t=>t.done).length;
+const people = l => l.crew.length ? l.crew : [...new Set(l.tasks.flatMap(t=>t.assignees))];
+const findP = id => S.projects.find(p=>p.id===id);
+const findL = (p,id) => p && p.logs.find(l=>l.id===id);
+function latestLog(p){ return [...p.logs].sort((a,b)=> b.date.localeCompare(a.date) || b.createdAt-a.createdAt)[0]; }
+function duplicateLog(p, src, iso){ const l={id:uid(),date:iso,name:"",createdAt:Date.now(),crew:[...src.crew],tasks:src.tasks.map(freshCopy)}; p.logs.push(l); return l; }
+
+/* ---------- photo helpers ---------- */
+const urlCache = new Map();
+async function photoURL(id){
+  if(urlCache.has(id)) return urlCache.get(id);
+  const b = await Store.get("photos", id); if(!b) return "";
+  const u = URL.createObjectURL(b); urlCache.set(id,u); return u;
+}
+function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+async function processPhoto(file, max=1600){
+  const src = URL.createObjectURL(file);
+  try{
+    const img = await loadImg(src);  // browsers apply camera rotation automatically
+    const s = Math.min(1, max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c = document.createElement("canvas"); c.width=Math.round(img.naturalWidth*s); c.height=Math.round(img.naturalHeight*s);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    return await new Promise(r=>c.toBlob(r,"image/jpeg",0.85));
+  } finally { URL.revokeObjectURL(src); }
+}
+async function addPhotos(task, files){
+  busy(true,"Adding photos…");
+  let failed=0;
+  for(const f of files){
+    try{ const blob=await processPhoto(f); const id=uid(); await Store.put("photos",id,blob);
+      task.photos.push({file:id,addedBy:me(),addedAt:Date.now()}); }catch(e){ failed++; }
+  }
+  busy(false); save(); render();
+  if(failed) toast("Some photos couldn't be added");
+}
+async function deletePhotoFiles(tasks){ for(const t of tasks) for(const ph of t.photos){ await Store.del("photos",ph.file); urlCache.delete(ph.file); } }
+let photoTarget = null;
+function pickPhoto(task, camera){ photoTarget = task; const el = camera ? $("#camIn") : $("#galIn"); el.value=""; el.click(); }
+/* ---------- overlays: toast, busy, sheets, dialogs, photo viewer ---------- */
+let toastTimer=null;
+function toast(msg, action, fn){
+  document.querySelectorAll(".toast").forEach(t=>t.remove());
+  const t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status");
+  t.innerHTML=`<span>${esc(msg)}</span>${action?`<button>${esc(action)}</button>`:""}`;
+  if(action) t.querySelector("button").onclick=()=>{ t.remove(); fn(); };
+  document.body.appendChild(t); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.remove(), action?5000:2600);
+}
+function busy(on,msg){ let b=$("#busy"); if(!on){ b&&b.remove(); return; }
+  if(!b){ b=document.createElement("div"); b.id="busy"; b.className="busy"; document.body.appendChild(b); }
+  b.innerHTML=`<div><span class="spin"></span>${esc(msg)}</div>`; }
+function overlay(el, scrimClose=true){
+  const scrim=document.createElement("div"); scrim.className="scrim";
+  const close=()=>{ scrim.classList.add("closing"); el.classList.add("closing"); setTimeout(()=>{scrim.remove(); el.remove();},190); };
+  if(scrimClose) scrim.onclick=close;
+  document.body.append(scrim, el); return close;
+}
+function menu(title, items){
+  const s=document.createElement("div"); s.className="sheet"; s.setAttribute("role","dialog");
+  s.innerHTML=`<div class="handle"></div>${title?`<div class="cap">${esc(title)}</div>`:""}`+
+    items.map((it,i)=>`<button class="srow ${it.danger?"danger":""}" data-i="${i}"><span class="tile">${ic(it.icon)}</span>${esc(it.label)}</button>`).join("");
+  const close=overlay(s);
+  s.querySelectorAll(".srow").forEach(b=>b.onclick=()=>{ close(); setTimeout(()=>items[+b.dataset.i].run(),60); });
+}
+function dialog(html, scrimClose=true){ const d=document.createElement("div"); d.className="dialog"; d.setAttribute("role","dialog"); d.innerHTML=html;
+  const close=overlay(d,scrimClose); return [d,close]; }
+function prompt2(title, fields, okLabel, cb){
+  // fields: [{key,hint,value,required,type}]
+  const [d,close]=dialog(`<h2>${esc(title)}</h2>`+fields.map((f,i)=>`<input class="field" data-k="${f.key}" type="${f.type||"text"}"
+     placeholder="${esc(f.hint)}" value="${esc(f.value||"")}" autocapitalize="sentences" ${i===0?"autofocus":""}>`).join("")+
+    `<div class="btns"><button class="btn" data-x>Cancel</button><button class="btn fill" data-ok>${esc(okLabel)}</button></div>`);
+  const ins=[...d.querySelectorAll("input")];
+  const ok=()=>{ const out={}; let bad=false;
+    ins.forEach((el,i)=>{ const v=el.value.trim(); out[fields[i].key]=v; if(fields[i].required&&!v){ el.classList.add("err"); el.placeholder="Required"; bad=true; } });
+    if(bad) return; close(); cb(out); };
+  ins.forEach(el=>{ el.oninput=()=>el.classList.remove("err"); el.onkeydown=e=>{ if(e.key==="Enter") ok(); }; });
+  d.querySelector("[data-ok]").onclick=ok; d.querySelector("[data-x]").onclick=close;
+  setTimeout(()=>{ ins[0].focus(); try{ const v=ins[0].value; ins[0].setSelectionRange(v.length,v.length); }catch(e){} },80);
+}
+const ask = (title,hint,value,okLabel,cb) => prompt2(title,[{key:"v",hint,value,required:true}],okLabel,o=>cb(o.v));
+function confirm2(title,msg,okLabel,cb){
+  const [d,close]=dialog(`<h2>${esc(title)}</h2><p>${esc(msg)}</p><div class="btns"><button class="btn" data-x>Cancel</button><button class="btn red" data-ok>${esc(okLabel)}</button></div>`);
+  d.querySelector("[data-x]").onclick=close; d.querySelector("[data-ok]").onclick=()=>{ close(); cb(); };
+}
+async function viewPhoto(ph){
+  const v=document.createElement("div"); v.className="viewer";
+  v.innerHTML=`<img alt="Photo" src="${await photoURL(ph.file)}"><div class="c">${esc(ph.addedBy)}, ${esc(Fmt.stamp(ph.addedAt))}</div>`;
+  v.onclick=()=>v.remove(); document.body.appendChild(v);
+}
+function assignSheet(project, current, title, done){
+  if(S.userName && !project.crew.includes(S.userName)){ project.crew.unshift(S.userName); save(); }
+  const sel=new Set(current);
+  const s=document.createElement("div"); s.className="sheet";
+  s.innerHTML=`<div class="handle"></div><div class="assignhead"><button class="btn" data-x style="color:var(--navy)">Cancel</button><b>${esc(title)}</b><button class="btn" data-ok>Assign</button></div>
+    <div class="search" style="margin:0 0 8px;border-radius:10px;height:54px">${ic("search")}<input placeholder="Search users" autocapitalize="words"></div><div class="rows"></div>`;
+  const close=overlay(s); const q=s.querySelector("input"); const rows=s.querySelector(".rows");
+  const draw=()=>{ const term=q.value.trim(); const tl=term.toLowerCase(); let exact=false;
+    rows.innerHTML=project.crew.filter(n=>{ if(n.toLowerCase()===tl) exact=true; return !tl||n.toLowerCase().includes(tl); })
+      .map(n=>{ const ph=(project.phones||{})[n]; return `<button class="urow" data-n="${esc(n)}"><span class="box ${sel.has(n)?"on":""}">${tick}</span><span class="badge" style="margin:0">${esc(Fmt.initials(n))}</span>
+        <span class="grow">${esc(n)}<span data-ph="${esc(n)}" style="display:block;font-size:14px;color:${ph?"var(--grey)":"var(--blue)"};margin-top:2px">${ph?esc(ph)+" · edit":"+ Add phone number"}</span></span>
+        <span class="act" data-rm="${esc(n)}" style="color:var(--grey2)" aria-label="Remove from crew">${ic("remove","sm")}</span></button>`; }).join("")+
+      (exact?"":`<button class="urow" data-new style="color:var(--blue)">${ic("add")} ${term?`Add “${esc(term)}” to crew`:"Add crew member"}</button>`);
+    rows.querySelectorAll("[data-n]").forEach(b=>b.onclick=e=>{ const n=b.dataset.n;
+      if(e.target.closest("[data-ph]")){ project.phones=project.phones||{};
+        prompt2(`Phone number for ${n}`,[{key:"v",hint:"e.g. 519-555-0123",value:project.phones[n]||"",type:"tel"}],"Save",o=>{ project.phones[n]=o.v; save(); draw(); }); return; }
+      if(e.target.closest("[data-rm]")){ confirm2(`Remove ${n} from the crew?`,"They stay on fields they're already assigned to.","Remove",()=>{ project.crew=project.crew.filter(x=>x!==n); sel.delete(n); save(); draw(); }); return; }
+      sel.has(n)?sel.delete(n):sel.add(n); draw(); });
+    const nb=rows.querySelector("[data-new]");
+    if(nb) nb.onclick=()=>prompt2("Add crew member",[{key:"n",hint:"Full name",value:term,required:true},{key:"ph",hint:"Phone number, for texting tasks (optional)",type:"tel"}],"Add",o=>{
+      const n=Fmt.cap(o.n); if(!project.crew.includes(n)) project.crew.push(n); project.phones=project.phones||{}; if(o.ph) project.phones[n]=o.ph;
+      sel.add(n); save(); q.value=""; draw(); });
+  };
+  q.oninput=draw; draw();
+  s.querySelector("[data-x]").onclick=close;
+  s.querySelector("[data-ok]").onclick=()=>{ close(); done([...sel]); };
+}
+function pickDate(cb){
+  const [d,close]=dialog(`<h2>Pick the log date</h2><input class="field" type="date" value="${Fmt.today()}"><div class="btns"><button class="btn" data-x>Cancel</button><button class="btn fill" data-ok>Next</button></div>`);
+  d.querySelector("[data-x]").onclick=close;
+  d.querySelector("[data-ok]").onclick=()=>{ const v=d.querySelector("input").value; if(!v) return; close(); cb(v); };
+}
+/* ---------- navigation (hash routes, so the iPhone swipe-back gesture works) ---------- */
+const depthOf = r => ({intro:0,projects:1,project:2,log:3,task:4})[r.name] ?? 1;
+function route(){
+  const h=location.hash.replace(/^#\/?/,"").split("/");
+  if(h[0]==="projects") return {name:"projects"};
+  if(h[0]==="p") return {name:"project",pid:h[1]};
+  if(h[0]==="l") return {name:"log",pid:h[1],lid:h[2]};
+  if(h[0]==="t") return {name:"task",pid:h[1],lid:h[2],tid:h[3]};
+  return {name:"intro"};
+}
+const go = path => { location.hash = path; };
+const back = () => { if(history.length>1) history.back(); else go("/projects"); };
+let lastKey="", lastDepth=0, ui={tab:"logs",query:"",filter:0};
+window.addEventListener("hashchange", ()=>render());
+
+function render(){
+  const r=route(); const key=location.hash; const app=$("#app");
+  const same = key===lastKey; const old=app.querySelector(".scroll"); const keep= same && old ? old.scrollTop : 0;
+  const dir = depthOf(r) < lastDepth ? "back" : "";
+  let html="";
+  if(r.name==="intro") html=introView();
+  else if(r.name==="projects") html=projectsView();
+  else if(r.name==="project") html=projectView(r);
+  else if(r.name==="log") html=logView(r);
+  else if(r.name==="task") html=taskView(r);
+  if(html===null){ go("/projects"); return; }
+  app.innerHTML=html;
+  const scr=app.firstElementChild;
+  if(same) scr.style.animation="none"; else if(dir) scr.classList.add("back");
+  const sc=app.querySelector(".scroll"); if(sc) sc.scrollTop=keep;
+  lastKey=key; lastDepth=depthOf(r);
+  bind(r);
+  hydrateImages();
+}
+async function hydrateImages(){ for(const img of document.querySelectorAll("img[data-ph]")){ const u=await photoURL(img.dataset.ph); if(u) img.src=u; } }
+
+/* ---------- shared bits ---------- */
+function ringSVG(p, size, filled){
+  const s=size, sw=s*0.1, r=(s-sw)/2, c=2*Math.PI*r;
+  if(p>=0.999){
+    return filled
+      ? `<svg class="ring" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#1DB04B"/><path d="M32 51L45 64L69 38" fill="none" stroke="#fff" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+      : `<svg class="ring" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#1DB04B" stroke-width="8"/><path d="M32 51L45 64L69 38" fill="none" stroke="#1DB04B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  return `<svg class="ring" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}"><circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="#D3E1F1" stroke-width="${sw}"/>
+    <circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="#1268D6" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-p)}" transform="rotate(-90 ${s/2} ${s/2})" style="transition:stroke-dashoffset .4s"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${s*0.25}" font-weight="700" fill="#0F1A2B">${Math.round(p*100)}%</text></svg>`;
+}
+const badges = (list,max,size=42) => `<span class="badges">${list.slice(0,max).map(n=>`<span class="badge" style="width:${size}px;height:${size}px">${esc(Fmt.initials(n))}</span>`).join("")}${list.length>max?`<span class="badge" style="width:${size}px;height:${size}px">+${list.length-max}</span>`:""}</span>`;
+
+/* ---------- intro ---------- */
+function introView(){
+  return `<div class="intro">
+    <div style="flex:1"></div>
+    ${logoSVG("logo")}
+    <div class="name rise" style="animation-delay:.28s">Daily Work Log</div>
+    <div class="ul"></div>
+    <div class="tagline rise" style="animation-delay:.6s">B44 TOOL READINESS</div>
+    <div class="mlabel rise" style="animation-delay:.74s">OUR MISSION</div>
+    <div class="mission rise" style="animation-delay:.74s">Increasing efficiency and flow in your workday, while maintaining coverage and documenting every task with accuracy and precision.</div>
+    <div style="flex:1;min-height:30px"></div>
+    <button class="enter rise" style="animation-delay:.9s" data-go="/projects">Enter</button>
+  </div>`;
+}
+
+/* ---------- projects ---------- */
+function projectsView(){
+  const list = S.projects.map(p=>{ const l=latestLog(p);
+    return `<div class="card" role="button" tabindex="0" data-open="${p.id}">
+      <span class="soft">${ic("folder")}</span>
+      <span class="grow"><div class="t">${esc(p.name)}</div>
+        ${p.location?`<div class="pin">${ic("pin","sm")}${esc(p.location)}</div>`:""}
+        <div class="s">${l?`${Fmt.plural(p.logs.length,"daily log","daily logs")}, latest ${Fmt.logDate(l.date)}`:"No daily logs yet"}</div></span>
+      <button class="iconbtn" data-pmenu="${p.id}" aria-label="Project options">${ic("more")}</button></div>`; }).join("");
+  return `<section class="screen">
+    <div class="top" style="padding:12px 12px 0 24px"><h1 style="font-size:34px;font-weight:800;color:var(--navy);margin:0">Projects</h1>
+      <button class="iconbtn" data-name aria-label="Your name" style="background:#fff;border:1px solid var(--stroke);color:var(--blue)">${ic("person")}</button></div>
+    <div class="sub">${S.userName?`Signed in as ${esc(S.userName)}`:"Tap the person icon to set your name"}</div>
+    <div class="scroll"><div class="list">${list || `<div class="empty">No projects yet.\nTap + to create your first one.</div>`}</div></div>
+    <button class="fab" data-newproject aria-label="New project">${ic("add")}</button></section>`;
+}
+
+/* ---------- project: checklists / templates / links ---------- */
+function projectView(r){
+  const p=findP(r.pid); if(!p) return null;
+  const q=ui.query.toLowerCase(); let rows="", empty="";
+  if(ui.tab==="logs"){
+    const logs=[...p.logs].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt)
+      .filter(l=>!q||logTitle(l).toLowerCase().includes(q)||l.tasks.some(t=>(t.title+" "+t.notes).toLowerCase().includes(q)));
+    rows=logs.map(l=>{ const d=doneCount(l),n=l.tasks.length;
+      return `<div class="card" role="button" tabindex="0" data-log="${l.id}">${ringSVG(n?d/n:0,58,true)}
+        <span class="grow"><div class="t">${esc(logTitle(l))}</div><div class="s">${d}/${n} fields completed</div></span>
+        ${badges(people(l),2)}<button class="iconbtn" data-lmenu="${l.id}" aria-label="Checklist options">${ic("more")}</button></div>`; }).join("");
+    empty = q?`Nothing matches “${esc(ui.query)}”`:"No daily logs yet.\nTap + to start today's.";
+  } else if(ui.tab==="templates"){
+    rows=p.templates.filter(t=>!q||t.name.toLowerCase().includes(q)).map(t=>`<div class="card" role="button" tabindex="0" data-tmpl="${t.id}">
+      <span class="soft">${ic("tmpl")}</span><span class="grow"><div class="t">${esc(t.name)}</div><div class="s">${Fmt.plural(t.tasks.length,"field","fields")}</div></span>
+      <button class="iconbtn" data-tmenu="${t.id}" aria-label="Template options">${ic("more")}</button></div>`).join("");
+    empty = q?`Nothing matches “${esc(ui.query)}”`:"No templates yet.\nOpen a checklist, tap ⋯ and choose Save checklist as template.";
+  } else {
+    rows=S.links.filter(l=>!q||(l.title+" "+l.url).toLowerCase().includes(q)).map(l=>`<div class="card" role="button" tabindex="0" data-link="${l.id}">
+      <span class="soft">${ic("link")}</span><span class="grow"><div class="t">${esc(l.title)}</div>
+      <div class="s" style="color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.url.replace(/^https?:\/\/(www\.)?/i,""))}</div></span>
+      <button class="iconbtn" data-kmenu="${l.id}" aria-label="Link options">${ic("more")}</button></div>`).join("");
+    empty = q?`Nothing matches “${esc(ui.query)}”`:"No links yet.\nTap + to save a web link to a tool or procedure.\nLinks show up in every project.";
+  }
+  const pill=(k,label)=>`<button class="pill ${ui.tab===k?"on":""}" data-tab="${k}">${label}</button>`;
+  return `<section class="screen">
+    <div class="top"><button class="iconbtn" data-back aria-label="Back">${ic("back")}</button><h1>${esc(p.name)}</h1>
+      <button class="iconbtn" data-projmenu aria-label="Project options">${ic("more")}</button></div>
+    ${p.location?`<div class="pin" style="padding-left:68px">${ic("pin","sm")}${esc(p.location)}</div>`:""}
+    <div class="pills">${pill("logs","Checklists")}${pill("templates","Templates")}${pill("links","Links")}</div>
+    <label class="search">${ic("search")}<input data-q placeholder="Search ${ui.tab==="logs"?"checklists":ui.tab}" value="${esc(ui.query)}"></label>
+    <div class="scroll"><div class="list">${rows || `<div class="empty">${empty}</div>`}</div></div>
+    <button class="fab" data-plus aria-label="${ui.tab==="links"?"Add link":"New daily log"}">${ic("add")}</button></section>`;
+}
+
+/* ---------- checklist ---------- */
+const FILTERS=[[1,"Assigned to Me"],[2,"Incomplete"],[3,"Complete"],[4,"Unassigned"]];
+function matches(t){ return [true, t.assignees.includes(me()), !t.done, t.done, !t.assignees.length][ui.filter]; }
+function taskCard(t){
+  const miss=t.photosRequired&&!t.photos.length&&!t.done;
+  return `<div class="task ${t.done?"done":""}" data-task="${t.id}"><div class="bar"></div><div class="body">
+    <div class="line1"><button class="check ${t.done?"on":""}" data-check="${t.id}" aria-label="${t.done?"Completed. Tap to reopen":"Mark complete"}">${tick}</button>
+      <div class="title">${esc(t.title)}</div>
+      <button class="act" data-open="${t.id}" aria-label="Edit field">${ic("addc")}</button>
+      <button class="act" data-cam="${t.id}" aria-label="Take photo">${ic("cam")}</button></div>
+    <div class="indent">
+      ${t.done?`<div class="meta">${ic("person","sm")}${esc(t.completedBy)}, ${esc(Fmt.stamp(t.completedAt))}</div>`:""}
+      ${t.assignees.length?`<div class="meta blue">${ic("personadd","sm")}${esc(t.assignees.join(", "))}</div>`:""}
+      ${t.notes.trim()?`<div class="notes">${esc(t.notes.trim())}</div>`:""}
+      ${t.loadSecured?`<span class="tag sec">✓ Load secured</span>`:""}${t.photosRequired?`<span class="tag req ${miss?"miss":""}">${ic("info","sm")}Photos required</span>`:""}
+      ${t.photos.length?`<div class="thumbs">${t.photos.map((ph,i)=>`<img alt="Photo ${i+1}" data-ph="${ph.file}" data-view="${t.id}:${i}">`).join("")}</div>`:""}
+    </div></div></div>`;
+}
+function logView(r){
+  const p=findP(r.pid), l=findL(p,r.lid); if(!l) return null;
+  const vis=l.tasks.filter(matches), d=doneCount(l), n=l.tasks.length;
+  return `<section class="screen">
+    <div class="top" style="min-height:70px"><button class="iconbtn" data-back aria-label="Back">${ic("back")}</button>
+      <div class="toptitle"><div class="p">${esc(p.name)}</div><div class="l">${esc(logTitle(l))}</div></div><span class="grow"></span>
+      <button class="iconbtn" data-logmenu aria-label="Checklist options">${ic("more")}</button></div>
+    <div class="scroll">
+      <div class="loghead"><div class="big" style="margin-top:0">${esc(logTitle(l))}</div>
+        ${p.location?`<div class="pin" style="padding:2px 24px 0">${ic("pin","sm")}${esc(p.location)}</div>`:""}
+        <div class="row">${ringSVG(n?d/n:0,76,false)}<div><div style="color:var(--grey);font-size:17px">${d}/${n} fields completed</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><button class="iconbtn" data-crew aria-label="Assign crew to this checklist"
+            style="width:60px;height:60px;background:#fff;border:1px solid var(--stroke);color:var(--blue)">${ic("personadd")}</button>${badges(l.crew,4,50)}</div></div></div>
+        <div class="divider"></div>
+        <div class="chips">${FILTERS.map(([k,lab])=>`<button class="chip ${ui.filter===k?"on":""}" data-filter="${k}">${lab}</button>`).join("")}</div></div>
+      ${vis.map(taskCard).join("")}
+      ${!vis.length?`<div class="empty">${n?"No fields match this filter.":"No fields yet. Tap New Field below, or the blue mic to say one."}</div>`:""}
+      <button class="newfield" data-newfield>${ic("add")} New Field</button>
+    </div>
+    <button class="fab blue" data-mic aria-label="Add a field by voice">${ic("mic")}</button></section>`;
+}
+
+/* ---------- edit field ---------- */
+function taskView(r){
+  const p=findP(r.pid), l=findL(p,r.lid), t=l&&l.tasks.find(x=>x.id===r.tid); if(!t) return null;
+  return `<section class="screen">
+    <div class="top" style="min-height:76px"><button class="iconbtn" data-back aria-label="Back">${ic("back")}</button>
+      <div class="toptitle show"><div class="p">${esc(logTitle(l))}</div><div class="l">Edit Field</div></div><span class="grow"></span>
+      <button class="iconbtn" data-fieldmenu aria-label="Field options">${ic("more")}</button></div>
+    <div class="scroll"><div class="editcard">
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px"><button class="check ${t.done?"on":""}" data-check="${t.id}" style="margin-top:6px" aria-label="Mark complete">${tick}</button>
+        <textarea class="edittitle" rows="1" data-title placeholder="Field title">${esc(t.title)}</textarea></div>
+      ${t.done?`<div class="meta" style="margin-top:10px">${ic("person","sm")}${esc(t.completedBy)}, ${esc(Fmt.stamp(t.completedAt))}</div>`:""}
+      <div style="display:flex;gap:6px;margin-top:12px"><textarea class="editnotes" rows="2" data-notes placeholder="Add notes… (tap the keyboard mic to dictate)">${esc(t.notes)}</textarea></div>
+      <div class="hr" style="margin-top:14px"></div>
+      <button class="rowbtn" data-assign>${ic("add")} Assign User</button>
+      ${t.assignees.map(n=>`<div class="person"><span class="badge">${esc(Fmt.initials(n))}</span><span class="grow">${esc(n)}<span style="display:block;font-size:14px;color:var(--grey)">${esc((p.phones||{})[n]||"No phone number yet")}</span></span>
+        <button class="btn" data-text="${esc(n)}" style="display:flex;align-items:center;gap:6px;background:var(--sky);color:var(--deep);padding:9px 14px">${ic("share","sm")}Text it</button></div>`).join("")}
+      <div class="hr"></div>
+      <div style="display:flex;align-items:center;gap:10px"><button class="rowbtn" data-addphoto style="flex:1">${ic("add")} Photos</button>
+        <span style="color:var(--grey);font-size:16px">Photos required?</span><button class="switch ${t.photosRequired?"on":""}" data-req role="switch" aria-checked="${t.photosRequired}" aria-label="Photos required"></button></div>
+      <div class="thumbs" style="margin-top:0">${t.photos.map((ph,i)=>`<div class="ptile"><img alt="Photo ${i+1}" data-ph="${ph.file}" data-view="${t.id}:${i}"><button class="rm" data-rmph="${i}" aria-label="Remove photo">${ic("remove","sm")}</button></div>`).join("")}
+        <button class="addtile" data-addphoto aria-label="Add photo">${ic("cam")}</button></div>
+      <div class="hr" style="margin-top:20px"></div>
+      <button class="rowbtn" data-secure style="color:var(--navy);font-size:20px"><span class="box ${t.loadSecured?"on":""}">${tick}</span>
+        <span style="text-align:left">Load securement completed${t.loadSecured?`<div class="meta" style="margin-top:2px">${ic("person","sm")}${esc(t.securedBy)}, ${esc(Fmt.stamp(t.securedAt))}</div>`:""}</span></button>
+      <div class="hr"></div>
+      <div style="color:var(--grey);font-size:15px;margin-top:16px">Added${t.createdBy?` by ${esc(t.createdBy)}`:""}, ${esc(Fmt.stamp(t.createdAt))}</div>
+      <button class="danger" data-delfield>${ic("del")} Delete field</button>
+    </div></div></section>`;
+}
+/* ---------- texting a task to the people assigned ---------- */
+function taskText(p,l,t){
+  let s=`${logTitle(l)}${p.name?` (${p.name})`:""}\nAssigned to you: ${t.title}`;
+  if(t.notes.trim()) s+=`\nNotes: ${t.notes.trim()}`;
+  if(t.photosRequired) s+=`\nPhotos required.`;
+  if(t.photos.length) s+=`\n${Fmt.plural(t.photos.length,"photo","photos")} attached.`;
+  return s+`\n\n- ${me()}`;
+}
+async function textTask(p,l,t,name){
+  const phone=(p.phones||{})[name]||"";
+  const body=taskText(p,l,t);
+  if(t.photos.length && navigator.canShare){
+    try{
+      const files=[]; for(const [i,ph] of t.photos.entries()){ const b=await Store.get("photos",ph.file); if(b) files.push(new File([b],`photo-${i+1}.jpg`,{type:"image/jpeg"})); }
+      if(files.length && navigator.canShare({files,text:body})){ await navigator.share({files,text:body}); return; }
+    }catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  if(phone){ location.href=`sms:${phone.replace(/[^\d+]/g,"")}?&body=${encodeURIComponent(body)}`; return; }
+  if(!t.photos.length){ p.phones=p.phones||{};
+    prompt2(`Phone number for ${name}`,[{key:"v",hint:"e.g. 519-555-0123",type:"tel",required:true}],"Save and text",o=>{ p.phones[name]=o.v; save(); render();
+      location.href=`sms:${o.v.replace(/[^\d+]/g,"")}?&body=${encodeURIComponent(body)}`; }); return; }
+  try{ await navigator.clipboard.writeText(body); toast(`No number saved for ${name}. Message copied, so you can paste it into a text.`,"Add number",()=>editPhone(p,name)); }
+  catch(e){ toast(`Add a phone number for ${name} first`,"Add number",()=>editPhone(p,name)); }
+}
+function editPhone(p,name){
+  p.phones=p.phones||{};
+  prompt2(`Phone number for ${name}`,[{key:"v",hint:"e.g. 519-555-0123",value:p.phones[name]||"",type:"tel"}],"Save",o=>{ p.phones[name]=o.v; save(); render(); });
+}
+function crewSheet(p){
+  p.phones=p.phones||{};
+  const items=p.crew.map(n=>({icon:"person",label:`${n}${p.phones[n]?`  ·  ${p.phones[n]}`:"  (no number)"}`,run:()=>editPhone(p,n)}));
+  items.push({icon:"add",label:"Add crew member",run:()=>prompt2("Add crew member",[{key:"n",hint:"Full name",required:true},{key:"ph",hint:"Phone number (optional)",type:"tel"}],"Add",o=>{
+    const n=Fmt.cap(o.n); if(!p.crew.includes(n)) p.crew.push(n); if(o.ph) p.phones[n]=o.ph; save(); render(); })});
+  menu("Crew and phone numbers. Tap a name to set their number.",items);
+}
+
+/* ---------- email report to a saved list ---------- */
+function emailList(p){
+  prompt2("Report email list",[{key:"e",hint:"Emails, separated by commas",value:(p.emails||[]).join(", "),type:"email"}],"Save",o=>{
+    p.emails=o.e.split(/[\s,;]+/).map(x=>x.trim()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); save();
+    toast(p.emails.length?`Saved ${Fmt.plural(p.emails.length,"address","addresses")}`:"Email list cleared"); });
+}
+async function emailReport(p,l){
+  if(!(p.emails||[]).length){ toast("Add your report email list first","Add emails",()=>emailList(p)); return; }
+  busy(true,"Building PDF report…");
+  let blob; try{ blob=await buildPdf(p,l); }catch(e){ busy(false); toast("Couldn't build the report. Please try again."); return; }
+  busy(false);
+  const name=Fmt.fileSafe(logTitle(l))+".pdf", to=p.emails.join(", ");
+  const subject=`${logTitle(l)}${p.name?` - ${p.name}`:""}`;
+  const bodyTxt=`${subject}: ${doneCount(l)}/${l.tasks.length} fields completed.\nReport attached.\n\n${me()}`;
+  // Second tap is needed: iPhones only allow sharing straight from a tap.
+  const [d,close]=dialog(`<h2>Report ready</h2><p>Tap Open email, choose Mail or Outlook, then tap the To line and Paste. Your ${Fmt.plural(p.emails.length,"address is","addresses are")} copied.</p>
+    <div class="btns"><button class="btn" data-x>Cancel</button><button class="btn fill" data-ok>Open email</button></div>`);
+  d.querySelector("[data-x]").onclick=close;
+  d.querySelector("[data-ok]").onclick=async()=>{
+    close();
+    try{ await navigator.clipboard.writeText(to); }catch(e){}
+    const file=new File([blob],name,{type:"application/pdf"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file],title:subject,text:bodyTxt}); return; }catch(e){ if(e&&e.name==="AbortError") return; }
+    }
+    // Computers: save the PDF, then open a new email addressed to the list
+    await deliver(blob,name,"application/pdf");
+    location.href=`mailto:${encodeURIComponent(to).replace(/%2C/g,",").replace(/%20/g,"")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyTxt+"\n\n(Attach the PDF that was just saved.)")}`;
+  };
+}
+
+/* ---------- actions ---------- */
+function toggle(p,l,t,el){
+  if(!t.done && t.photosRequired && !t.photos.length){
+    navigator.vibrate&&navigator.vibrate(30);
+    toast("This field needs a photo before it can be completed","Take photo",()=>pickPhoto(t,true)); return;
+  }
+  t.done=!t.done; t.completedBy=t.done?me():""; t.completedAt=t.done?Date.now():0; save();
+  navigator.vibrate&&navigator.vibrate(12); render();
+  const c=document.querySelector(`[data-check="${t.id}"]`); if(c){ c.classList.add("pop"); }
+}
+function addTask(l,title){ const t=newTask(Fmt.cap(title)); l.tasks.push(t); save(); render();
+  if(!matches(t)) toast("Field added. Clear the filter to see it.");
+  else setTimeout(()=>{ const sc=$(".scroll"); sc&&sc.scrollTo({top:sc.scrollHeight,behavior:"smooth"}); },50); }
+function voiceAdd(l){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ ask("New field","Tap the mic on your keyboard to dictate","","Add",v=>addTask(l,v)); return; }
+  try{ const r=new SR(); r.lang="en-CA"; r.interimResults=false; r.maxAlternatives=1;
+    toast("Listening… say the new field");
+    r.onresult=e=>{ const v=e.results[0][0].transcript; if(v) addTask(l,v); };
+    r.onerror=()=>ask("New field","Tap the mic on your keyboard to dictate","","Add",v=>addTask(l,v));
+    r.start(); }catch(e){ ask("New field","Tap the mic on your keyboard to dictate","","Add",v=>addTask(l,v)); }
+}
+function startLog(p,iso,source,unfinished){
+  const lat=latestLog(p);
+  const l={id:uid(),date:iso,name:"",createdAt:Date.now(),crew:lat?[...lat.crew]:[],tasks:[]};
+  (source||[]).forEach(t=>{ if(unfinished&&t.done) return; l.tasks.push(unfinished?carryCopy(t):freshCopy(t)); });
+  p.logs.push(l); save(); go(`/l/${p.id}/${l.id}`);
+}
+function newLog(p,tmpl){
+  pickDate(iso=>{
+    if(tmpl) return startLog(p,iso,tmpl.tasks,false);
+    const lat=latestLog(p);
+    if(!lat && !p.templates.length) return startLog(p,iso,null,false);
+    const items=[{icon:"add",label:"Blank checklist",run:()=>startLog(p,iso,null,false)}];
+    if(lat){ const open=lat.tasks.length-doneCount(lat), from=Fmt.logDate(lat.date);
+      if(open) items.push({icon:"carry",label:`Carry over ${Fmt.plural(open,"unfinished field","unfinished fields")} from ${from}`,run:()=>startLog(p,iso,lat.tasks,true)});
+      if(lat.tasks.length) items.push({icon:"copy",label:`Copy all fields from ${from}`,run:()=>startLog(p,iso,lat.tasks,false)}); }
+    p.templates.forEach(t=>items.push({icon:"tmpl",label:`Template: ${t.name}`,run:()=>startLog(p,iso,t.tasks,false)}));
+    menu(`Start the ${Fmt.logDate(iso)} log with`,items);
+  });
+}
+function logMenu(p,l,inside){
+  const items=[
+    {icon:"edit",label:"Rename checklist",run:()=>ask("Rename checklist","Checklist name",logTitle(l),"Save",v=>{ l.name=v; save(); render(); })}];
+  if(inside) items.push({icon:"personadd",label:"Crew and phone numbers",run:()=>crewSheet(p)},{icon:"add",label:"Add field",run:()=>ask("New field","e.g. Pack up sea can 317503","","Add",v=>addTask(l,v))},
+    {icon:"reorder",label:"Reorder fields",run:()=>toast("Open a field and use Move up or Move down in its ⋯ menu")});
+  items.push({icon:"share",label:"Email report",run:()=>emailReport(p,l)},
+    {icon:"pdf",label:"Export to PDF",run:()=>exportReport(p,l,false)},
+    {icon:"word",label:"Export to Word",run:()=>exportReport(p,l,true)});
+  if(inside) items.push({icon:"tmpl",label:"Save checklist as template",run:()=>ask("Save as template","Template name","Daily fields","Save",v=>{
+    p.templates.push({id:uid(),name:v,tasks:l.tasks.map(freshCopy)}); save(); toast("Template saved. Use it from the + button."); })});
+  items.push({icon:"copy",label:"Duplicate checklist",run:()=>{ const c=duplicateLog(p,l,Fmt.today()); save(); go(`/l/${p.id}/${c.id}`); }},
+    {icon:"del",label:"Delete checklist",danger:true,run:()=>confirm2("Delete this checklist?",`${logTitle(l)} and its photos will be removed. This can't be undone.`,"Delete",async()=>{
+      await deletePhotoFiles(l.tasks); p.logs=p.logs.filter(x=>x!==l); save(); inside?back():render(); })});
+  menu(inside?null:logTitle(l),items);
+}
+function editLink(existing){
+  const norm=u=>{ u=u.trim().replace(/\s/g,""); if(u && !u.includes("://") && !/^(mailto|tel):/i.test(u)) u="https://"+u; return u; };
+  prompt2(existing?"Edit link":"Add link",[{key:"u",hint:"Web address, e.g. https://…",value:existing?existing.url:"",required:true,type:"url"},{key:"n",hint:"Name (optional)",value:existing?existing.title:""}],"Save",o=>{
+    const u=norm(o.u); let host=""; try{ host=new URL(u).hostname.replace(/^www\./,""); }catch(e){ toast("That doesn't look like a web address"); return; }
+    const l=existing||{id:uid()}; l.url=u; l.title=o.n||host; if(!existing) S.links.push(l); save(); render(); });
+}
+function linkMenu(l){
+  menu(l.title,[{icon:"open",label:"Open",run:()=>window.open(l.url,"_blank","noopener")},
+    {icon:"edit",label:"Edit link",run:()=>editLink(l)},
+    {icon:"copy",label:"Copy link",run:async()=>{ try{ await navigator.clipboard.writeText(l.url); toast("Link copied"); }catch(e){ toast(l.url); } }},
+    {icon:"del",label:"Delete link",danger:true,run:()=>confirm2("Delete this link?",`${l.title} will be removed from every project.`,"Delete",()=>{ S.links=S.links.filter(x=>x!==l); save(); render(); })}]);
+}
+function editProject(p){
+  prompt2(p?"Edit project":"New project",[{key:"n",hint:"Project name, e.g. B44 Zone 2 Tool Readiness",value:p?p.name:"",required:true},{key:"loc",hint:"Location, e.g. Kincardine, ON",value:p?p.location:""}],p?"Save":"Create",o=>{
+    if(p){ p.name=o.n; p.location=o.loc; save(); render(); return; }
+    const np={id:uid(),name:o.n,location:o.loc,createdAt:Date.now(),crew:[],phones:{},logs:[],templates:[]};
+    S.projects.unshift(np); save(); ui.tab="logs"; ui.query=""; go(`/p/${np.id}`); });
+}
+
+/* ---------- event wiring per screen ---------- */
+function bind(r){
+  const app=$("#app");
+  app.onclick=null;
+  const B=(sel,fn)=>app.querySelectorAll(sel).forEach(el=>el.addEventListener("click",e=>{ e.stopPropagation(); fn(el,e); }));
+  B("[data-back]",()=>back());
+  B("[data-go]",el=>go(el.dataset.go));
+  if(r.name==="projects"){
+    const askName=()=>ask("What's your name?","Shown on completed fields and photos",S.userName,"Save",v=>{ S.userName=v; save(); render(); });
+    B("[data-name]",askName);
+    if(!S.userName && !ui.askedName){ ui.askedName=true; setTimeout(askName,350); }
+    B("[data-newproject]",()=>editProject(null));
+    B("[data-open]",el=>{ ui.tab="logs"; ui.query=""; go(`/p/${el.dataset.open}`); });
+    B("[data-pmenu]",el=>{ const p=findP(el.dataset.pmenu); menu(p.name,[{icon:"edit",label:"Edit name and location",run:()=>editProject(p)},
+      {icon:"del",label:"Delete project",danger:true,run:()=>confirm2(`Delete ${p.name}?`,"This removes all of its daily logs and photos. It can't be undone.","Delete",async()=>{
+        for(const l of p.logs) await deletePhotoFiles(l.tasks); S.projects=S.projects.filter(x=>x!==p); save(); render(); })}]); });
+  }
+  if(r.name==="project"){
+    const p=findP(r.pid);
+    B("[data-tab]",el=>{ ui.tab=el.dataset.tab; ui.query=""; render(); });
+    const q=app.querySelector("[data-q]"); q.oninput=()=>{ ui.query=q.value; const pos=q.selectionStart; render(); const nq=app.querySelector("[data-q]"); nq.focus(); nq.setSelectionRange(pos,pos); };
+    B("[data-plus]",()=> ui.tab==="links"?editLink(null):newLog(p,null));
+    B("[data-log]",el=>go(`/l/${p.id}/${el.dataset.log}`));
+    B("[data-lmenu]",el=>logMenu(p,findL(p,el.dataset.lmenu),false));
+    B("[data-tmpl]",el=>newLog(p,p.templates.find(t=>t.id===el.dataset.tmpl)));
+    B("[data-tmenu]",el=>{ const t=p.templates.find(x=>x.id===el.dataset.tmenu); menu(t.name,[{icon:"add",label:"New checklist from this template",run:()=>newLog(p,t)},
+      {icon:"edit",label:"Rename template",run:()=>ask("Rename template","Template name",t.name,"Save",v=>{ t.name=v; save(); render(); })},
+      {icon:"del",label:"Delete template",danger:true,run:()=>confirm2("Delete template?",`${t.name} will be removed. Checklists made from it stay.`,"Delete",()=>{ p.templates=p.templates.filter(x=>x!==t); save(); render(); })}]); });
+    B("[data-link]",el=>window.open(S.links.find(x=>x.id===el.dataset.link).url,"_blank","noopener"));
+    B("[data-kmenu]",el=>linkMenu(S.links.find(x=>x.id===el.dataset.kmenu)));
+    B("[data-projmenu]",()=>menu(p.name,[{icon:"edit",label:"Edit name and location",run:()=>editProject(p)},
+      {icon:"personadd",label:"Crew and phone numbers",run:()=>crewSheet(p)},
+      {icon:"share",label:"Report email list",run:()=>emailList(p)}]));
+  }
+  if(r.name==="log"){
+    const p=findP(r.pid), l=findL(p,r.lid), T=id=>l.tasks.find(t=>t.id===id);
+    const sc=app.querySelector(".scroll"), tt=app.querySelector(".toptitle");
+    const upd=()=>tt.classList.toggle("show", sc.scrollTop>110); sc.addEventListener("scroll",upd,{passive:true}); upd();
+    B("[data-logmenu]",()=>logMenu(p,l,true));
+    B("[data-crew]",()=>assignSheet(p,l.crew,"Checklist crew",sel=>{ l.crew=sel; save(); render(); }));
+    B("[data-filter]",el=>{ const f=+el.dataset.filter; ui.filter=ui.filter===f?0:f; render(); });
+    B("[data-check]",el=>toggle(p,l,T(el.dataset.check),el));
+    B("[data-open]",el=>go(`/t/${p.id}/${l.id}/${el.dataset.open}`));
+    B("[data-task]",el=>go(`/t/${p.id}/${l.id}/${el.dataset.task}`));
+    B("[data-cam]",el=>pickPhoto(T(el.dataset.cam),true));
+    B("[data-view]",el=>{ const [tid,i]=el.dataset.view.split(":"); viewPhoto(T(tid).photos[+i]); });
+    B("[data-newfield]",()=>ask("New field","e.g. Pack up sea can 317503","","Add",v=>addTask(l,v)));
+    B("[data-mic]",()=>voiceAdd(l));
+  }
+  if(r.name==="task"){
+    const p=findP(r.pid), l=findL(p,r.lid), t=l.tasks.find(x=>x.id===r.tid);
+    const ti=app.querySelector("[data-title]"), no=app.querySelector("[data-notes]");
+    const grow=el=>{ el.style.height="auto"; el.style.height=el.scrollHeight+"px"; }; [ti,no].forEach(el=>{ grow(el); el.addEventListener("input",()=>grow(el)); });
+    ti.addEventListener("change",()=>{ const v=ti.value.trim(); if(v){ t.title=v; save(); } else ti.value=t.title; });
+    ti.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); ti.blur(); } });
+    no.addEventListener("input",()=>{ t.notes=no.value; save(); });
+    B("[data-check]",()=>toggle(p,l,t));
+    B("[data-assign]",()=>assignSheet(p,t.assignees,"Assign users",sel=>{
+      const added=sel.filter(n=>!t.assignees.includes(n)); t.assignees=sel; save(); render();
+      if(added.length===1) toast(`Text this field to ${added[0]}?`,"Text it",()=>textTask(p,l,t,added[0]));
+    }));
+    B("[data-text]",el=>textTask(p,l,t,el.dataset.text));
+    B("[data-addphoto]",()=>menu(null,[{icon:"cam",label:"Take photo",run:()=>pickPhoto(t,true)},{icon:"gallery",label:"Choose from library",run:()=>pickPhoto(t,false)}]));
+    B("[data-view]",el=>viewPhoto(t.photos[+el.dataset.view.split(":")[1]]));
+    B("[data-rmph]",el=>confirm2("Remove this photo?","It will be deleted from this field.","Remove",async()=>{ const ph=t.photos.splice(+el.dataset.rmph,1)[0]; await Store.del("photos",ph.file); urlCache.delete(ph.file); save(); render(); }));
+    B("[data-req]",()=>{ t.photosRequired=!t.photosRequired; save(); render(); });
+    B("[data-secure]",()=>{ t.loadSecured=!t.loadSecured; t.securedBy=t.loadSecured?me():""; t.securedAt=t.loadSecured?Date.now():0; save(); render(); });
+    const del=()=>confirm2("Delete this field?","Its notes and photos will be removed.","Delete",async()=>{ await deletePhotoFiles([t]); l.tasks=l.tasks.filter(x=>x!==t); save(); back(); });
+    B("[data-delfield]",del);
+    B("[data-fieldmenu]",()=>{ const i=l.tasks.indexOf(t); const mv=d=>{ const j=i+d; if(j<0||j>=l.tasks.length) return; l.tasks.splice(i,1); l.tasks.splice(j,0,t); save(); toast(d<0?"Moved up":"Moved down"); };
+      menu(null,[{icon:"cam",label:"Take photo",run:()=>pickPhoto(t,true)},{icon:"gallery",label:"Choose from library",run:()=>pickPhoto(t,false)},
+        ...(i>0?[{icon:"up",label:"Move up",run:()=>mv(-1)}]:[]),...(i<l.tasks.length-1?[{icon:"down",label:"Move down",run:()=>mv(1)}]:[]),
+        {icon:"del",label:"Delete field",danger:true,run:del}]); });
+  }
+}
+/* ---------- reports: tiny ZIP + DOCX + PDF writers, no outside libraries ---------- */
+const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=CRC[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zip(files){ // [{name, data:Uint8Array}] stored (no compression), valid for Word
+  const enc=new TextEncoder(); const parts=[], central=[]; let off=0;
+  const u16=v=>[v&255,(v>>8)&255], u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  for(const f of files){ const nm=enc.encode(f.name), c=crc32(f.data), sz=f.data.length;
+    const hdr=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)]);
+    parts.push(hdr,nm,f.data);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(sz),...u32(sz),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+    off+=hdr.length+nm.length+sz; }
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  return new Blob([...parts,...central,end],{type:"application/zip"});
+}
+async function jpegFor(fileId,max){ // downsized JPEG bytes + size for reports
+  const b=await Store.get("photos",fileId); if(!b) return null;
+  const u=URL.createObjectURL(b);
+  try{ const img=await loadImg(u); const s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement("canvas"); c.width=Math.round(img.naturalWidth*s); c.height=Math.round(img.naturalHeight*s);
+    const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height);
+    const out=await new Promise(r=>c.toBlob(r,"image/jpeg",0.82));
+    return {bytes:new Uint8Array(await out.arrayBuffer()),w:c.width,h:c.height};
+  }catch(e){ return null; } finally{ URL.revokeObjectURL(u); }
+}
+const xesc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"");
+async function buildDocx(p,l){
+  const NAVY="14233A",GREY="6B7685",GREEN="1DB04B",RED="D93B3F",TEXT="1B2533"; let body="",rels="",n=0; const media=[];
+  const run=(t,b,pt,col,font)=>`<w:r><w:rPr><w:rFonts w:ascii="${font||"Calibri"}" w:hAnsi="${font||"Calibri"}" w:cs="${font||"Calibri"}"/>${b?"<w:b/>":""}<w:color w:val="${col}"/><w:sz w:val="${pt*2}"/><w:szCs w:val="${pt*2}"/></w:rPr><w:t xml:space="preserve">${xesc(t)}</w:t></w:r>`;
+  const para=(t,b,pt,col,after,indent)=>`<w:p><w:pPr><w:spacing w:before="0" w:after="${after}"/>${indent?'<w:ind w:left="440"/>':""}</w:pPr>${String(t).split("\n").map((x,i)=>(i?"<w:r><w:br/></w:r>":"")+run(x,b,pt,col)).join("")}</w:p>`;
+  const d=doneCount(l), tot=l.tasks.length, at=Date.now();
+  if(p.name) body+=para(p.name.toUpperCase(),false,10,GREY,40);
+  body+=para(logTitle(l),true,22,NAVY,60);
+  if(p.location) body+=para(p.location,false,11,GREY,20);
+  body+=para(`Generated ${Fmt.longStamp(at)} by ${me()}`,false,10,GREY,120);
+  body+=`<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="8" w:color="D5D9DE"/></w:pBdr><w:spacing w:before="0" w:after="240"/></w:pPr>${run(`${d}/${tot} fields completed`,true,12,d===tot&&tot?GREEN:NAVY)}${people(l).length?run(`     Crew: ${people(l).join(", ")}`,false,11,GREY):""}</w:p>`;
+  for(const t of l.tasks){
+    body+=`<w:p><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="40"/><w:ind w:left="440" w:hanging="440"/></w:pPr>${run(t.done?"\u2714  ":"\u25CB  ",true,13,t.done?GREEN:"A3ACB7","Segoe UI Symbol")}${run(t.title||"(Untitled field)",true,13,NAVY)}</w:p>`;
+    body+= t.done?para(`Completed by ${t.completedBy}, ${Fmt.stamp(t.completedAt)}`,false,9,GREY,40,true):para("Not completed",false,9,RED,40,true);
+    if(t.loadSecured) body+=`<w:p><w:pPr><w:spacing w:before="0" w:after="40"/><w:ind w:left="440"/></w:pPr>${run("\u2714 ",true,9,GREEN,"Segoe UI Symbol")}${run("Load securement completed",true,9,GREEN)}${t.securedBy?run(` by ${t.securedBy}, ${Fmt.stamp(t.securedAt)}`,false,9,GREY):""}</w:p>`;
+    if(t.assignees.length) body+=para(`Assigned: ${t.assignees.join(", ")}`,false,9,GREY,40,true);
+    if(t.notes.trim()) body+=para(t.notes.trim(),false,11,TEXT,80,true);
+    if(t.photosRequired&&!t.photos.length) body+=para("Photos required: none attached",false,9,RED,40,true);
+    if(t.photos.length){
+      body+=`<w:tbl><w:tblPr><w:tblW w:w="9640" w:type="dxa"/><w:tblInd w:w="440" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="4820"/><w:gridCol w:w="4820"/></w:tblGrid>`;
+      for(let i=0;i<t.photos.length;i+=2){ body+="<w:tr><w:trPr><w:cantSplit/></w:trPr>";
+        for(let j=i;j<i+2;j++){ body+=`<w:tc><w:tcPr><w:tcW w:w="4820" w:type="dxa"/></w:tcPr>`;
+          if(j<t.photos.length){ const ph=t.photos[j], e=await jpegFor(ph.file,1100);
+            if(!e) body+=para("(Photo missing)",false,9,RED,40);
+            else{ n++; media.push({name:`word/media/image${n}.jpeg`,data:e.bytes});
+              rels+=`<Relationship Id="rIdImg${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${n}.jpeg"/>`;
+              const sc=Math.min(3.15/e.w,2.6/e.h), cx=Math.round(e.w*sc*914400), cy=Math.round(e.h*sc*914400);
+              body+=`<w:p><w:pPr><w:keepNext/><w:spacing w:before="80" w:after="20"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Photo ${n}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${n}" name="image${n}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdImg${n}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+              body+=para(`${ph.addedBy}, ${Fmt.stamp(ph.addedAt)}`,false,8,GREY,160); }
+          } else body+="<w:p/>";
+          body+="</w:tc>"; }
+        body+="</w:tr>"; }
+      body+=`</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr></w:p>`;
+    }
+  }
+  const H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', E=s=>new TextEncoder().encode(s);
+  return zip([
+    {name:"[Content_Types].xml",data:E(H+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')},
+    {name:"_rels/.rels",data:E(H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')},
+    {name:"word/_rels/document.xml.rels",data:E(H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+rels+'</Relationships>')},
+    {name:"word/document.xml",data:E(H+'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'+body+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>')},
+    ...media]);
+}
+
+/* PDF: US Letter, Helvetica, photos embedded as JPEG */
+class Pdf{
+  constructor(footer){ this.W=612; this.H=792; this.M=44; this.objs=[]; this.pages=[]; this.imgs=[]; this.footer=footer;
+    this.ctx=document.createElement("canvas").getContext("2d"); this.newPage(); }
+  measure(t,size,bold){ this.ctx.font=`${bold?"bold ":""}${size}px Helvetica, Arial, "Liberation Sans", sans-serif`; return this.ctx.measureText(t).width; }
+  enc(t){ return String(t).replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/\u2026/g,"...")
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g,"?").replace(/[\\()]/g,"\\$&"); }
+  newPage(){ if(this.cur) this.finishPage(); this.cur={ops:[]}; this.pages.push(this.cur); this.y=this.M; }
+  finishPage(){ const n=this.pages.length; this.text(this.footer,7.5,false,"8A94A1",this.M,this.H-24,true);
+    const pn=`Page ${n}`; this.text(pn,7.5,false,"8A94A1",this.W-this.M-this.measure(pn,7.5),this.H-24,true); }
+  ensure(h){ if(this.y+h>this.H-this.M-18) this.newPage(); }
+  rgb(hex){ return [0,2,4].map(i=>(parseInt(hex.substr(i,2),16)/255).toFixed(3)).join(" "); }
+  text(t,size,bold,col,x,y,abs){ this.cur.ops.push(`BT /${bold?"F2":"F1"} ${size} Tf ${this.rgb(col)} rg ${x.toFixed(2)} ${(this.H-y).toFixed(2)} Td (${this.enc(t)}) Tj ET`); }
+  wrap(t,size,bold,width){ const out=[]; for(const para of String(t).split("\n")){ let line="";
+      for(const w of para.split(/\s+/)){ const tryl=line?line+" "+w:w; if(this.measure(tryl,size,bold)<=width||!line) line=tryl; else { out.push(line); line=w; } }
+      out.push(line); } return out; }
+  block(t,size,bold,col,x,width,after=0){ const lines=this.wrap(t,size,bold,width), lh=size*1.25;
+    for(const ln of lines){ this.ensure(lh); this.text(ln,size,bold,col,x,this.y+size); this.y+=lh; } this.y+=after; }
+  rect(x,y,w,h,col){ this.cur.ops.push(`${this.rgb(col)} rg ${x} ${this.H-y-h} ${w} ${h} re f`); }
+  line(x1,y,x2,col){ this.cur.ops.push(`${this.rgb(col)} RG 0.8 w ${x1} ${this.H-y} m ${x2} ${this.H-y} l S`); }
+  circle(cx,cy,r,col,fill){ const k=0.5523*r, Y=this.H-cy;
+    this.cur.ops.push(`${this.rgb(col)} ${fill?"rg":"RG"} 1.4 w ${cx+r} ${Y} m ${cx+r} ${Y+k} ${cx+k} ${Y+r} ${cx} ${Y+r} c ${cx-k} ${Y+r} ${cx-r} ${Y+k} ${cx-r} ${Y} c ${cx-r} ${Y-k} ${cx-k} ${Y-r} ${cx} ${Y-r} c ${cx+k} ${Y-r} ${cx+r} ${Y-k} ${cx+r} ${Y} c ${fill?"f":"S"}`); }
+  tick(cx,cy){ const Y=this.H-cy; this.cur.ops.push(`1 1 1 RG 1.8 w 1 J 1 j ${cx-3.4} ${Y-0.2} m ${cx-0.9} ${Y-2.7} l ${cx+3.6} ${Y+2.4} l S`); }
+  image(e,x,y,w,h){ const name=`Im${this.imgs.length+1}`; this.imgs.push({name,...e}); this.cur.ops.push(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${(this.H-y-h).toFixed(2)} cm /${name} Do Q`); }
+  blob(){ this.finishPage(); this.cur=null;
+    const chunks=[], offs=[]; let len=0; const push=s=>{ const b=typeof s==="string"?Uint8Array.from(s,c=>c.charCodeAt(0)&255):s; chunks.push(b); len+=b.length; };
+    const objs=[]; const add=v=>{ objs.push(v); return objs.length; };
+    const cat=add(null), pagesId=add(null), f1=add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"), f2=add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+    const imgIds={}; for(const im of this.imgs) imgIds[im.name]=add({stream:im.bytes,dict:`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>`});
+    const xo=Object.entries(imgIds).map(([n,id])=>`/${n} ${id} 0 R`).join(" ");
+    const kids=[]; for(const pg of this.pages){ const content=pg.ops.join("\n"); const cid=add({stream:Uint8Array.from(content,c=>c.charCodeAt(0)&255),dict:`<< /Length ${content.length} >>`});
+      kids.push(add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${this.W} ${this.H}] /Contents ${cid} 0 R /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> /XObject << ${xo} >> >> >>`)); }
+    objs[cat-1]=`<< /Type /Catalog /Pages ${pagesId} 0 R >>`; objs[pagesId-1]=`<< /Type /Pages /Kids [${kids.map(k=>k+" 0 R").join(" ")}] /Count ${kids.length} >>`;
+    push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+    objs.forEach((o,i)=>{ offs.push(len); push(`${i+1} 0 obj\n`); if(typeof o==="string") push(o+"\n"); else { push(o.dict+"\nstream\n"); push(o.stream); push("\nendstream\n"); } push("endobj\n"); });
+    const xref=len; push(`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join(""));
+    push(`trailer\n<< /Size ${objs.length+1} /Root ${cat} 0 R >>\nstartxref\n${xref}\n%%EOF`);
+    return new Blob(chunks,{type:"application/pdf"}); }
+}
+async function buildPdf(p,l){
+  const pdf=new Pdf(logTitle(l)), M=pdf.M, W=pdf.W-2*M; const d=doneCount(l), tot=l.tasks.length;
+  if(p.name) pdf.block(p.name.toUpperCase(),8.5,false,"6B7685",M,W,4);
+  pdf.block(logTitle(l),22,true,"14233A",M,W,6);
+  if(p.location) pdf.block(p.location,10,false,"6B7685",M,W,2);
+  pdf.block(`Generated ${Fmt.longStamp(Date.now())} by ${me()}`,10,false,"6B7685",M,W,14);
+  pdf.block(`${d}/${tot} fields completed`,13,true,"14233A",M,W,6);
+  pdf.rect(M,pdf.y,W,6,"E4E7EC"); if(tot&&d) pdf.rect(M,pdf.y,W*d/tot,6,"1DB04B"); pdf.y+=14;
+  if(people(l).length) pdf.block(`Crew: ${people(l).join(", ")}`,10,false,"6B7685",M,W,4);
+  pdf.y+=8; pdf.line(M,pdf.y,M+W,"E2E6EB"); pdf.y+=16;
+  for(const t of l.tasks){
+    const x=M+24, w=pdf.W-M-x; const lines=pdf.wrap(t.title||"(Untitled field)",13,true,w);
+    pdf.ensure(lines.length*16.25+40);
+    const cy=pdf.y+8.5; if(t.done){ pdf.circle(M+8,cy,7.5,"1DB04B",true); pdf.tick(M+8,cy); } else pdf.circle(M+8,cy,6.8,"A3ACB7",false);
+    pdf.block(t.title||"(Untitled field)",13,true,"14233A",x,w,3);
+    if(t.done) pdf.block(`Completed by ${t.completedBy}, ${Fmt.stamp(t.completedAt)}`,8.5,false,"6B7685",x,w,2);
+    else pdf.block("Not completed",8.5,false,"D93B3F",x,w,2);
+    if(t.loadSecured) pdf.block(`Load securement completed${t.securedBy?` by ${t.securedBy}, ${Fmt.stamp(t.securedAt)}`:""}`,8.5,true,"148A3A",x,w,2);
+    if(t.assignees.length) pdf.block(`Assigned: ${t.assignees.join(", ")}`,8.5,false,"6B7685",x,w,2);
+    if(t.notes.trim()){ pdf.y+=4; pdf.block(t.notes.trim(),10.5,false,"1B2533",x,w,2); }
+    if(t.photosRequired&&!t.photos.length) pdf.block("Photos required: none attached",8.5,false,"D93B3F",x,w,2);
+    if(t.photos.length){ pdf.y+=8; const gap=12, colW=(w-gap)/2, boxH=175;
+      for(let i=0;i<t.photos.length;i+=2){ pdf.ensure(boxH+22);
+        for(let j=i;j<Math.min(i+2,t.photos.length);j++){ const ph=t.photos[j], left=x+(j-i)*(colW+gap); const e=await jpegFor(ph.file,900);
+          if(!e){ pdf.text("(Photo missing)",8.5,false,"D93B3F",left,pdf.y+12); continue; }
+          const s=Math.min(colW/e.w,boxH/e.h), dw=e.w*s, dh=e.h*s; pdf.image(e,left,pdf.y,dw,dh);
+          pdf.text(`${ph.addedBy}, ${Fmt.stamp(ph.addedAt)}`,7.5,false,"8A94A1",left,pdf.y+dh+11); }
+        pdf.y+=boxH+22; } }
+    pdf.y+=10; pdf.ensure(12); pdf.line(M,pdf.y,M+W,"E2E6EB"); pdf.y+=16;
+  }
+  return pdf.blob();
+}
+async function deliver(blob,filename,mime){
+  const file=new File([blob],filename,{type:mime});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:filename}); return; }catch(e){ if(e&&e.name==="AbortError") return; }
+  }
+  try{ if(window.claude&&window.claude.use){ const dl=await window.claude.use("downloads"); if(dl){ await dl.save({filename,data:blob}); return; } } }catch(e){ if(e&&e.code==="declined") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },4000);
+}
+async function exportReport(p,l,word){
+  busy(true, word?"Building Word report…":"Building PDF report…");
+  try{ const blob= word? await buildDocx(p,l) : await buildPdf(p,l);
+    busy(false); await deliver(blob, Fmt.fileSafe(logTitle(l))+(word?".docx":".pdf"), word?"application/vnd.openxmlformats-officedocument.wordprocessingml.document":"application/pdf");
+  }catch(e){ busy(false); console.error(e); toast("Couldn't build the report. Please try again."); }
+}
+
+/* ---------- start ---------- */
+(async function init(){
+  await Store.open();
+  try{ const saved=await Store.get("kv","state"); if(saved) S=Object.assign({userName:"",projects:[],links:[]},saved); }catch(e){}
+  S.projects.forEach(p=>{ p.phones=p.phones||{}; p.crew=p.crew||[]; p.templates=p.templates||[]; });
+  const onPick=async e=>{ const files=[...e.target.files]; if(photoTarget&&files.length) await addPhotos(photoTarget,files); photoTarget=null; };
+  $("#camIn").onchange=onPick; $("#galIn").onchange=onPick;
+  if(location.hash && location.hash!=="#") history.replaceState(null,"",location.pathname+location.search);
+  render();
+  // Offline support, and ask the phone to keep this app's data even when storage runs low
+  if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+})();
+</script>
+</body>
+</html>

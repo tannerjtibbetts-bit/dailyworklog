@@ -1,0 +1,16 @@
+{
+  "name": "Daily Work Log",
+  "short_name": "Work Log",
+  "description": "Daily work logs, checklists, photos and reports for the crew.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F1A2B",
+  "theme_color": "#0F1A2B",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
