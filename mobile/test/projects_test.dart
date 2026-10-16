@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dailyworklog/data/fmt.dart';
 import 'package:dailyworklog/data/models.dart';
 import 'package:dailyworklog/data/store.dart';
+import 'package:dailyworklog/export/export.dart';
 import 'package:dailyworklog/screens/note_screen.dart';
 import 'package:dailyworklog/screens/notify_screen.dart';
 import 'package:dailyworklog/screens/overtime_pane.dart';
@@ -168,8 +169,8 @@ void main() {
     });
 
     test('email list keeps valid addresses once', () {
-      expect(parseEmails('a@b.com, bad; c@d.ca a@b.com'), ['a@b.com', 'c@d.ca']);
-      expect(parseEmails('nope'), isEmpty);
+      expect(Export.parseEmails('a@b.com, bad; c@d.ca a@b.com'), ['a@b.com', 'c@d.ca']);
+      expect(Export.parseEmails('nope'), isEmpty);
     });
 
     test('new checklist: carry over unfinished keeps notes, copy all is fresh, crew copied', () {
@@ -260,7 +261,7 @@ void main() {
       await tester.pumpWidget(app(const ProjectsScreen()));
       await tester.pump();
       expect(find.text('No projects yet.\nTap + to create your first one.'), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('New project').first);
+      await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
       expect(find.text('New project'), findsWidgets);
       await tester.tap(find.text('Create'));
@@ -328,7 +329,7 @@ void main() {
       // Empty rows go, then the sheet is redrawn with one row per crew member again.
       expect(p.overtime.rows.length, 2);
 
-      await tester.tap(find.text('Notes'));
+      await tester.tap(find.text('Notes').first);
       await tester.pumpAndSettle();
       expect(find.text('Pump 3 leaking'), findsOneWidget);
       expect(find.text('Harnesses in trailer'), findsOneWidget);
@@ -447,12 +448,19 @@ void main() {
       Store.instance.projects.add(p);
       await tester.pumpWidget(app(NotifyScreen(projectId: p.id)));
       await tester.pumpAndSettle();
+      // The crew picker opens first.
+      expect(find.text('Al Smith'), findsWidgets);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
       expect(find.text('Notify'), findsOneWidget);
       expect(find.text('Send to'), findsOneWidget);
       expect(find.text('Send note'), findsOneWidget);
       await tester.tap(find.text('Send note'));
       await tester.pump();
       expect(find.text('Choose who to send it to'), findsOneWidget);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
       expect(p.notices.length, 1);
     });
   });

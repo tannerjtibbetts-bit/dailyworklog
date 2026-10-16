@@ -7,14 +7,16 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../ui/theme.dart';
 
-/// Card colours for a field: North pale blue, South pale pink, no area white.
+/// Card colours for a field: North pale blue, South pale pink, Unzoned pale yellow, no area white.
 /// Done adds a green border all round (and pale green when no area is set).
 BoxDecoration fieldCardDecoration(Task t) {
-  final north = t.side == Task.north, south = t.side == Task.south;
+  final north = t.side == Task.north, south = t.side == Task.south, unzoned = t.side == Task.unzoned;
   final color = north
       ? C.northBg
       : south
       ? C.southBg
+      : unzoned
+      ? C.unzonedBg
       : t.done
       ? C.doneBg
       : Colors.white;
@@ -24,6 +26,8 @@ BoxDecoration fieldCardDecoration(Task t) {
       ? C.northStroke
       : south
       ? C.southStroke
+      : unzoned
+      ? C.unzonedStroke
       : C.cardStroke;
   return cardDecoration(color: color, stroke: stroke, width: t.done ? 2.5 : 1);
 }
@@ -35,6 +39,8 @@ Color fieldAccent(Task t) => t.done
     ? C.northAccent
     : t.side == Task.south
     ? C.southAccent
+    : t.side == Task.unzoned
+    ? C.unzonedAccent
     : C.sky;
 
 /// The round completion check: grey ring when open, filled green with a tick when done.

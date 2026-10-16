@@ -455,17 +455,21 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     ),
     const SizedBox(height: 18),
     _divider,
-    // South / North: reports list South fields first, then North
+    // South / North / Unzoned: reports list South fields first, then North, then Unzoned
     Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Expanded(
-            child: Text('Area', style: TextStyle(color: C.navy, fontSize: 21)),
+          const Text('Area', style: TextStyle(color: C.navy, fontSize: 21)),
+          Wrap(
+            spacing: 12,
+            children: [
+              _side(t, Task.south, 'South'),
+              _side(t, Task.north, 'North'),
+              _side(t, Task.unzoned, 'Unzoned'),
+            ],
           ),
-          _side(t, Task.south, 'South'),
-          const SizedBox(width: 16),
-          _side(t, Task.north, 'North'),
         ],
       ),
     ),

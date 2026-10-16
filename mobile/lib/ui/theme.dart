@@ -18,13 +18,17 @@ class C {
   // Surfaces
   static const bg = Color(0xFFEAF2FB);
   static const cardStroke = Color(0xFFD3E1F1);
-  // Field cards by area: North pale blue, South pale pink
+  // Field cards by area: North pale blue, South pale pink, Unzoned pale yellow
   static const northBg = Color(0xFFDDEBFC);
   static const northStroke = Color(0xFFA9CBF2);
   static const northAccent = Color(0xFF5E9BE6);
   static const southBg = Color(0xFFFCE8EF);
   static const southStroke = Color(0xFFF0BFD0);
   static const southAccent = Color(0xFFE07FA3);
+  // Unzoned: pale yellow
+  static const unzonedBg = Color(0xFFFFF5D1);
+  static const unzonedStroke = Color(0xFFEED98C);
+  static const unzonedAccent = Color(0xFFE0B92E);
   static const doneBg = Color(0xFFF3FBF6);
   static const chip = Color(0xFFDAE6F4);
   static const divider = Color(0xFFD3E1F1);

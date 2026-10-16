@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
@@ -43,16 +42,6 @@ String normalizeUrl(String raw) {
 String hostOf(String url) {
   final h = Uri.tryParse(url)?.host ?? '';
   return h.startsWith('www.') ? h.substring(4) : h;
-}
-
-/// The emails typed into the Report email list box: valid ones only, no repeats.
-List<String> parseEmails(String text) {
-  final list = <String>[];
-  for (final e in text.split(RegExp(r'[\s,;]+'))) {
-    final t = e.trim();
-    if (RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t) && !list.contains(t)) list.add(t);
-  }
-  return list;
 }
 
 /// Checklists newest first (same date: newest created first).
@@ -290,17 +279,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
 
   // ----- menus -----
 
-  Future<void> _editEmailList(Project p, {VoidCallback? after}) async {
-    final text = await prompt(context, 'Report email list', 'Emails, separated by commas', Fmt.join(p.emails), 'Save',
-        keyboard: TextInputType.emailAddress, caps: TextCapitalization.none);
-    if (text == null || !mounted) return;
-    final list = parseEmails(text);
-    p.emails = list;
-    store.save();
-    toast(context, list.isEmpty ? 'No valid email addresses found' : 'Saved ${Fmt.plural(list.length, 'address', 'addresses')}');
-    after?.call();
-  }
-
   void _projectMenu() {
     final p = project!;
     menu(context, p.name, [
@@ -318,7 +296,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         p.location = n;
         store.save();
       }),
-      SheetItem(Icons.send_outlined, 'Report email list', () => _editEmailList(p)),
+      SheetItem(Icons.send_outlined, 'Report email list', () => Export.editEmailList(context, p)),
       SheetItem(Icons.person_add_alt_1, 'Manage crew', () => showManageCrew(context, p)),
       SheetItem(Icons.badge_outlined, 'My form details', () => FormPrefill.editDetails(context)),
       SheetItem(Icons.delete_outline, 'Delete project', () {
@@ -335,15 +313,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
   void _logMenu(DailyLog l) {
     final p = project!;
     menu(context, l.displayTitle(), [
-      SheetItem(Icons.send_outlined, 'Email report', () {
-        if (p.emails.isEmpty) {
-          _editEmailList(p, after: () {
-            if (p.emails.isNotEmpty) Export.report(context, p, l, word: false);
-          });
-        } else {
-          Export.report(context, p, l, word: false);
-        }
-      }),
+      SheetItem(Icons.send_outlined, 'Email report', () => Export.email(context, p, l)),
       SheetItem(Icons.picture_as_pdf_outlined, 'Export to PDF', () => Export.report(context, p, l, word: false)),
       SheetItem(Icons.article_outlined, 'Export to Word', () => Export.report(context, p, l, word: true)),
       SheetItem(Icons.edit_outlined, 'Rename Checklist', () async {
@@ -372,24 +342,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
 
   /// Opens a link (forms open with your usual answers) and notes the use on today's checklist;
   /// it only goes in the report if ticked.
-  Future<void> _openLink(Link l) async {
-    await FormPrefill.openLink(context, l);
-    _recordLink(l);
-  }
+  Future<void> _openLink(Link l) => FormPrefill.openLink(context, l, onOpened: () => _recordLink(l));
 
-  Future<void> _openPlain(Link l) async {
-    final uri = Uri.tryParse(l.url);
-    var ok = false;
-    try {
-      ok = uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
-    if (!mounted) return;
-    if (!ok) {
-      toast(context, 'No app on this phone can open that link', long: true);
-      return;
-    }
-    _recordLink(l);
-  }
+  Future<void> _openPlain(Link l) => FormPrefill.openPlain(context, l, onOpened: () => _recordLink(l));
 
   void _recordLink(Link l) {
     final p = project;
@@ -468,6 +423,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
     menu(context, l.title, [
       SheetItem(Icons.open_in_new, 'Open', () => _openLink(l)),
       if (form) SheetItem(Icons.person_outline, 'My form details', () => FormPrefill.editDetails(context)),
+      if (form)
+        SheetItem(Icons.copy, 'Copy my details',
+            () => FormPrefill.copyDetails(context, l, onOpened: () => _recordLink(l))),
       if (form) SheetItem(Icons.open_in_new, 'Open without filling in', () => _openPlain(l)),
       SheetItem(Icons.edit_outlined, 'Edit link', () => _editLink(l)),
       SheetItem(Icons.copy, 'Copy link', () {

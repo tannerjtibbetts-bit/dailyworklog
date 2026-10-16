@@ -34,24 +34,20 @@ bool matchesFilter(Task t, FieldFilter f, String me) {
   }
 }
 
-/// South first, then North, then fields with no area (same order as the report).
-int areaRank(Task t) => t.side == Task.south
-    ? 0
-    : t.side == Task.north
-    ? 1
-    : 2;
+/// South first, then North, then Unzoned, then fields with no area (same order as the report).
+int areaRank(Task t) => Task.areaRank(t.side);
 
-/// The fields shown for a filter, South then North then the rest, keeping the order within an area.
+/// The fields shown for a filter, South, North, Unzoned, then the rest, keeping the order within an area.
 List<Task> visibleFields(List<Task> tasks, FieldFilter f, String me) {
-  final groups = [<Task>[], <Task>[], <Task>[]];
+  final groups = [<Task>[], <Task>[], <Task>[], <Task>[]];
   for (final t in tasks) {
     if (matchesFilter(t, f, me)) groups[areaRank(t)].add(t);
   }
-  return [...groups[0], ...groups[1], ...groups[2]];
+  return [for (final g in groups) ...g];
 }
 
 /// Moves a dragged field from [from] to [to] (index after removal). Fields stay inside their
-/// area (South / North / none): returns null if the move would take it into another area.
+/// area (South / North / Unzoned / none): returns null if the move would take it into another area.
 List<Task>? moveField(List<Task> visible, int from, int to) {
   if (from < 0 || from >= visible.length || to < 0 || to >= visible.length) return null;
   final out = List.of(visible);
@@ -276,8 +272,14 @@ class _LogScreenState extends State<LogScreen> {
                   onSubmitted: (_) => submit(),
                 ),
                 const SizedBox(height: 8),
-                // One or the other (or neither)
-                Wrap(children: [tick(Task.south, 'South'), const SizedBox(width: 8), tick(Task.north, 'North')]),
+                // One of them (or none)
+                Wrap(children: [
+                  tick(Task.south, 'South'),
+                  const SizedBox(width: 8),
+                  tick(Task.north, 'North'),
+                  const SizedBox(width: 8),
+                  tick(Task.unzoned, 'Unzoned'),
+                ]),
               ],
             ),
             actions: [

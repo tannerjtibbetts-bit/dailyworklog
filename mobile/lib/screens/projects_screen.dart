@@ -1,7 +1,12 @@
 // Home screen: the list of projects (e.g. "B44 Zone 2 Tool Readiness").
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../access/access.dart';
+import '../data/backup.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/store.dart';
@@ -167,6 +172,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       SheetItem(Icons.person_add_alt_1, owner ? 'Approvals / hand over' : 'App owner / Approvals', () {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ApprovalsScreen()));
       }),
+      SheetItem(Icons.save_alt, 'Back up all my work', _backup),
+      SheetItem(Icons.restore, 'Restore from a backup', _restore),
       SheetItem(Icons.logout, 'Sign out', () async {
         await Access.signOut();
         if (!mounted) return;
@@ -174,6 +181,73 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             MaterialPageRoute(builder: (_) => const IntroScreen()), (_) => false);
       }),
     ]);
+  }
+
+  /// Everything (projects and photos) in one .zip, shared so it can be saved or sent to a new phone.
+  Future<void> _backup() async {
+    final zip = await _busy('Making your backup\u2026', () => Backup.create(store));
+    if (!mounted) return;
+    if (zip == null) {
+      toast(context, "Couldn't make the backup. Please try again.", long: true);
+      return;
+    }
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(ShareParams(
+      files: [XFile(zip.path, mimeType: 'application/zip')],
+      subject: 'Daily Work Log backup',
+      text: 'Daily Work Log backup. Save it somewhere safe, or send it to your new phone.',
+      sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    ));
+  }
+
+  /// Replaces everything on this phone with a backup .zip, after showing what's in it.
+  Future<void> _restore() async {
+    List<PlatformFile> picked;
+    try {
+      picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip']);
+    } catch (_) {
+      picked = [];
+    }
+    final path = picked.isEmpty ? null : picked.first.path;
+    if (path == null || !mounted) return;
+    final zip = File(path);
+    final info = await Backup.inspect(zip);
+    if (!mounted) return;
+    if (info == null) {
+      toast(context, "That file isn't a Daily Work Log backup", long: true);
+      return;
+    }
+    final from = info.userName.isEmpty ? '' : ' from ${info.userName}';
+    await confirm(
+        context,
+        'Restore this backup?',
+        'Backup$from: ${Fmt.plural(info.projects, 'project', 'projects')}, '
+            '${Fmt.plural(info.photos, 'photo', 'photos')}.\n\n'
+            'This replaces everything on this phone with the backup. It can\'t be undone.',
+        'Restore', () async {
+      final ok = await _busy('Restoring\u2026', () => Backup.restore(store, zip));
+      if (!mounted) return;
+      toast(context, ok == true ? 'Backup restored' : "Couldn't restore that backup", long: true);
+    });
+  }
+
+  /// Runs [job] behind a "please wait" box. Null if it failed.
+  Future<T?> _busy<T>(String message, Future<T> Function() job) async {
+    final nav = Navigator.of(context, rootNavigator: true);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => PopScope(canPop: false, child: AlertDialog(content: Text(message))),
+    );
+    T? result;
+    try {
+      result = await job();
+    } catch (_) {
+      result = null;
+    }
+    nav.pop();
+    return result;
   }
 
   Future<void> _editProject(Project? existing) async {

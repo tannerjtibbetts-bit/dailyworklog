@@ -54,11 +54,14 @@ void main() {
     expect(p.overtime.rows.single.name, 'Sam M');
   });
 
-  test('report groups: South, North, then Other', () {
-    final a = Task()..side = Task.north, b = Task()..side = Task.south, c = Task();
-    final g = Task.reportGroups([a, b, c]);
-    expect(g.map((e) => e.key), ['South', 'North', 'Other']);
+  test('report groups: South, North, Unzoned, then Other', () {
+    final a = Task()..side = Task.north, b = Task()..side = Task.south, c = Task(), u = Task()..side = Task.unzoned;
+    final g = Task.reportGroups([a, u, b, c]);
+    expect(g.map((e) => e.key), ['South', 'North', 'Unzoned', 'Other']);
     expect(Task.reportGroups([c]).single.key, '');
+    expect(Task.reportGroups([u]).single.key, 'Unzoned');
+    expect(Task.sideLabel(Task.unzoned), 'Unzoned');
+    expect([Task.south, Task.north, Task.unzoned, ''].map(Task.areaRank), [0, 1, 2, 3]);
   });
 
   test('dates', () {

@@ -59,7 +59,7 @@ class Photo {
 }
 
 class Task {
-  static const south = 'south', north = 'north';
+  static const south = 'south', north = 'north', unzoned = 'unzoned';
 
   String id = newId();
   String title = '';
@@ -79,24 +79,47 @@ class Task {
   /// Marked to carry over to the next shift's checklist; shown on the report.
   bool nextShift = false;
 
-  /// south, north or '' (not set). Reports list South fields first, then North.
+  /// south, north, unzoned or '' (not set). Reports list South, then North, then Unzoned.
   String side = '';
   List<String> assignees = [];
   List<Photo> photos = [];
 
-  static String sideLabel(String side) => side == south ? 'South' : side == north ? 'North' : '';
+  static String sideLabel(String side) => side == south
+      ? 'South'
+      : side == north
+          ? 'North'
+          : side == unzoned
+              ? 'Unzoned'
+              : '';
 
-  /// Fields grouped for the report: South, then North, then any without an area.
+  /// South first, then North, then Unzoned, then fields with no area (checklist and report order).
+  static int areaRank(String side) => side == south
+      ? 0
+      : side == north
+          ? 1
+          : side == unzoned
+              ? 2
+              : 3;
+
+  /// Fields grouped for the report: South, North, Unzoned, then any without an area.
   /// Returns one group with no heading if no areas are set.
   static List<MapEntry<String, List<Task>>> reportGroups(List<Task> tasks) {
-    final s = <Task>[], n = <Task>[], other = <Task>[];
+    final s = <Task>[], n = <Task>[], u = <Task>[], other = <Task>[];
     for (final t in tasks) {
-      (t.side == south ? s : t.side == north ? n : other).add(t);
+      (t.side == south
+              ? s
+              : t.side == north
+                  ? n
+                  : t.side == unzoned
+                      ? u
+                      : other)
+          .add(t);
     }
-    if (s.isEmpty && n.isEmpty) return [MapEntry('', other)];
+    if (s.isEmpty && n.isEmpty && u.isEmpty) return [MapEntry('', other)];
     return [
       if (s.isNotEmpty) MapEntry('South', s),
       if (n.isNotEmpty) MapEntry('North', n),
+      if (u.isNotEmpty) MapEntry('Unzoned', u),
       if (other.isNotEmpty) MapEntry('Other', other),
     ];
   }
