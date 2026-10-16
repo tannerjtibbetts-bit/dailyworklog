@@ -27,7 +27,10 @@ int seaCansEntered(Project p) => p.seaCans.where((m) => m.can.trim().isNotEmpty)
 class SeaCanPane extends StatefulWidget {
   final Project project;
 
-  const SeaCanPane({super.key, required this.project});
+  /// The Export button: just this list, as PDF, Excel, CSV or Word.
+  final VoidCallback onExport;
+
+  const SeaCanPane({super.key, required this.project, required this.onExport});
 
   @override
   State<SeaCanPane> createState() => _SeaCanPaneState();
@@ -224,9 +227,58 @@ class _SeaCanPaneState extends State<SeaCanPane> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Sea can movements',
-                  style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
+                // Title, with an Export button for sending just this list
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Sea can movements',
+                        style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Semantics(
+                      label: 'Export sea cans to PDF, Excel, CSV or Word',
+                      button: true,
+                      child: Material(
+                        color: C.sky,
+                        borderRadius: BorderRadius.circular(100),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(100),
+                          onTap: widget.onExport,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                            child: Text(
+                              'Export',
+                              style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: InkWell(
+                    onTap: () {
+                      p.seaCanInclude = !p.seaCanInclude;
+                      store.save();
+                    },
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: p.seaCanInclude,
+                          onChanged: (v) {
+                            p.seaCanInclude = v ?? false;
+                            store.save();
+                          },
+                        ),
+                        const Expanded(
+                          child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 4, bottom: 10),

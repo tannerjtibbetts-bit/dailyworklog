@@ -389,6 +389,19 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ]);
   }
 
+  // ----- sea cans -----
+
+  /// Sea Can Movements tab's Export button: just the list, as PDF, Excel, CSV or Word.
+  void _exportSeaCans() {
+    final p = project!;
+    menu(context, 'Send just the sea can list. Your daily report still includes it when ticked.', [
+      SheetItem(Icons.picture_as_pdf_outlined, 'Export sea cans to PDF', () => Export.seaCans(context, p, format: 'pdf')),
+      SheetItem(Icons.grid_on, 'Export sea cans to Excel', () => Export.seaCans(context, p, format: 'xlsx')),
+      SheetItem(Icons.table_rows_outlined, 'Export sea cans to CSV', () => Export.seaCans(context, p, format: 'csv')),
+      SheetItem(Icons.description_outlined, 'Export sea cans to Word', () => Export.seaCans(context, p, format: 'docx')),
+    ]);
+  }
+
   // ----- notes -----
 
   void _openNote(Note? n) => _push(NoteScreen(projectId: widget.projectId, noteId: n?.id));
@@ -855,7 +868,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                     ),
                   Expanded(
                     child: mode == ProjectTab.seaCans
-                        ? SeaCanPane(project: p)
+                        ? SeaCanPane(project: p, onExport: _exportSeaCans)
                         : ot
                         ? OvertimePane(project: p, onExport: _exportOvertime)
                         : rows.isEmpty

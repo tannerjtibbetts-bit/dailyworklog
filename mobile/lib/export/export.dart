@@ -1,5 +1,6 @@
-// Report and overtime exports. The file is built in the background, then offered to
+// Report, overtime and sea can exports. The file is built in the background, then offered to
 // share/email or save to the phone.
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -16,6 +17,7 @@ import '../ui/common.dart';
 import 'overtime_xlsx.dart';
 import 'report_docx.dart';
 import 'report_pdf.dart';
+import 'seacan_xlsx.dart';
 
 class Export {
   Export._();
@@ -23,6 +25,7 @@ class Export {
   static const pdf = 'application/pdf';
   static const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   static const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  static const csv = 'text/csv';
 
   /// The day's report as a PDF ([word] false) or Word document ([word] true), then the share sheet.
   static Future<void> report(BuildContext context, Project project, DailyLog log, {required bool word}) async {
@@ -84,6 +87,53 @@ class Export {
     ]);
   }
 
+  /// Just the sea can list: [format] is 'pdf', 'xlsx', 'csv' or 'docx'.
+  static Future<void> seaCans(BuildContext context, Project project, {required String format}) async {
+    final store = Store.instance;
+    final by = store.me();
+    final at = nowMs();
+    final name = seaCanFileName(project, at, format);
+    final f = await _build(
+      context,
+      switch (format) {
+        'xlsx' => 'Building Excel sheet…',
+        'csv' => 'Building CSV…',
+        'docx' => 'Building Word document…',
+        _ => 'Building PDF…',
+      },
+      name,
+      'Couldn\'t build the file. Please try again.',
+      () => compute(_seaCanJob, _CanJob(_slim(project), by, at, format)),
+    );
+    if (f == null || !context.mounted) return;
+    final mime = switch (format) {
+      'xlsx' => xlsx,
+      'csv' => csv,
+      'docx' => docx,
+      _ => pdf,
+    };
+    await menu(context, '${_name(f)} is ready', [
+      SheetItem(Icons.share, 'Share or email', () => _share(context, f, mime)),
+      SheetItem(Icons.download, 'Save to phone', () => _saveTo(context, f, mime)),
+    ]);
+  }
+
+  /// e.g. "Sea can movements - B44 - 16-10-2026.csv" (the date written like the report titles).
+  static String seaCanFileName(Project p, int at, String format) {
+    final date = Fmt.logDate(Fmt.isoOf(DateTime.fromMillisecondsSinceEpoch(at)));
+    return '${Fmt.fileSafe('Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'} - $date')}.$format';
+  }
+
+  /// The sea can list as CSV: quoted where needed, CRLF line ends, UTF-8 with a BOM so Excel reads it right.
+  static Uint8List seaCanCsv(Project p) {
+    String field(String s) => s.contains(RegExp('[",\r\n]')) ? '"${s.replaceAll('"', '""')}"' : s;
+    final b = StringBuffer('\uFEFFSea can,From row,From level,Current row,Current level\r\n');
+    for (final m in p.filledSeaCans()) {
+      b.write('${[m.can.trim(), m.fromRow, m.fromLevel, m.toRow, m.toLevel].map(field).join(',')}\r\n');
+    }
+    return Uint8List.fromList(utf8.encode(b.toString()));
+  }
+
   /// "Report email list" prompt: emails separated by commas.
   static Future<void> editEmailList(BuildContext context, Project p) async {
     final text = await prompt(
@@ -135,7 +185,9 @@ class Export {
   static Project _slim(Project p) => Project()
     ..name = p.name
     ..location = p.location
-    ..overtime = p.overtime;
+    ..overtime = p.overtime
+    ..seaCans = p.seaCans
+    ..seaCanInclude = p.seaCanInclude;
 
   static Future<File?> _buildReport(BuildContext context, Project p, DailyLog log, bool word) {
     final store = Store.instance;
@@ -269,9 +321,25 @@ class _OtJob {
   _OtJob(this.project, this.by, this.at, this.excel);
 }
 
+class _CanJob {
+  final Project project;
+  final String by;
+  final int at;
+  final String format;
+
+  _CanJob(this.project, this.by, this.at, this.format);
+}
+
 Future<Uint8List> _reportJob(_ReportJob j) async => j.word
     ? ReportDocx.write(j.project, j.log, j.by, j.at, j.photoDir)
     : await ReportPdf.write(j.project, j.log, j.by, j.at, j.photoDir);
 
 Future<Uint8List> _overtimeJob(_OtJob j) async =>
     j.excel ? OvertimeXlsx.write(j.project, j.by, j.at) : await ReportPdf.writeOvertime(j.project, j.by, j.at);
+
+Future<Uint8List> _seaCanJob(_CanJob j) async => switch (j.format) {
+  'xlsx' => SeaCanXlsx.write(j.project, j.by, j.at),
+  'csv' => Export.seaCanCsv(j.project),
+  'docx' => ReportDocx.writeSeaCans(j.project, j.by, j.at),
+  _ => await ReportPdf.writeSeaCans(j.project, j.by, j.at),
+};

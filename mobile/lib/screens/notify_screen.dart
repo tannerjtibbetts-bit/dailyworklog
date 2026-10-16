@@ -162,7 +162,7 @@ class _NotifyScreenState extends State<NotifyScreen> {
       final body = Sms.noticeText(p, text, me, store.contactPhone);
       if (files.isNotEmpty) {
         await Sms.compose(context, numbers, body, photos: files);
-      } else if (await Sms.canSendDirect()) {
+      } else if (await Sms.canSendDirect() || await Sms.requestDirect()) {
         await _textEach(numbers, body);
       } else {
         // Can't text from the app (iPhone, or no permission): open Messages with everyone and the text ready.

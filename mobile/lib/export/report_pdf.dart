@@ -100,6 +100,24 @@ class ReportPdf {
     return r._doc.save();
   }
 
+  /// Just the Sea Can Movements tab as its own PDF, to send on its own.
+  static Future<Uint8List> writeSeaCans(Project p, String generatedBy, int generatedAt) {
+    final title = 'Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'}';
+    final r = ReportPdf._(title, '');
+    r._newPage();
+    const w = _w - 2 * _m;
+    r._text(title, _title, _m, w, 6);
+    if (p.location.isNotEmpty) r._text(p.location, _meta, _m, w, 2);
+    r._text('Generated ${Fmt.longStamp(generatedAt)} by $generatedBy', _meta, _m, w, 10);
+    if (p.filledSeaCans().isEmpty) {
+      r._text('No sea cans entered yet.', _body, _m, w, 4);
+    } else {
+      r._drawSeaCans(p, true);
+    }
+    r._finishPage();
+    return r._doc.save();
+  }
+
   void _render(Project p, DailyLog log, String by, int at) {
     _logIso = log.date;
     _newPage();
@@ -138,6 +156,7 @@ class ReportPdf {
     }
     _drawExtras(log);
     _drawOvertime(p, false);
+    _drawSeaCans(p, false);
     _finishPage();
   }
 
@@ -188,6 +207,70 @@ class ReportPdf {
     }
     _y += rowH + 10;
     _drawOvertimeNotes(notes, w);
+  }
+
+  static const double _canRowH = 20;
+
+  /// Sea can table. In the daily report only when ticked (with a heading); force draws just the table.
+  void _drawSeaCans(Project p, bool force) {
+    final cans = p.filledSeaCans();
+    if (cans.isEmpty || (!force && !p.seaCanInclude)) return;
+    const w = _w - 2 * _m, rowH = _canRowH;
+    // Keep the heading with the table's header and first row.
+    _ensure((force ? 0 : 6 + _heading.lineH + 8) + rowH * 3);
+    if (!force) {
+      _y += 6;
+      _text('Sea can movements', _heading, _m, w, 8);
+    }
+    _seaCanHeader();
+    for (final m in cans) {
+      if (_y + rowH > _h - _m - 18) {
+        _finishPage();
+        _newPage();
+        _seaCanHeader();
+      }
+      _hLine(_m, _m + w, _y);
+      const canW = w * 0.36, cellW = (w - canW) / 4;
+      _drawString(_ellipsize(m.can.trim(), _otBold, canW - 10), _otBold, _m + 6, _y + 13.5);
+      final v = [m.fromRow, m.fromLevel, m.toRow, m.toLevel];
+      for (var i = 0; i < 4; i++) {
+        final s = v[i].isEmpty ? '–' : v[i];
+        final st = v[i].isEmpty ? _small : _body;
+        _drawString(s, st, _m + canW + i * cellW + (cellW - _measure(s, st)) / 2, _y + 13.5);
+      }
+      _y += rowH;
+    }
+    _hLine(_m, _m + w, _y);
+    _y += 8;
+    _text(Fmt.plural(cans.length, 'sea can', 'sea cans'), _small, _m, w, 10);
+  }
+
+  /// The sea can table's two header rows: From / Current location over Row / Level. Repeats on each page.
+  void _seaCanHeader() {
+    const w = _w - 2 * _m, rowH = _canRowH, canW = w * 0.36, cellW = (w - canW) / 4;
+    _fillRect(_m, _y, w, rowH * 2, _barTrack);
+    _drawString('Sea can', _otBold, _m + 6, _y + rowH + 3.5);
+    const groups = ['From location', 'Current location'];
+    for (var i = 0; i < 2; i++) {
+      final x = _m + canW + i * cellW * 2;
+      _drawString(groups[i], _otBold, x + (cellW * 2 - _measure(groups[i], _otBold)) / 2, _y + 13.5);
+      // A white rule under the group name, and between the two groups.
+      _g!
+        ..setStrokeColor(PdfColors.white)
+        ..setLineWidth(1)
+        ..drawLine(x + 8, _h - (_y + rowH), x + cellW * 2 - 8, _h - (_y + rowH))
+        ..strokePath();
+      if (i == 1) {
+        _g!
+          ..drawLine(x, _h - _y, x, _h - (_y + rowH * 2))
+          ..strokePath();
+      }
+    }
+    const subs = ['Row', 'Level', 'Row', 'Level'];
+    for (var i = 0; i < 4; i++) {
+      _drawString(subs[i], _small, _m + canW + i * cellW + (cellW - _measure(subs[i], _small)) / 2, _y + rowH + 13.5);
+    }
+    _y += rowH * 2;
   }
 
   void _drawOvertimeNotes(String notes, double w) {

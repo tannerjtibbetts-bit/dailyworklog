@@ -500,6 +500,12 @@ class Project {
   /// Sea Can Movements tab, one line per sea can.
   List<SeaCanMove> seaCans = [];
 
+  /// Sea can list goes in the daily report (PDF, Word and email).
+  bool seaCanInclude = false;
+
+  /// Sea cans with a number typed in, in order.
+  List<SeaCanMove> filledSeaCans() => seaCans.where((m) => m.can.trim().isNotEmpty).toList();
+
   static String roleLabel(String role) =>
       role == techRole ? 'Techs' : role == mgmtRole ? 'Supervision' : 'Crew';
 
@@ -652,6 +658,7 @@ class Project {
         'assignTexts': assignTexts.toList(),
         'notes': [for (final n in notes) n.toJson()],
         'seaCans': [for (final m in seaCans) m.toJson()],
+        'seaCanInclude': seaCanInclude,
       };
 
   static Project fromJson(Map<String, dynamic> o) => Project()
@@ -669,5 +676,6 @@ class Project {
     ..assignTexts = _strings(o['assignTexts']).toSet()
     ..notes = _objects(o['notes'], Note.fromJson)
     ..notices = _objects(o['notices'], Notice.fromJson)
-    ..seaCans = _objects(o['seaCans'], SeaCanMove.fromJson);
+    ..seaCans = _objects(o['seaCans'], SeaCanMove.fromJson)
+    ..seaCanInclude = _b(o, 'seaCanInclude');
 }

@@ -44,6 +44,20 @@ class ReportDocx {
     return r._finish();
   }
 
+  /// Just the Sea Can Movements tab as its own Word document.
+  static Uint8List writeSeaCans(Project p, String generatedBy, int generatedAt) {
+    final r = ReportDocx._(defaultEncoder);
+    r._para('Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'}', true, 22, _navy, 60, false);
+    if (p.location.isNotEmpty) r._para(p.location, false, 11, _grey, 20, false);
+    r._para('Generated ${Fmt.longStamp(generatedAt)} by $generatedBy', false, 10, _grey, 200, false);
+    if (p.filledSeaCans().isEmpty) {
+      r._para('No sea cans entered yet.', false, 11, _text, 80, false);
+    } else {
+      r._seaCanTable(p.filledSeaCans());
+    }
+    return r._finish();
+  }
+
   void _render(Project p, DailyLog log, String by, int at, String photoDir) {
     _logIso = log.date;
     final done = log.doneCount(), total = log.tasks.length;
@@ -75,6 +89,7 @@ class ReportDocx {
     }
 
     _renderOvertime(p);
+    _renderSeaCans(p);
 
     final extras = log.includedExtras();
     if (extras.isNotEmpty) {
@@ -120,6 +135,62 @@ class ReportDocx {
     _otRow(['Yes total', '${ot.yesCount(0)}', '${ot.yesCount(1)}', '${ot.yesCount(2)}', ''], true, null, false);
     _body.write('</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr></w:p>');
     _overtimeNotes(notes);
+  }
+
+  void _renderSeaCans(Project p) {
+    final cans = p.filledSeaCans();
+    if (!p.seaCanInclude || cans.isEmpty) return;
+    _body.write('<w:p><w:pPr><w:keepNext/><w:spacing w:before="360" w:after="100"/></w:pPr>');
+    _run('Sea can movements', true, 13, _navy);
+    _body.write('</w:p>');
+    _seaCanTable(cans);
+  }
+
+  /// Sea can, then From and Current location, each split into Row and Level. The header repeats on each page.
+  void _seaCanTable(List<SeaCanMove> cans) {
+    const b =
+        '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
+        '<w:bottom w:val="single" w:sz="4" w:color="D5D9DE"/><w:right w:val="single" w:sz="4" w:color="D5D9DE"/>'
+        '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
+    _body.write(
+      '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
+      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="3680"/>'
+      '<w:gridCol w:w="1600"/><w:gridCol w:w="1600"/><w:gridCol w:w="1600"/><w:gridCol w:w="1600"/></w:tblGrid>',
+    );
+    // Only the header rows keep with the next row, so a long list still breaks across pages.
+    void cell(String text, int width, {bool bold = false, bool center = true, String? shade, String extra = ''}) {
+      final keep = shade != null;
+      _body.write('<w:tc><w:tcPr><w:tcW w:w="$width" w:type="dxa"/>$extra');
+      if (shade != null) _body.write('<w:shd w:val="clear" w:color="auto" w:fill="$shade"/>');
+      _body.write(
+        '<w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr>${keep ? '<w:keepNext/>' : ''}<w:spacing w:before="40" w:after="40"/>'
+        '${center ? '<w:jc w:val="center"/>' : ''}</w:pPr>',
+      );
+      if (text.isNotEmpty) _run(text, bold, 10, text == '–' ? _grey : _text);
+      _body.write('</w:p></w:tc>');
+    }
+
+    const head = 'E4E7EC';
+    _body.write('<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>');
+    cell('Sea can', 3680, bold: true, center: false, shade: head, extra: '<w:vMerge w:val="restart"/>');
+    cell('From location', 3200, bold: true, shade: head, extra: '<w:gridSpan w:val="2"/>');
+    cell('Current location', 3200, bold: true, shade: head, extra: '<w:gridSpan w:val="2"/>');
+    _body.write('</w:tr><w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>');
+    cell('', 3680, shade: head, extra: '<w:vMerge/>');
+    for (final s in const ['Row', 'Level', 'Row', 'Level']) {
+      cell(s, 1600, bold: true, shade: head);
+    }
+    _body.write('</w:tr>');
+    for (final m in cans) {
+      _body.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
+      cell(m.can.trim(), 3680, bold: true, center: false);
+      for (final v in [m.fromRow, m.fromLevel, m.toRow, m.toLevel]) {
+        cell(v.isEmpty ? '–' : v, 1600);
+      }
+      _body.write('</w:tr>');
+    }
+    _body.write('</w:tbl>');
+    _para(Fmt.plural(cans.length, 'sea can', 'sea cans'), false, 9, _grey, 160, false);
   }
 
   void _overtimeNotes(String notes) {

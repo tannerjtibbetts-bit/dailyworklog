@@ -1,0 +1,2987 @@
+{
+  "title": "Daily Work Log — User manual",
+  "updated": "2026-10-16",
+  "sections": [
+    {
+      "id": "what-the-app-does",
+      "title": "What the app does",
+      "group": "Getting started",
+      "summary": "The big picture: projects, daily checklists, fields, crew texts and reports, all kept on your phone.",
+      "keywords": [
+        "overview",
+        "about",
+        "start",
+        "help",
+        "how it works",
+        "intro"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Daily Work Log keeps your daily work lists on your phone. It replaces the paper checklist."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "A project is a job or area, for example \"B44 Zone 2 Tool Readiness\".",
+            "Each project has daily logs, also called checklists. You start one for each shift or day.",
+            "A checklist holds fields. A field is one task, for example \"Pack up sea can 317503\".",
+            "You tick fields off as they get done. Your name and the time are stamped on each one.",
+            "You can add photos and notes to a field, and assign crew to it. The app can text them.",
+            "At the end of the day you send a PDF or Word report, or email it to your report list.",
+            "Each project also has tabs for texting the crew (Notify), web links, weekend overtime, notes and sea can movements."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Everything is saved on your phone as you go. There is no Save button to remember."
+        },
+        {
+          "type": "tip",
+          "text": "There are two versions of the app with the same features: the classic Android app and the new app for iPhone and Android. Where they work differently, this manual says so."
+        },
+        {
+          "type": "see",
+          "id": "opening-the-app",
+          "text": "Related: Opening the app"
+        },
+        {
+          "type": "see",
+          "id": "project-list",
+          "text": "Related: Your project list"
+        }
+      ]
+    },
+    {
+      "id": "opening-the-app",
+      "title": "Opening the app",
+      "group": "Getting started",
+      "summary": "The opening screen with the logo and the yellow Enter button.",
+      "keywords": [
+        "enter",
+        "open",
+        "start",
+        "logo",
+        "splash",
+        "welcome"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "When you open the app you see the opening screen. It shows the logo, \"Daily Work Log\", \"B44 TOOL READINESS\" and the mission."
+        },
+        {
+          "type": "image",
+          "file": "intro.png",
+          "caption": "The opening screen with the yellow Enter button"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open Daily Work Log.",
+            "Tap the yellow \"Enter\" button at the bottom."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "If you are signed in, you go straight to your projects.",
+            "If the app needs your PIN, you see the \"Sign in\" screen.",
+            "If this phone is not approved yet, you see the steps to ask for access."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The \"Support\" button under \"Enter\" opens this user manual. You can read it before you sign in."
+        },
+        {
+          "type": "see",
+          "id": "requesting-access",
+          "text": "Related: Asking for access the first time"
+        },
+        {
+          "type": "see",
+          "id": "signing-in-with-pin",
+          "text": "Related: Signing in with your PIN"
+        }
+      ]
+    },
+    {
+      "id": "requesting-access",
+      "title": "Asking for access (first time)",
+      "group": "Getting started",
+      "summary": "A new phone must be approved by the app owner. Send a request by text with Request access.",
+      "keywords": [
+        "request access",
+        "approval",
+        "new phone",
+        "first time",
+        "sign up",
+        "register",
+        "access request"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The first time you use the app on a phone, the app owner has to approve it. You ask by text. It only takes a minute."
+        },
+        {
+          "type": "image",
+          "file": "signin.png",
+          "caption": "The Sign in screen with Request access"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap \"Enter\" on the opening screen.",
+            "Under \"1. Ask for access\", type your full name in \"Your full name\".",
+            "Tap \"Request access\".",
+            "Your phone's share menu opens with the request text. Pick Messages (or another app).",
+            "Send it to the app owner.",
+            "Wait for the owner to text back an approval code."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Use the same name you will use in the app. The approval only works for this phone and this name."
+        },
+        {
+          "type": "see",
+          "id": "entering-approval-code",
+          "text": "Related: Entering the approval code"
+        }
+      ]
+    },
+    {
+      "id": "entering-approval-code",
+      "title": "Entering the approval code",
+      "group": "Getting started",
+      "summary": "Paste the owner's approval text and tap Sign in.",
+      "keywords": [
+        "approval code",
+        "paste",
+        "sign in",
+        "code",
+        "approved",
+        "welcome"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The owner texts you back an approval. Copy the whole text, not just part of it."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "In Messages, press and hold the owner's text and choose Copy.",
+            "Go back to Daily Work Log. You are still on the \"Sign in\" screen.",
+            "Under \"2. Enter the approval code\", tap \"Paste\". The text appears in the box.",
+            "Tap \"Sign in\".",
+            "You see \"Approved. Welcome!\". Next you choose a PIN."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If something is wrong, the app tells you:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"That doesn't look like an approval code. Paste the whole text you were sent.\"",
+            "\"That code isn't for this phone and name. Ask for a new one using the request from this phone.\"",
+            "\"That approval has expired. Send a new request.\""
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "An approval lasts one year."
+        },
+        {
+          "type": "see",
+          "id": "choosing-a-pin",
+          "text": "Related: Choosing a PIN"
+        }
+      ]
+    },
+    {
+      "id": "choosing-a-pin",
+      "title": "Choosing a PIN",
+      "group": "Getting started",
+      "summary": "Pick a 4 to 8 digit PIN and choose whether to stay signed in.",
+      "keywords": [
+        "pin",
+        "password",
+        "keep me signed in",
+        "remember",
+        "lock",
+        "passcode"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "After you are approved, you pick a PIN. You use it to open the app."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On \"Choose a PIN\", type 4 to 8 digits in \"PIN\".",
+            "Type the same digits again in \"PIN again\".",
+            "Leave \"Keep me signed in on this phone\" ticked if you don't want to type the PIN every time. Untick it if you do.",
+            "Tap \"Save\". Your projects open."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"4 to 8 digits\" means the PIN is too short, too long or has letters.",
+            "\"The PINs don't match\" means the two boxes are different. Type them again."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "signing-in-with-pin",
+          "text": "Related: Signing in with your PIN"
+        }
+      ]
+    },
+    {
+      "id": "signing-in-with-pin",
+      "title": "Signing in with your PIN",
+      "group": "Getting started",
+      "summary": "Type your PIN to open the app, and what Keep me signed in does.",
+      "keywords": [
+        "pin",
+        "sign in",
+        "login",
+        "log in",
+        "wrong pin",
+        "keep me signed in"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If you are not kept signed in, the app asks for your PIN after you tap \"Enter\"."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap \"Enter\" on the opening screen.",
+            "You see \"Sign in\" and \"Welcome back\" with your name.",
+            "Type your PIN.",
+            "Tick \"Keep me signed in on this phone\" to skip the PIN next time.",
+            "Tap \"Sign in\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If you see \"Wrong PIN\", try again."
+        },
+        {
+          "type": "see",
+          "id": "forgot-pin",
+          "text": "Related: Forgot your PIN"
+        },
+        {
+          "type": "see",
+          "id": "profile-more-menu",
+          "text": "Related: Signing out"
+        }
+      ]
+    },
+    {
+      "id": "forgot-pin",
+      "title": "Forgot your PIN",
+      "group": "Getting started",
+      "summary": "Reset your PIN. The owner approves the phone again. Nothing is deleted.",
+      "keywords": [
+        "forgot pin",
+        "reset pin",
+        "lost pin",
+        "locked out",
+        "new pin"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If you forget your PIN, you can reset it. Your work stays on the phone."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Sign in\" screen, tap \"Forgot PIN\".",
+            "Read \"Reset your PIN?\" and tap \"Reset\".",
+            "The app goes back to the access steps. Tap \"Request access\" and send the request to the app owner again.",
+            "Paste the new approval code and tap \"Sign in\".",
+            "Choose a new PIN."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Your projects, checklists, photos and crew stay on this phone. Nothing is deleted."
+        },
+        {
+          "type": "see",
+          "id": "requesting-access",
+          "text": "Related: Asking for access"
+        }
+      ]
+    },
+    {
+      "id": "approval-expired",
+      "title": "When your approval runs out",
+      "group": "Getting started",
+      "summary": "Approvals last one year. Then you ask the owner again; your work is still there.",
+      "keywords": [
+        "expired",
+        "ended",
+        "approval ended",
+        "renew",
+        "one year",
+        "reset"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "An approval lasts one year. When it ends, or after you reset your PIN, the \"Sign in\" screen says: \"Your approval has ended or was reset. Ask the app owner for a new one. Everything you've saved on this phone is still here.\""
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Check your name in \"Your full name\".",
+            "Tap \"Request access\" and send the text to the app owner.",
+            "When the owner texts back, copy the whole text.",
+            "Tap \"Paste\", then \"Sign in\"."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "requesting-access",
+          "text": "Related: Asking for access"
+        },
+        {
+          "type": "see",
+          "id": "approving-requests",
+          "text": "Related: For the owner: approving a request"
+        }
+      ]
+    },
+    {
+      "id": "your-profile",
+      "title": "Your profile: name and contact number",
+      "group": "Getting started",
+      "summary": "Set your name (stamped on your work) and the number crew should call or text you on.",
+      "keywords": [
+        "profile",
+        "name",
+        "my name",
+        "phone number",
+        "contact number",
+        "person icon",
+        "signed in as"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Your profile tells the app who you are. Your name is shown on completed fields and photos. Your number is added under your name in every text the app sends."
+        },
+        {
+          "type": "image",
+          "file": "profile.png",
+          "caption": "The Your profile box"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Projects\" screen, tap the round person icon at the top right.",
+            "The \"Your profile\" box opens.",
+            "Type your name in \"Your name\".",
+            "Type your phone number in \"Number crew should call or text you on\".",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Under \"Projects\" you then see \"Signed in as\" with your name and number."
+        },
+        {
+          "type": "tip",
+          "text": "The first time you open the app, this box opens by itself. You must enter a name to save it."
+        },
+        {
+          "type": "text",
+          "text": "In texts, your number shows like this at the bottom: \"From: Tanner\" and then \"Call or text me at 226-555-0123\"."
+        },
+        {
+          "type": "see",
+          "id": "my-task-colours",
+          "text": "Related: My task colours"
+        },
+        {
+          "type": "see",
+          "id": "profile-more-menu",
+          "text": "Related: The More… menu"
+        }
+      ]
+    },
+    {
+      "id": "my-task-colours",
+      "title": "My task colours (zone sheet)",
+      "group": "Getting started",
+      "summary": "Pick which colours on the zone sheet are your trade's tasks, so the app ticks them for you.",
+      "keywords": [
+        "colours",
+        "colors",
+        "zone sheet",
+        "dark blue",
+        "orange",
+        "pink",
+        "maintenance",
+        "electrical",
+        "my tasks"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "When you take a photo of the North or South zone sheet, the app reads the colour of each task. It ticks only the tasks in your colours. You choose your colours in your profile."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Projects\" screen, tap the person icon.",
+            "Under \"My task colours on the zone sheet\", tick your colours: \"Dark blue\", \"Orange (maintenance)\" or \"Pink (electrical)\".",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "\"Dark blue\" is ticked to start with. You can tick more than one colour."
+        },
+        {
+          "type": "see",
+          "id": "zone-sheet-photo",
+          "text": "Related: Reading the North/South zone sheet"
+        }
+      ]
+    },
+    {
+      "id": "profile-more-menu",
+      "title": "The More… menu and signing out",
+      "group": "Getting started",
+      "summary": "The profile's More… button: app owner and approvals, backup, restore and Sign out.",
+      "keywords": [
+        "more",
+        "sign out",
+        "log out",
+        "logout",
+        "approvals",
+        "menu",
+        "settings"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Your profile\" box has a \"More…\" button. It opens a short menu."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Projects\" screen, tap the person icon.",
+            "Tap \"More…\".",
+            "Pick an item."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). See the App owner section.",
+            "\"User manual\": opens this manual.",
+            "\"Back up all my work\" and \"Restore from a backup\" (new app only).",
+            "\"Sign out\". It only shows when you have a PIN."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "\"Sign out\" takes you back to the opening screen. Next time you need your PIN to get in."
+        },
+        {
+          "type": "see",
+          "id": "backup",
+          "text": "Related: Backing up all your work"
+        },
+        {
+          "type": "see",
+          "id": "approving-requests",
+          "text": "Related: Approving a request (owner)"
+        }
+      ]
+    },
+    {
+      "id": "project-list",
+      "title": "Your project list and adding a project",
+      "group": "Projects & checklists",
+      "summary": "The Projects screen lists your jobs. Tap + to add a new project.",
+      "keywords": [
+        "project",
+        "new project",
+        "add project",
+        "create",
+        "home",
+        "projects screen",
+        "location"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Projects\" screen is your home screen. Each card shows the project name, location and how many daily logs it has."
+        },
+        {
+          "type": "image",
+          "file": "projects.png",
+          "caption": "The Projects screen"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap the big dark \"+\" button at the bottom.",
+            "In \"New project\", type the name, for example \"B44 Zone 2 Tool Readiness\".",
+            "Type the location if you like, for example \"Kincardine, ON\".",
+            "Tap \"Create\". The new project opens."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap a project card to open it."
+        },
+        {
+          "type": "see",
+          "id": "editing-or-deleting-a-project",
+          "text": "Related: Editing or deleting a project"
+        },
+        {
+          "type": "see",
+          "id": "project-screen",
+          "text": "Related: Inside a project: the tabs"
+        }
+      ]
+    },
+    {
+      "id": "editing-or-deleting-a-project",
+      "title": "Editing or deleting a project",
+      "group": "Projects & checklists",
+      "summary": "Press and hold a project to rename it, change its location or delete it.",
+      "keywords": [
+        "rename project",
+        "edit project",
+        "delete project",
+        "remove project",
+        "location",
+        "set location"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "From the project list:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Press and hold the project card.",
+            "Tap \"Edit name and location\", change the text, and tap \"Save\".",
+            "Or tap \"Delete project\", then \"Delete\" to confirm."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "From inside the project, tap the three dots (⋯) at the top right. You can pick \"Rename project\" or \"Set location\". In the new app, \"Delete project\" is in this menu too."
+        },
+        {
+          "type": "tip",
+          "text": "Deleting a project removes all of its daily logs and photos. It can't be undone."
+        },
+        {
+          "type": "see",
+          "id": "project-options-menu",
+          "text": "Related: The project ⋯ menu"
+        }
+      ]
+    },
+    {
+      "id": "project-screen",
+      "title": "Inside a project: the tabs",
+      "group": "Projects & checklists",
+      "summary": "A project has six tabs: Checklists, Notify, Links, Overtime, Notes and Sea Can Movements.",
+      "keywords": [
+        "tabs",
+        "pills",
+        "checklists",
+        "notify",
+        "links",
+        "overtime",
+        "notes",
+        "sea can",
+        "search"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "When you open a project, you see its name at the top and six tab buttons in two rows."
+        },
+        {
+          "type": "image",
+          "file": "project.png",
+          "caption": "A project on the Checklists tab"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Checklists\": your daily logs, newest first.",
+            "\"Notify\": send a crew member a note or photo by text.",
+            "\"Links\": saved web links and forms. They show in every project.",
+            "\"Overtime\": the weekend overtime sign-up sheet.",
+            "\"Notes\": your own notes and photos.",
+            "\"Sea Can Movements\": where each sea can came from and where it is now."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap a tab to switch. On Checklists, Notify, Links and Notes there is a search box. Type a word to find a checklist, field, note or link."
+        },
+        {
+          "type": "text",
+          "text": "The big \"+\" at the bottom adds something new to the tab you are on."
+        },
+        {
+          "type": "see",
+          "id": "project-options-menu",
+          "text": "Related: The project ⋯ menu"
+        },
+        {
+          "type": "see",
+          "id": "starting-a-daily-log",
+          "text": "Related: Starting a daily log"
+        }
+      ]
+    },
+    {
+      "id": "project-options-menu",
+      "title": "The project ⋯ menu",
+      "group": "Projects & checklists",
+      "summary": "Rename the project, set its location, report email list, Manage crew and more.",
+      "keywords": [
+        "menu",
+        "options",
+        "three dots",
+        "settings",
+        "rename",
+        "manage crew",
+        "email list"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Tap the three dots (⋯) at the top right of a project. You get:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Rename project\"",
+            "\"Set location\"",
+            "\"Report email list\": who gets the emailed report.",
+            "\"Manage crew\": your crew list, phone numbers and who gets texts.",
+            "\"My form details\": your usual answers for forms (new app; in the classic app it is in a form link's menu).",
+            "\"Delete project\" (new app; in the classic app press and hold the project on the project list)."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "emailing-a-report",
+          "text": "Related: The report email list"
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Managing your crew"
+        }
+      ]
+    },
+    {
+      "id": "starting-a-daily-log",
+      "title": "Starting a daily log",
+      "group": "Projects & checklists",
+      "summary": "Tap + on Checklists, pick the date, then choose how to start it.",
+      "keywords": [
+        "new log",
+        "new checklist",
+        "daily log",
+        "start",
+        "today",
+        "date",
+        "blank checklist"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Start a new daily log (checklist) for each day or shift."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Checklists\".",
+            "Tap the big \"+\" at the bottom.",
+            "Pick the date (today is already picked) and tap OK.",
+            "If the project has earlier logs or templates, a menu asks \"Start the … log with\". Pick one (see below).",
+            "The new checklist opens."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Blank checklist\": an empty list.",
+            "\"Carry over … fields marked for next shift\": only the fields you marked \"Carry over to next shift\".",
+            "\"Carry over … unfinished fields from …\": every field not done on the last log, with its notes.",
+            "\"Copy all fields from …\": every field from the last log, without notes.",
+            "\"Template: …\": the fields from a saved template."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The new log starts fresh: nothing is ticked and there are no photos. Each copied field keeps its title, area, assigned people and \"Photos Required\" setting. The crew from the last checklist comes along too."
+        },
+        {
+          "type": "tip",
+          "text": "The first log in a project with no templates starts blank, with no menu."
+        },
+        {
+          "type": "see",
+          "id": "templates",
+          "text": "Related: Saving and using templates"
+        },
+        {
+          "type": "see",
+          "id": "load-secured-and-next-shift",
+          "text": "Related: Carry over to next shift"
+        }
+      ]
+    },
+    {
+      "id": "checklist-screen",
+      "title": "Reading a checklist",
+      "group": "Projects & checklists",
+      "summary": "What you see on a checklist: progress ring, crew, filters, field cards and buttons.",
+      "keywords": [
+        "checklist",
+        "daily log",
+        "progress",
+        "percent",
+        "ring",
+        "fields completed",
+        "screen"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Tap a checklist to open it."
+        },
+        {
+          "type": "image",
+          "file": "log.png",
+          "caption": "A checklist with coloured field cards"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "At the top: the checklist name and the project location.",
+            "The ring shows how much is done, for example 40%. It turns into a green check at 100%.",
+            "\"3/10 fields completed\" counts the ticked fields.",
+            "The person button sets the checklist crew. Their initials show beside it.",
+            "Filter buttons: \"Assigned to Me\", \"Incomplete\", \"Complete\", \"Unassigned\".",
+            "The field cards, South first, then North, then Unzoned, then fields with no area.",
+            "\"New Field\" under the last card, and the blue mic button at the bottom, add a field.",
+            "The camera icon at the top adds fields from a photo or spreadsheet.",
+            "The three dots (⋮) at the top open the checklist options."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "adding-a-field",
+          "text": "Related: Adding a field"
+        },
+        {
+          "type": "see",
+          "id": "filtering-fields",
+          "text": "Related: Filtering fields"
+        },
+        {
+          "type": "see",
+          "id": "checklist-menu",
+          "text": "Related: Rename, duplicate or delete a checklist"
+        }
+      ]
+    },
+    {
+      "id": "checklist-menu",
+      "title": "Rename, duplicate or delete a checklist",
+      "group": "Projects & checklists",
+      "summary": "Use the checklist ⋮ menu, or press and hold it on the Checklists tab.",
+      "keywords": [
+        "rename",
+        "duplicate",
+        "copy",
+        "delete checklist",
+        "remove log",
+        "checklist options"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Open the checklist and tap the three dots (⋮) at the top right. Or press and hold the checklist on the \"Checklists\" tab."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Rename Checklist\": type a new name and tap \"Save\". Without a name it is called \"Daily work log\" and the date.",
+            "\"Duplicate Checklist\": makes a copy dated today with the same fields and crew. Nothing is ticked and there are no photos or notes.",
+            "\"Delete Checklist\": tap \"Delete\" to confirm. The checklist and its photos are removed. This can't be undone."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The same menu has \"Email report\", \"Export to PDF\" and \"Export to Word\"."
+        },
+        {
+          "type": "see",
+          "id": "templates",
+          "text": "Related: Saving a checklist as a template"
+        },
+        {
+          "type": "see",
+          "id": "exporting-a-report",
+          "text": "Related: Exporting a report"
+        }
+      ]
+    },
+    {
+      "id": "templates",
+      "title": "Saving and using templates",
+      "group": "Projects & checklists",
+      "summary": "Save a checklist's fields as a template, then start new logs from it.",
+      "keywords": [
+        "template",
+        "save as template",
+        "reuse",
+        "standard list",
+        "daily fields"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A template is a saved list of fields you use again and again."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open a checklist with the fields you want.",
+            "Tap the three dots (⋮) at the top right.",
+            "Tap \"Save Checklist as Template\".",
+            "Type a name (\"Daily fields\" is filled in) and tap \"Save\".",
+            "You see \"Template saved. Use it from the + button.\""
+          ]
+        },
+        {
+          "type": "text",
+          "text": "To use it: on the \"Checklists\" tab tap \"+\", pick the date, then tap \"Template: …\" with your template's name."
+        },
+        {
+          "type": "text",
+          "text": "A template keeps each field's title, area, assigned people and \"Photos Required\". It does not keep ticks, notes or photos."
+        },
+        {
+          "type": "tip",
+          "text": "Using a template adds a line \"Template used: …\" to the checklist's \"Also today\" list."
+        },
+        {
+          "type": "see",
+          "id": "starting-a-daily-log",
+          "text": "Related: Starting a daily log"
+        }
+      ]
+    },
+    {
+      "id": "reordering-fields",
+      "title": "Reordering fields",
+      "group": "Projects & checklists",
+      "summary": "Press and hold a field card, then drag it up or down.",
+      "keywords": [
+        "reorder",
+        "move",
+        "drag",
+        "order",
+        "sort",
+        "rearrange"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist.",
+            "Tap the three dots (⋮) and tap \"Reorder Fields\" (this also clears any filter).",
+            "Press and hold a field card.",
+            "Drag it up or down, then let go."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Fields stay inside their area. A South field can't be dragged into the North group. To move it, change its Area instead."
+        },
+        {
+          "type": "tip",
+          "text": "You can't drag while a filter is on."
+        },
+        {
+          "type": "see",
+          "id": "editing-a-field",
+          "text": "Related: Changing a field's area"
+        }
+      ]
+    },
+    {
+      "id": "filtering-fields",
+      "title": "Filtering fields",
+      "group": "Projects & checklists",
+      "summary": "Show only fields assigned to you, incomplete, complete or unassigned.",
+      "keywords": [
+        "filter",
+        "assigned to me",
+        "incomplete",
+        "complete",
+        "unassigned",
+        "mine",
+        "show only"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The buttons under the crew on a checklist filter the list."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Assigned to Me\": fields where your profile name is assigned.",
+            "\"Incomplete\": fields not ticked yet.",
+            "\"Complete\": fields already ticked.",
+            "\"Unassigned\": fields with nobody assigned."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap a button to turn it on (it turns dark blue). Tap it again to show everything."
+        },
+        {
+          "type": "tip",
+          "text": "If you add a field that the filter hides, you see \"Field added. Clear the filter to see it.\""
+        },
+        {
+          "type": "see",
+          "id": "your-profile",
+          "text": "Related: Your profile name"
+        }
+      ]
+    },
+    {
+      "id": "checklist-crew",
+      "title": "The checklist crew",
+      "group": "Projects & checklists",
+      "summary": "Pick who is working on this checklist. They show as initials and on the report.",
+      "keywords": [
+        "crew",
+        "checklist crew",
+        "who is working",
+        "team",
+        "initials",
+        "badges"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Each checklist can have a crew: the people on shift."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist.",
+            "Tap the round person button under \"fields completed\".",
+            "In \"Checklist Crew\", tick the people. Use \"Search Users\" to find someone.",
+            "Tap \"Assign\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Their initials show on the checklist and on the Checklists tab. The report lists them after \"Crew:\". A new checklist copies the crew from the last one."
+        },
+        {
+          "type": "tip",
+          "text": "Picking the checklist crew doesn't send any texts."
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Managing your crew"
+        }
+      ]
+    },
+    {
+      "id": "also-today",
+      "title": "The \"Also today\" list",
+      "group": "Projects & checklists",
+      "summary": "Links used, notes sent, notes and templates for the day. Tick the ones to put in the report.",
+      "keywords": [
+        "also today",
+        "extras",
+        "include",
+        "report",
+        "tick",
+        "remove",
+        "links used",
+        "notes sent"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "At the bottom of a checklist there may be a box called \"Also today\". It lists other things from that day, with the time:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Link used: …\" when you open a link.",
+            "\"Note sent to …\" when you send a Notify note.",
+            "\"Note\" or \"Note by …\" when you tick a note for the report.",
+            "\"Template used: …\" when the checklist was started from a template."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "\"Ticked items are included in the PDF, Word and emailed report.\" New items start unticked. Tap the box beside an item to tick or untick it."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To take an item off the list, tap the grey trash can beside it (or press and hold the item).",
+            "Tap \"Remove\" to confirm."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Removing it only takes it off this list. The link, note or template itself stays."
+        },
+        {
+          "type": "text",
+          "text": "Items go on today's checklist. If there is no checklist for today, they go on the most recent one."
+        },
+        {
+          "type": "see",
+          "id": "whats-in-the-report",
+          "text": "Related: What goes in the report"
+        }
+      ]
+    },
+    {
+      "id": "adding-a-field",
+      "title": "Adding a field",
+      "group": "Fields",
+      "summary": "Tap New Field or the blue mic, type the task, tick South, North or Unzoned, and tap Add.",
+      "keywords": [
+        "new field",
+        "add field",
+        "task",
+        "add task",
+        "south",
+        "north",
+        "unzoned",
+        "zone",
+        "area",
+        "mic",
+        "voice"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A field is one task on the checklist."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist.",
+            "Tap \"New Field\" under the last card (or the blue mic button at the bottom, or \"Add Field\" in the ⋮ menu).",
+            "In \"New field\", type the task, for example \"Pack up sea can 317503 and send out of zone 2\".",
+            "Tick \"South\", \"North\" or \"Unzoned\" if you like. You can pick one, or none.",
+            "Tap \"Add\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The new field shows in its area group, and the screen scrolls to it."
+        },
+        {
+          "type": "text",
+          "text": "The blue mic button works differently in each version:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "New app: it opens the \"New field\" box. Tap the mic key on your keyboard to say the task.",
+            "Classic app: it listens right away (\"Say the new field\") and adds the field from what you say, with no area."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "field-card-colours",
+          "text": "Related: Field card colours"
+        },
+        {
+          "type": "see",
+          "id": "importing-fields",
+          "text": "Related: Adding many fields from a photo or file"
+        }
+      ]
+    },
+    {
+      "id": "field-card-colours",
+      "title": "Field card colours",
+      "group": "Fields",
+      "summary": "South cards are pink, North blue, Unzoned yellow; done fields get a green border.",
+      "keywords": [
+        "colour",
+        "color",
+        "pink",
+        "blue",
+        "yellow",
+        "green",
+        "card",
+        "south",
+        "north",
+        "unzoned"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The colour of a card tells you its area:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "South: pale pink.",
+            "North: pale blue.",
+            "Unzoned: pale yellow.",
+            "No area: white."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "When a field is done, the card gets a green border and a green bar on the left. A done field with no area turns pale green."
+        },
+        {
+          "type": "text",
+          "text": "Small labels on the card show more: \"✓  Load secured\", the area (\"South\", \"North\", \"Unzoned\"), \"Next shift\" and \"Photos Required\"."
+        },
+        {
+          "type": "see",
+          "id": "completing-a-field",
+          "text": "Related: Completing a field"
+        }
+      ]
+    },
+    {
+      "id": "completing-a-field",
+      "title": "Completing a field",
+      "group": "Fields",
+      "summary": "Tap the round check to tick a field done. Your name and the time are stamped on it.",
+      "keywords": [
+        "complete",
+        "done",
+        "tick",
+        "check",
+        "finish",
+        "completed by",
+        "stamp",
+        "untick",
+        "reopen"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "Find the field on the checklist.",
+            "Tap the round grey circle at the left of the card.",
+            "It turns green with a tick. The card gets a green border."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Under the title you see who completed it and when, for example \"Tanner, 10/16/2026 at 7:02 AM\". The name comes from your profile."
+        },
+        {
+          "type": "text",
+          "text": "Tapping the green check again reopens the field. The stamp is removed."
+        },
+        {
+          "type": "text",
+          "text": "You can also tick the large circle at the top of the \"Edit Field\" page."
+        },
+        {
+          "type": "tip",
+          "text": "If a field has \"Photos Required\" and no photo yet, it won't tick. You see \"This field needs a photo before it can be completed\". Tap \"Take photo\" in that message to add one."
+        },
+        {
+          "type": "see",
+          "id": "field-photos",
+          "text": "Related: Photos and Photos Required"
+        }
+      ]
+    },
+    {
+      "id": "editing-a-field",
+      "title": "Editing a field: title, notes and area",
+      "group": "Fields",
+      "summary": "Open the Edit Field page to change the title, write notes or set South, North or Unzoned.",
+      "keywords": [
+        "edit field",
+        "notes",
+        "title",
+        "area",
+        "south",
+        "north",
+        "unzoned",
+        "change",
+        "delete field"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Tap a field card (or its blue ⊕ button) to open the \"Edit Field\" page. Changes save by themselves."
+        },
+        {
+          "type": "image",
+          "file": "task.png",
+          "caption": "The Edit Field page"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap the title to change it.",
+            "Tap \"Add notes…\" and type any notes.",
+            "Under \"Area\", tick \"South\", \"North\" or \"Unzoned\". Tap a ticked one again to clear it.",
+            "Tap the back arrow when you are done."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "At the bottom it says who added the field and when, for example \"Added by Tanner, 10/16/2026 at 6:45 AM\"."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To delete the field, tap \"Delete field\" at the bottom (or ⋮ then \"Delete field\").",
+            "Tap \"Delete\". Its notes and photos are removed."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Notes stay in the app and in the report. They are not put in texts."
+        },
+        {
+          "type": "tip",
+          "text": "Classic app only: a mic button beside the notes lets you speak your notes."
+        },
+        {
+          "type": "see",
+          "id": "assigning-people",
+          "text": "Related: Assigning people"
+        },
+        {
+          "type": "see",
+          "id": "field-photos",
+          "text": "Related: Adding photos"
+        }
+      ]
+    },
+    {
+      "id": "field-photos",
+      "title": "Photos and Photos Required",
+      "group": "Fields",
+      "summary": "Add photos to a field with the camera button, and make a photo required before it can be ticked.",
+      "keywords": [
+        "photo",
+        "picture",
+        "camera",
+        "gallery",
+        "photos required",
+        "image",
+        "remove photo"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Photos prove the work was done. They go in the report."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the checklist, tap the camera button on the field card to take a photo straight away.",
+            "Or open the field and tap \"Photos\" (or the dashed camera box).",
+            "Pick \"Take photo\" or \"Choose from gallery\". From the gallery you can pick several."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap a photo to see it full size, with who added it and when. Tap again to close it."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To remove a photo, open the field and tap the red circle on the photo.",
+            "Tap \"Remove\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Turn on \"Photos required?\" on the \"Edit Field\" page to make a photo a must. The card shows \"Photos Required\" (red while no photo is added), and the field can't be ticked until it has one. The assignment text also says \"Photos required.\""
+        },
+        {
+          "type": "tip",
+          "text": "The ⋮ menu on the Edit Field page also has \"Take photo\" and \"Add from gallery\"."
+        },
+        {
+          "type": "see",
+          "id": "tips",
+          "text": "Related: Photo problems"
+        }
+      ]
+    },
+    {
+      "id": "load-secured-and-next-shift",
+      "title": "Load secured and Carry over to next shift",
+      "group": "Fields",
+      "summary": "Tick Load securement completed, or mark a field to carry over to the next shift.",
+      "keywords": [
+        "load secured",
+        "load securement",
+        "next shift",
+        "carry over",
+        "tomorrow",
+        "unfinished"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Two ticks on the \"Edit Field\" page:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Load securement completed\": tick it when the load is secured. Your name and the time are stamped under it. The card shows \"✓  Load secured\" and the report says who secured it.",
+            "\"Carry over to next shift\": \"Shown on the report, and offered when you start the next checklist\". The card shows \"Next shift\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "When you start the next daily log, the app offers \"Carry over … fields marked for next shift\". Only those fields are copied, with their notes."
+        },
+        {
+          "type": "see",
+          "id": "starting-a-daily-log",
+          "text": "Related: Starting a daily log"
+        }
+      ]
+    },
+    {
+      "id": "assigning-people",
+      "title": "Assigning people to a field",
+      "group": "Fields",
+      "summary": "Tap Assign User, tick people, tap Assign. People set up for texts get a text.",
+      "keywords": [
+        "assign",
+        "assign user",
+        "assignee",
+        "crew",
+        "who",
+        "text",
+        "sms",
+        "remove assignee",
+        "text it"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "Open the field (tap its card).",
+            "Tap \"Assign User\".",
+            "In \"Assign Users\", tick the people. Type in \"Search Users\" to find someone.",
+            "To add someone new, tap \"+  Add crew member\" (or \"+  Add … to crew\" after typing a name).",
+            "Tap \"Assign\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The people show under \"Assign User\" with their phone number. Newly assigned people get a text if they are set up for texts in Manage crew. You are never texted yourself."
+        },
+        {
+          "type": "text",
+          "text": "Each person has a \"Text it\" button. It opens Messages with the assignment text ready, so you can send it again."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To take someone off the field, tap the red minus circle beside their name.",
+            "Tap \"Remove\". They stay on the crew. No text is sent."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Handy after carrying a field over: remove anyone who isn't on today's shift."
+        },
+        {
+          "type": "see",
+          "id": "assignment-texts",
+          "text": "Related: How assignment texts work"
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Managing your crew"
+        }
+      ]
+    },
+    {
+      "id": "importing-fields",
+      "title": "Adding fields from a photo or file",
+      "group": "Fields",
+      "summary": "Make fields from a photo of a task list, a gallery photo, or an Excel or CSV file.",
+      "keywords": [
+        "import",
+        "scan",
+        "photo of list",
+        "excel",
+        "csv",
+        "spreadsheet",
+        "xlsx",
+        "camera",
+        "gallery",
+        "read"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You don't have to type a long list. The app can read it."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist.",
+            "Tap the camera icon at the top (or ⋮ then \"Add Fields from a Photo or Spreadsheet\").",
+            "Pick one: \"Take a photo of a task list\", \"Choose a photo\" or \"Import an Excel or CSV file\".",
+            "Take the photo, or pick the photo or file.",
+            "Wait while it says \"Reading the photo…\" or \"Opening the file…\".",
+            "Check the list on the \"Add fields\" screen, then tap \"Add … fields\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "For a photo: hold the phone straight above the page, close up, in good light. If you see \"No text found\", try again closer."
+        },
+        {
+          "type": "tip",
+          "text": "Older Excel files (.xls) can't be read. Save the file as .xlsx or .csv first."
+        },
+        {
+          "type": "text",
+          "text": "A photo you take for this is deleted after it is read. It isn't added to the checklist."
+        },
+        {
+          "type": "see",
+          "id": "import-review",
+          "text": "Related: Checking the list before adding"
+        },
+        {
+          "type": "see",
+          "id": "zone-sheet-photo",
+          "text": "Related: Reading the North/South zone sheet"
+        }
+      ]
+    },
+    {
+      "id": "import-review",
+      "title": "Checking the list before adding (review screen)",
+      "group": "Fields",
+      "summary": "Untick rows that aren't tasks, fix words, combine split rows, then tap Add.",
+      "keywords": [
+        "review",
+        "import",
+        "combine ticked",
+        "tick all",
+        "untick all",
+        "fix",
+        "column",
+        "add fields"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "After reading a photo or file, the \"Add fields\" screen shows every row it found. Nothing is added until you tap the button at the bottom."
+        },
+        {
+          "type": "image",
+          "file": "import_review.png",
+          "caption": "The Add fields review list"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Ticked rows become fields. Untick anything that isn't a task. Rows with only numbers start unticked.",
+            "Tap a row to fix a misread word in \"Fix this field\", then tap \"Save\".",
+            "\"Tick all\" and \"Untick all\" do the whole list.",
+            "\"Combine ticked\": if one task is split over several rows, tick just those rows and tap it. Check the wording and tap \"Combine\".",
+            "\"Which column has the tasks?\": for a table, pick the column with the task names.",
+            "\"Put the other columns in each field's notes\": keeps the other columns as notes.",
+            "For a spreadsheet, the first row (the headings) starts unticked."
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            "When the list looks right, tap \"Add … fields\" at the bottom.",
+            "You see \"Added … fields\" and go back to the checklist."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "importing-fields",
+          "text": "Related: Adding fields from a photo or file"
+        }
+      ]
+    },
+    {
+      "id": "zone-sheet-photo",
+      "title": "Reading the North/South zone sheet",
+      "group": "Fields",
+      "summary": "A photo of the zone task sheet becomes fields; tasks in your colours are ticked.",
+      "keywords": [
+        "zone sheet",
+        "north",
+        "south",
+        "colour",
+        "dark blue",
+        "orange",
+        "pink",
+        "green",
+        "yellow",
+        "sea can",
+        "delay code"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If you take a photo (or choose a photo) of the zone task sheet, the app knows it. It puts each task back together."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist and tap the camera icon at the top.",
+            "Tap \"Take a photo of a task list\" or \"Choose a photo\".",
+            "Photograph the North or South sheet.",
+            "The review says how many tasks it found on \"the North sheet\" or \"the South sheet\"."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Each task's title is the task, the sea can number and the location.",
+            "The notes get the Job, Contact, Location, Comments and Delay code.",
+            "Under each task you see its colour, for example \"■ Dark blue\", \"■ Green (completed)\" or \"■ Yellow (ongoing)\".",
+            "Only tasks in your colours (set in My task colours) start ticked. Tick any others you want.",
+            "The new fields get the North or South area from the sheet."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap \"Add … fields\" to add the ticked tasks."
+        },
+        {
+          "type": "tip",
+          "text": "To change which colours are ticked, tap the person icon on the \"Projects\" screen and change \"My task colours on the zone sheet\"."
+        },
+        {
+          "type": "see",
+          "id": "my-task-colours",
+          "text": "Related: My task colours"
+        },
+        {
+          "type": "see",
+          "id": "import-review",
+          "text": "Related: The review screen"
+        }
+      ]
+    },
+    {
+      "id": "manage-crew",
+      "title": "Managing your crew",
+      "group": "Crew & texting",
+      "summary": "Add crew, phone numbers and groups (Crew, Techs, Supervision), and choose who gets assignment texts.",
+      "keywords": [
+        "crew",
+        "manage crew",
+        "phone",
+        "number",
+        "techs",
+        "supervision",
+        "group",
+        "add person",
+        "remove person",
+        "contact"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Each project has its own crew list."
+        },
+        {
+          "type": "image",
+          "file": "manage_crew.png",
+          "caption": "The Manage Crew sheet"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap the three dots (⋯) at the top right.",
+            "Tap \"Manage crew\".",
+            "People are grouped under \"Crew\", \"Techs\" and \"Supervision\". Each shows a number or \"No phone number\".",
+            "Tap a person to change their details. Tap \"+  Add crew member\" to add someone.",
+            "Tap \"Done\" when finished."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Each person's details:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Name\"",
+            "\"Phone number (optional)\"",
+            "\"Group\": \"Crew\", \"Tech\" or \"Supervision\"",
+            "\"This contact will receive texts when assigned to a field or task\": tick it to text them when you assign them."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap \"Save\" (or \"Add\" for a new person). People with the texts tick show \"texted when assigned\"."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To remove someone, tap them and tap \"Remove\" (or press and hold their name).",
+            "Tap \"Remove\" again. They stay on fields they're already assigned to."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Renaming someone changes their name everywhere in the project. Your own name is added to the crew by itself."
+        },
+        {
+          "type": "see",
+          "id": "assignment-texts",
+          "text": "Related: How assignment texts work"
+        }
+      ]
+    },
+    {
+      "id": "assignment-texts",
+      "title": "How assignment texts work",
+      "group": "Crew & texting",
+      "summary": "When you assign someone who is set up for texts, the app texts them the field.",
+      "keywords": [
+        "sms",
+        "text",
+        "assignment text",
+        "message",
+        "undo",
+        "iphone",
+        "android",
+        "send"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "When you assign people to a field, each new person ticked for texts in Manage crew gets a text. Nobody gets one unless ticked, and never you."
+        },
+        {
+          "type": "text",
+          "text": "The text says the checklist name and project, \"Assigned to you:\" and the field title. If photos are required it adds \"Photos required.\" At the bottom it says \"From:\" with your name and \"Call or text me at\" with your number."
+        },
+        {
+          "type": "text",
+          "text": "If the person has no number, the app asks \"Phone number for …\". Type it and tap \"Save\"."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Android: the text is sent straight from the app. You see \"Texting …\" with \"Undo\" for 5 seconds, then \"Texted …\". Tap \"Undo\" to stop it. The first time, allow the app to send SMS.",
+            "iPhone: an iPhone app can't send texts by itself. Messages opens with the text ready. Tap Send."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "To send it again, open the field and tap \"Text it\" beside the person. Messages opens with the text ready."
+        },
+        {
+          "type": "tip",
+          "text": "If a text fails you see \"Couldn't text … Use Text it to try again.\""
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Turning texts on for a person"
+        },
+        {
+          "type": "see",
+          "id": "texts-not-arriving",
+          "text": "Related: Texts not arriving"
+        }
+      ]
+    },
+    {
+      "id": "notify-sending",
+      "title": "Sending a note to crew (Notify)",
+      "group": "Crew & texting",
+      "summary": "Pick people, write a note, add photos and tap Send note.",
+      "keywords": [
+        "notify",
+        "send note",
+        "message",
+        "text crew",
+        "sms",
+        "photo",
+        "send to",
+        "broadcast"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Use the \"Notify\" tab to text one or more people a note or photo. Everyone you pick gets it, even if they are not ticked for assignment texts."
+        },
+        {
+          "type": "image",
+          "file": "notify.png",
+          "caption": "The Notify screen"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Notify\".",
+            "Tap the big \"+\" at the bottom.",
+            "The \"Send to\" list opens. Tick the people and tap \"Assign\".",
+            "Type your note in \"Write your note…\".",
+            "To add photos, tap \"Photos\" and pick \"Take photo\" or \"Choose from gallery\".",
+            "Tap \"Send note\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If someone has no number, the app asks for it first. You can also tap \"+ Add phone number\" under a name."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Android, no photos: the note is texted straight from the app to each person. You see \"Texted …\". If the app isn't allowed to send texts, Messages opens instead.",
+            "With photos (new app): the share menu opens. Pick Messages, then choose who to send it to.",
+            "With photos (classic app): Messages opens with the people and photos ready. Tap Send.",
+            "iPhone: Messages opens with everyone and the note ready. Tap Send."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The text ends with \"From:\", your name and the project, and your contact number."
+        },
+        {
+          "type": "tip",
+          "text": "You must pick at least one person, and write a note or add a photo."
+        },
+        {
+          "type": "see",
+          "id": "notify-sent-list",
+          "text": "Related: Your list of sent notes"
+        }
+      ]
+    },
+    {
+      "id": "notify-sent-list",
+      "title": "Your list of sent notes",
+      "group": "Crew & texting",
+      "summary": "The Notify tab lists every note you sent. Send again, view photos, delete, or include in the report.",
+      "keywords": [
+        "sent notes",
+        "history",
+        "send again",
+        "delete note",
+        "notify list",
+        "include"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Notify\" tab lists your sent notes, newest first: who it went to, the note, and when it was sent."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap a sent note to open its menu.",
+            "Pick \"Send again\", \"View photos\" or \"Delete from list\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "\"Delete from list\" removes it from this list and deletes its photos. Texts already sent stay on their phones."
+        },
+        {
+          "type": "text",
+          "text": "Tick \"Include in today's report\" under a note to put it in the day's report, under \"Also today\"."
+        },
+        {
+          "type": "see",
+          "id": "also-today",
+          "text": "Related: The Also today list"
+        }
+      ]
+    },
+    {
+      "id": "links-tab",
+      "title": "Links: saving and opening web links",
+      "group": "Tabs",
+      "summary": "Save links to tools, procedures and forms. They show in every project.",
+      "keywords": [
+        "links",
+        "web",
+        "url",
+        "website",
+        "add link",
+        "open link",
+        "share link",
+        "bookmark"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Links\" tab keeps web links handy. The same links show in every project."
+        },
+        {
+          "type": "image",
+          "file": "links.png",
+          "caption": "The Links tab"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap \"Links\", then the big \"+\".",
+            "In \"Add link\", type or paste the web address. If you just copied one, it is filled in already.",
+            "Type a name if you like, for example \"Tool tracking portal\".",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tap a link to open it in your browser."
+        },
+        {
+          "type": "text",
+          "text": "Press and hold a link for more: \"Open\", \"Edit link\", \"Copy link\", \"Share link\" and \"Delete link\". Deleting removes it from every project."
+        },
+        {
+          "type": "text",
+          "text": "When you open a link, \"Link used: …\" is added to today's \"Also today\" list. Tick \"Include in today's report\" under the link to put it in the report."
+        },
+        {
+          "type": "see",
+          "id": "formstack-forms",
+          "text": "Related: Forms filled in with your answers"
+        }
+      ]
+    },
+    {
+      "id": "formstack-forms",
+      "title": "Forms filled in with your saved answers",
+      "group": "Tabs",
+      "summary": "Formstack form links open with your usual answers filled in. Set them in My form details.",
+      "keywords": [
+        "form",
+        "formstack",
+        "observation",
+        "my form details",
+        "copy my details",
+        "prefill",
+        "auto fill",
+        "open without filling in"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If a link is a Formstack form (like the observation form), the app can fill in your usual answers. You still check the form and tap Submit."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap the form link.",
+            "The first time, you see \"Fill in your usual answers?\". Tap \"Set up\" (or \"Just open\" to skip).",
+            "In \"My form details\", type your usual answers. Leave blank anything that changes each time.",
+            "Tap \"Save\".",
+            "The form opens with your answers. You see \"Filled in … answers. Check them, then Submit.\""
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Your name and today's date are filled in too. Your answers are saved on this phone only."
+        },
+        {
+          "type": "text",
+          "text": "Press and hold a form link for more:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"My form details\": change your saved answers.",
+            "\"Copy my details\": shows each answer with a \"Copy\" button, then \"Open form\".",
+            "\"Open without filling in\": opens the empty form."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "The app needs signal to read the form. If it can't fill something in, it shows your details with \"Copy\" buttons so you can paste them."
+        },
+        {
+          "type": "see",
+          "id": "links-tab",
+          "text": "Related: Links"
+        }
+      ]
+    },
+    {
+      "id": "overtime-tab",
+      "title": "Overtime: the weekend sign-up sheet",
+      "group": "Tabs",
+      "summary": "Weekend sign-up: Yes/No for Fri, Sat, Sun, hours 1 to 10, totals, export and Clear answers.",
+      "keywords": [
+        "overtime",
+        "weekend",
+        "ot",
+        "sign up",
+        "friday",
+        "saturday",
+        "sunday",
+        "hours",
+        "yes",
+        "no",
+        "overtime export",
+        "excel",
+        "pdf",
+        "clear answers",
+        "include in reports",
+        "reset weekend"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Overtime\" tab is a weekend overtime sheet. It has one row per crew member to start."
+        },
+        {
+          "type": "image",
+          "file": "overtime.png",
+          "caption": "The Overtime tab"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Overtime\".",
+            "In each row, tap \"Select…\" and pick a name.",
+            "Under \"Fri\", \"Sat\" and \"Sun\", pick \"Yes\" or \"No\". Yes turns green, No turns red.",
+            "Under \"Hours\", type the hours the person is willing to work, 1 to 10.",
+            "Type anything else in the \"Notes\" box under the table."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The \"Yes total\" row counts the Yes answers for each day. Everything saves by itself."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"+  Add a row\" and \"+  Add 5 rows\" add more rows.",
+            "\"Remove empty rows\" takes out rows with no name and no answers."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "If there is no crew yet, you see \"Add your crew first: tap ⋯ at the top, then Manage crew.\""
+        },
+        {
+          "type": "text",
+          "text": "Exporting and clearing overtime:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Overtime\" tab, tap \"Export\" at the top right.",
+            "Pick \"Export overtime to PDF\" or \"Export overtime to Excel\".",
+            "When it's ready, pick \"Share or email\" or \"Save to phone\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the overtime table and notes to your daily reports too."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "For the next weekend, tap \"Clear answers\" at the bottom.",
+            "Tap \"Clear\". The Yes/No answers and hours are cleared. Names and notes stay in place."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notes-tab",
+      "title": "Notes: writing and deleting notes",
+      "group": "Tabs",
+      "summary": "Write a note, add photos, tick it into today's report, or delete notes.",
+      "keywords": [
+        "notes",
+        "note",
+        "write",
+        "diary",
+        "photo",
+        "include in report",
+        "memo",
+        "delete note",
+        "trash",
+        "bin",
+        "clear all notes",
+        "remove notes"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Notes\" tab is for your own notes and photos."
+        },
+        {
+          "type": "image",
+          "file": "notes.png",
+          "caption": "The Notes tab"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Notes\".",
+            "Tap the big \"+\".",
+            "Type in \"Write your note…\".",
+            "Tap \"Photos\" to add pictures.",
+            "Tick \"Include in today's report\" to put the note in the day's report.",
+            "Tap \"Done\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Notes save by themselves. A note with no words and no photos isn't kept."
+        },
+        {
+          "type": "tip",
+          "text": "If there is no checklist yet, you see \"Start a checklist for today to put this note in a report.\""
+        },
+        {
+          "type": "text",
+          "text": "Tap a note in the list to open it again. Each note shows the date, the text and \"By\" with who wrote it."
+        },
+        {
+          "type": "tip",
+          "text": "Classic app only: a mic button lets you speak your note."
+        },
+        {
+          "type": "text",
+          "text": "Deleting notes and Clear all notes:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Notes\" tab, tap the red trash can on the note (or press and hold it and tap \"Delete note\").",
+            "Tap \"Delete\". The note and its photos are deleted and taken off any report."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Inside a note, the red trash can at the top right does the same."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To delete every note in the project, tap \"Clear all notes\" in red above the list.",
+            "Read \"Delete all … notes?\" and tap \"Delete all\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "\"Clear all notes\" deletes every note in the project, not just the ones a search shows. It can't be undone."
+        }
+      ]
+    },
+    {
+      "id": "sea-can-movements",
+      "title": "Sea Can Movements",
+      "group": "Tabs",
+      "summary": "Log each sea can's identifier, where it came from and where it is now; export it or add it to your report.",
+      "keywords": [
+        "sea can",
+        "seacan",
+        "container",
+        "can",
+        "row",
+        "level",
+        "location",
+        "movement",
+        "yard",
+        "export sea cans",
+        "pdf",
+        "excel",
+        "csv",
+        "word",
+        "include in my reports"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project, one per line."
+        },
+        {
+          "type": "image",
+          "file": "seacans.png",
+          "caption": "The Sea Can Movements tab"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Sea Can Movements\".",
+            "In \"Sea can #\", type the sea can identifier.",
+            "Under \"From location\", pick the \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from.",
+            "Under \"Current location\", pick the row and level where it is now."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "It starts with 20 lines and saves by itself. The top shows how many sea cans are entered."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"+  Add 10 rows\" adds more lines.",
+            "\"Remove empty rows\" takes out blank lines.",
+            "\"Clear all\" empties the whole tab. Tap \"Clear all\" again to confirm. This can't be undone."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Sending the sea can list:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap \"Export\" at the top of the tab.",
+            "Pick \"Export sea cans to PDF\", \"Export sea cans to Excel\", \"Export sea cans to CSV\" or \"Export sea cans to Word\".",
+            "Wait while the file is made.",
+            "When it's ready, pick \"Share or email\" or \"Save to phone\", like other exports."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Putting it in your daily report:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tick \"Include in my reports (PDF, Word and email)\" on this tab.",
+            "Your daily reports now show the sea can list after the fields."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The report lists only sea cans that have a number, with the columns Sea can, From row, From level, Current row and Current level."
+        },
+        {
+          "type": "tip",
+          "text": "Untick \"Include in my reports (PDF, Word and email)\" to leave the sea cans out of the report again."
+        },
+        {
+          "type": "see",
+          "id": "whats-in-the-report",
+          "text": "Related: What goes in the report"
+        }
+      ]
+    },
+    {
+      "id": "exporting-a-report",
+      "title": "Exporting a report (PDF or Word)",
+      "group": "Reports",
+      "summary": "Make the day's report as a PDF or Word file, then share, email or save it.",
+      "keywords": [
+        "report",
+        "export",
+        "pdf",
+        "word",
+        "docx",
+        "share",
+        "save",
+        "print",
+        "download"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist and tap the three dots (⋮). Or press and hold the checklist on the \"Checklists\" tab.",
+            "Tap \"Export to PDF\" or \"Export to Word\".",
+            "Wait while it says \"Building PDF report…\" or \"Building Word report…\".",
+            "When it says the file is ready, pick what to do."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Email to report list\" (PDF only): sends it to your report email list.",
+            "\"Share or email\": opens your phone's share menu.",
+            "\"Save to phone\": saves the file where you choose.",
+            "\"Open\" (classic app only): opens the file to look at it."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The file is named after the checklist, for example \"Daily work log 16-10-2026.pdf\"."
+        },
+        {
+          "type": "see",
+          "id": "emailing-a-report",
+          "text": "Related: Emailing the report"
+        },
+        {
+          "type": "see",
+          "id": "whats-in-the-report",
+          "text": "Related: What goes in the report"
+        }
+      ]
+    },
+    {
+      "id": "emailing-a-report",
+      "title": "Emailing the report",
+      "group": "Reports",
+      "summary": "Set up the report email list, then Email report sends the PDF to it.",
+      "keywords": [
+        "email",
+        "email report",
+        "send report",
+        "mail",
+        "outlook",
+        "gmail",
+        "email list",
+        "addresses",
+        "recipients",
+        "report email list",
+        "to"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "Open the checklist and tap the three dots (⋮).",
+            "Tap \"Email report\".",
+            "If the report email list is empty, type the addresses first and tap \"Save\".",
+            "The PDF is built and your email opens."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "New app: the addresses are copied. You see \"Email addresses copied. Paste them into \"To\".\" Pick your email app, then paste into To.",
+            "Classic app: pick your email app. The addresses are already in To."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The subject is the checklist name and project. The message says how many fields were completed and \"Report attached.\""
+        },
+        {
+          "type": "text",
+          "text": "The report email list:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap the three dots (⋯) at the top right.",
+            "Tap \"Report email list\".",
+            "Type the addresses, separated by commas.",
+            "Tap \"Save\". You see how many addresses were saved."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "If you see \"No valid email addresses found\", check for typos."
+        }
+      ]
+    },
+    {
+      "id": "whats-in-the-report",
+      "title": "What goes in the report",
+      "group": "Reports",
+      "summary": "Fields grouped South, North, Unzoned with stamps and photos, plus ticked Also today items, sea cans and overtime.",
+      "keywords": [
+        "report contents",
+        "what is in report",
+        "south",
+        "north",
+        "unzoned",
+        "photos",
+        "also today",
+        "overtime",
+        "pdf"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The PDF and Word reports show, from top to bottom:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "The project name, checklist name and location.",
+            "\"Generated\" with the date and your name.",
+            "How many fields are completed, with a progress bar, and the crew.",
+            "The fields, grouped \"South\", \"North\", \"Unzoned\" (and \"Other\" for fields with no area). If no fields have an area, they are in one list.",
+            "For each field: \"Completed by\" with name and time, or \"Not completed\"; load securement; \"Carries over to next shift\"; \"Assigned:\"; the notes; and the photos.",
+            "\"Photos required: none attached\" in red if a required photo is missing.",
+            "The sea can list, after the fields, only when \"Include in my reports (PDF, Word and email)\" is ticked on the Sea Can Movements tab. It shows the sea cans that have a number, with Sea can, From row, From level, Current row and Current level.",
+            "\"Also today\": only the items you ticked, with the time and any photos.",
+            "\"Weekend overtime\": the table and notes, only when \"Include in my reports\" is ticked on the Overtime tab."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Unticked \"Also today\" items and unticked notes are not in the report. Neither are sea cans or overtime unless their \"Include in my reports\" box is ticked."
+        },
+        {
+          "type": "see",
+          "id": "also-today",
+          "text": "Related: The Also today list"
+        },
+        {
+          "type": "see",
+          "id": "sea-can-movements",
+          "text": "Related: Including the sea can list"
+        },
+        {
+          "type": "see",
+          "id": "overtime-tab",
+          "text": "Related: Including overtime"
+        }
+      ]
+    },
+    {
+      "id": "approving-requests",
+      "title": "Approving a request",
+      "group": "App owner",
+      "summary": "On the owner's phone: paste an access request and tap Approve, then send the approval back.",
+      "keywords": [
+        "approve",
+        "approvals",
+        "owner",
+        "access request",
+        "new user",
+        "permission"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Only the app owner's phone can approve people. Each approval lasts one year."
+        },
+        {
+          "type": "image",
+          "file": "approvals.png",
+          "caption": "The owner's Approvals page"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "When someone texts you an access request, copy the whole text.",
+            "In the app, tap the person icon on the \"Projects\" screen, then \"More…\", then \"Approvals / hand over\".",
+            "Tap \"Paste\". The request appears in the box.",
+            "Tap \"Approve\".",
+            "Check the name in \"Approve …?\" and tap \"Approve\".",
+            "The share menu opens with the approval text. Send it back to that person by text."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The approval text is also copied, in case you need to paste it. Under \"Approved\" you see everyone you approved, when, and until when."
+        },
+        {
+          "type": "tip",
+          "text": "If you see \"That doesn't look like an access request\", copy the whole text again."
+        },
+        {
+          "type": "see",
+          "id": "hand-over-ownership",
+          "text": "Related: Handing over ownership"
+        }
+      ]
+    },
+    {
+      "id": "hand-over-ownership",
+      "title": "Handing over ownership to another phone",
+      "group": "App owner",
+      "summary": "Move the owner role to a new phone with a handover text and a 6-digit code. You can undo it.",
+      "keywords": [
+        "hand over",
+        "handover",
+        "new phone",
+        "work phone",
+        "transfer owner",
+        "6-digit code",
+        "undo"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Moving to another phone, like a work phone? You can make it the owner. Everyone you approved stays approved."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Install the app on the new phone first.",
+            "On the owner phone, open \"Approvals / hand over\" (person icon, \"More…\").",
+            "Under \"Hand over ownership\", type the new phone's number in \"New phone's number\".",
+            "Tap \"Send handover text\", then \"Hand over\".",
+            "A box shows \"Your code:\" and 6 digits. Write it down. Don't text the code.",
+            "Messages opens with the handover text. Send it to the new phone."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Once you send it, this phone stops approving people. It keeps its own access and everything saved on it."
+        },
+        {
+          "type": "text",
+          "text": "This phone then shows \"Ownership handed over\" and \"Code for the new phone:\" until the handover is done."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Undo: if the new phone didn't take over, tap \"Undo: keep this phone as the owner\".",
+            "Tap \"Keep\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Only undo if the new phone did not take over. Otherwise you would have two owner phones."
+        },
+        {
+          "type": "see",
+          "id": "take-over-as-owner",
+          "text": "Related: Taking over on the new phone"
+        }
+      ]
+    },
+    {
+      "id": "take-over-as-owner",
+      "title": "Taking over as the app owner",
+      "group": "App owner",
+      "summary": "On the new phone: paste the handover text, type the 6-digit code and tap Take over.",
+      "keywords": [
+        "take over",
+        "new owner",
+        "handover",
+        "6-digit code",
+        "become owner"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "On the new phone, copy the whole handover text from Messages.",
+            "Open the app. On the \"Sign in\" screen, tap \"Take over as the app owner\". (If this phone is already signed in: person icon, \"More…\", \"App owner / Approvals\".)",
+            "Tap \"Paste\".",
+            "Type the 6-digit code shown on the old owner phone.",
+            "Tap \"Take over\".",
+            "You see \"This phone is now the app owner\". Then choose a PIN."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Wrong code, or the text isn't complete.\" Check the 6 digits and paste the whole text.",
+            "\"That handover isn't from this app's owner.\" Ask the owner to send it again."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "To make the old phone the owner again later, send a handover from the new owner phone back to it."
+        },
+        {
+          "type": "see",
+          "id": "hand-over-ownership",
+          "text": "Related: Handing over ownership"
+        }
+      ]
+    },
+    {
+      "id": "user-manual",
+      "title": "Using this user manual (Support)",
+      "group": "Help",
+      "summary": "Open the manual from Support or your profile, search it, and use Back and Next.",
+      "keywords": [
+        "support",
+        "help",
+        "manual",
+        "user manual",
+        "search",
+        "guide",
+        "instructions",
+        "how to"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "This manual is built into the app. It covers every part of the app, with pictures."
+        },
+        {
+          "type": "text",
+          "text": "Ways to open it:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Tap \"Support\" on the opening screen, under \"Enter\".",
+            "Tap \"Support\" at the bottom of the \"Sign in\" screen.",
+            "Once signed in: tap the person icon on the \"Projects\" screen, then \"More…\", then \"User manual\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "On the \"Support\" page, tap \"User manual\". You see the list of topics, grouped by subject."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To find something, type a word in the search box, for example \"photos\", \"PIN\" or \"sea can\".",
+            "The topics that match show up, with your word marked in yellow.",
+            "Tap a topic to read it."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "At the bottom of each topic there are \"Back\" and \"Next\" buttons. They take you to the topic before or after, so you can read the manual like a book."
+        },
+        {
+          "type": "tip",
+          "text": "If nothing matches, try another word, like \"photo\", \"text\" or \"report\"."
+        },
+        {
+          "type": "see",
+          "id": "what-the-app-does",
+          "text": "Related: What the app does"
+        },
+        {
+          "type": "see",
+          "id": "tips",
+          "text": "Related: Troubleshooting & tips"
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "title": "Backing up all your work",
+      "group": "Help",
+      "summary": "Save everything (projects, photos, crew, links) in one backup file.",
+      "keywords": [
+        "backup",
+        "back up",
+        "save",
+        "zip",
+        "export all",
+        "safe",
+        "copy"
+      ],
+      "newAppOnly": true,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A backup puts all your work into one .zip file: projects, checklists, photos, crew, links and your profile."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Projects\" screen, tap the person icon.",
+            "Tap \"More…\", then \"Back up all my work\".",
+            "Wait for \"Making your backup…\".",
+            "The share menu opens. Save the file somewhere safe (like Files or Drive), or send it to your new phone."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Make a backup now and then, and always before changing phones."
+        },
+        {
+          "type": "see",
+          "id": "restore",
+          "text": "Related: Restoring from a backup"
+        },
+        {
+          "type": "see",
+          "id": "moving-to-a-new-phone",
+          "text": "Related: Moving to a new phone"
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Restoring from a backup",
+      "group": "Help",
+      "summary": "Replace everything on this phone with a backup file. Works between Android and iPhone.",
+      "keywords": [
+        "restore",
+        "backup",
+        "zip",
+        "new phone",
+        "recover",
+        "import all"
+      ],
+      "newAppOnly": true,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Projects\" screen, tap the person icon.",
+            "Tap \"More…\", then \"Restore from a backup\".",
+            "Pick the backup .zip file.",
+            "Read \"Restore this backup?\". It says whose backup it is and how many projects and photos it has.",
+            "Tap \"Restore\". You see \"Backup restored\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Restoring replaces everything on this phone with the backup. It can't be undone."
+        },
+        {
+          "type": "text",
+          "text": "If you see \"That file isn't a Daily Work Log backup\", pick the right .zip file."
+        },
+        {
+          "type": "see",
+          "id": "backup",
+          "text": "Related: Backing up all your work"
+        }
+      ]
+    },
+    {
+      "id": "where-data-is-kept",
+      "title": "Where your data is kept",
+      "group": "Help",
+      "summary": "Everything is saved on your phone. Nothing is uploaded.",
+      "keywords": [
+        "data",
+        "privacy",
+        "cloud",
+        "upload",
+        "storage",
+        "offline",
+        "internet",
+        "saved"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "All your projects, checklists, photos, crew and notes are saved on your phone only. Nothing is uploaded to the internet."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "The app works without signal. Only opening links and filling in forms need the internet.",
+            "Reports, texts and emails only leave your phone when you send them.",
+            "If you delete the app, your work is deleted with it. Make a backup first (new app)."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "backup",
+          "text": "Related: Backing up all your work"
+        }
+      ]
+    },
+    {
+      "id": "moving-to-a-new-phone",
+      "title": "Moving to a new phone",
+      "group": "Help",
+      "summary": "Back up on the old phone, restore on the new one, and get the new phone approved.",
+      "keywords": [
+        "new phone",
+        "switch phone",
+        "transfer",
+        "move",
+        "iphone",
+        "android",
+        "upgrade"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "steps",
+          "items": [
+            "On the old phone, tap \"Back up all my work\" and send the file to the new phone.",
+            "Install the app on the new phone.",
+            "Ask for access on the new phone (\"Request access\"). The approval is for each phone.",
+            "Paste the approval code, sign in and choose a PIN.",
+            "Tap the person icon, \"More…\", \"Restore from a backup\", and pick the file."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Backups work between Android and iPhone."
+        },
+        {
+          "type": "tip",
+          "text": "Moving from the classic Android app to the new app on the same phone? Installing the new app as an update keeps your work."
+        },
+        {
+          "type": "tip",
+          "text": "If you are the app owner, also hand over ownership to the new phone."
+        },
+        {
+          "type": "see",
+          "id": "hand-over-ownership",
+          "text": "Related: Handing over ownership"
+        },
+        {
+          "type": "see",
+          "id": "restore",
+          "text": "Related: Restoring from a backup"
+        }
+      ]
+    },
+    {
+      "id": "texts-not-arriving",
+      "title": "Texts not arriving",
+      "group": "Help",
+      "summary": "Check the phone number, the texts tick in Manage crew, and the SMS permission on Android.",
+      "keywords": [
+        "sms",
+        "text not sent",
+        "not arriving",
+        "no text",
+        "permission",
+        "phone number",
+        "messages",
+        "troubleshooting"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If a crew member didn't get a text, check these:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Is the phone number right? Open \"Manage crew\" (project ⋯ menu) and tap the person.",
+            "For assignment texts: is \"This contact will receive texts when assigned to a field or task\" ticked? Without it, no assignment text is sent. (Notify still texts anyone you pick.)",
+            "Only newly assigned people get a text. To send again, open the field and tap \"Text it\".",
+            "You never get a text for assigning yourself.",
+            "Android: the app needs permission to send SMS. If you said no, open the phone's Settings, Apps, Daily Work Log, Permissions, and allow SMS.",
+            "iPhone: the app can't send texts by itself. Messages opens. Make sure you tap Send.",
+            "Did you tap \"Undo\" by mistake? Use \"Text it\" to send it again.",
+            "With photos, pick Messages in the share menu, then choose who to send it to."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "\"No messaging app found on this phone\" means no texting app could open."
+        },
+        {
+          "type": "see",
+          "id": "assignment-texts",
+          "text": "Related: How assignment texts work"
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Managing your crew"
+        }
+      ]
+    },
+    {
+      "id": "tips",
+      "title": "Troubleshooting & tips",
+      "group": "Help",
+      "summary": "Quick answers: saving, photos, links, reading lists, reports and more.",
+      "keywords": [
+        "tips",
+        "help",
+        "troubleshooting",
+        "problem",
+        "faq",
+        "not working",
+        "hints",
+        "photo",
+        "camera",
+        "gallery",
+        "permission",
+        "missing photo",
+        "can't complete"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "bullets",
+          "items": [
+            "You never need to tap Save on a field or note. Changes save by themselves.",
+            "Press and hold things (projects, checklists, links, notes) to see more options.",
+            "\"No app on this phone can open that link\": check the web address with \"Edit link\".",
+            "Forms not filling in? You need signal. Use \"Copy my details\" to paste instead.",
+            "Reading a list from a photo works best close up, straight on, in good light.",
+            "\"Couldn't build the report. Please try again.\": try again. Very many photos take longer.",
+            "Can't find a field? Clear the filter buttons, or use the search box on the Checklists tab.",
+            "Signed out by mistake? Tap \"Enter\" and type your PIN."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Photo problems:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"No camera app found\" or \"No gallery app found\": allow the app to use the camera and photos in your phone's Settings.",
+            "\"Couldn't save that photo\" or \"Some photos couldn't be added\": try again. Check that your phone has free space.",
+            "\"This field needs a photo before it can be completed\": the field has Photos Required. Add a photo first, or turn off \"Photos required?\".",
+            "\"(Photo missing)\" in a report: the photo file is no longer on the phone.",
+            "Photos are kept at full quality, so they take space. Delete old checklists or notes you no longer need."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "texts-not-arriving",
+          "text": "Related: Texts not arriving"
+        },
+        {
+          "type": "see",
+          "id": "where-data-is-kept",
+          "text": "Related: Where your data is kept"
+        }
+      ]
+    }
+  ]
+}

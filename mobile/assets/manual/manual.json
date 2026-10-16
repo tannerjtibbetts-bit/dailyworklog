@@ -95,6 +95,10 @@
           ]
         },
         {
+          "type": "text",
+          "text": "The \"Support\" button under \"Enter\" opens this user manual. You can read it before you sign in."
+        },
+        {
           "type": "see",
           "id": "requesting-access",
           "text": "Related: Asking for access the first time"
@@ -512,6 +516,7 @@
           "type": "bullets",
           "items": [
             "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). See the App owner section.",
+            "\"User manual\": opens this manual.",
             "\"Back up all my work\" and \"Restore from a backup\" (new app only).",
             "\"Sign out\". It only shows when you have a PIN."
           ]
@@ -2210,7 +2215,7 @@
       "id": "sea-can-movements",
       "title": "Sea Can Movements",
       "group": "Tabs",
-      "summary": "Log each sea can: its identifier, the row and level it came from, and where it is now.",
+      "summary": "Log each sea can's identifier, where it came from and where it is now; export it or add it to your report.",
       "keywords": [
         "sea can",
         "seacan",
@@ -2220,7 +2225,13 @@
         "level",
         "location",
         "movement",
-        "yard"
+        "yard",
+        "export sea cans",
+        "pdf",
+        "excel",
+        "csv",
+        "word",
+        "include in my reports"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2256,8 +2267,41 @@
           ]
         },
         {
+          "type": "text",
+          "text": "Sending the sea can list:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap \"Export\" at the top of the tab.",
+            "Pick \"Export sea cans to PDF\", \"Export sea cans to Excel\", \"Export sea cans to CSV\" or \"Export sea cans to Word\".",
+            "Wait while the file is made.",
+            "When it's ready, pick \"Share or email\" or \"Save to phone\", like other exports."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Putting it in your daily report:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tick \"Include in my reports (PDF, Word and email)\" on this tab.",
+            "Your daily reports now show the sea can list after the fields."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The report lists only sea cans that have a number, with the columns Sea can, From row, From level, Current row and Current level."
+        },
+        {
           "type": "tip",
-          "text": "Sea can movements are kept on this tab. They are not part of the daily report."
+          "text": "Untick \"Include in my reports (PDF, Word and email)\" to leave the sea cans out of the report again."
+        },
+        {
+          "type": "see",
+          "id": "whats-in-the-report",
+          "text": "Related: What goes in the report"
         }
       ]
     },
@@ -2378,7 +2422,7 @@
       "id": "whats-in-the-report",
       "title": "What goes in the report",
       "group": "Reports",
-      "summary": "Fields grouped South, North, Unzoned with stamps and photos, plus ticked Also today items and overtime.",
+      "summary": "Fields grouped South, North, Unzoned with stamps and photos, plus ticked Also today items, sea cans and overtime.",
       "keywords": [
         "report contents",
         "what is in report",
@@ -2406,18 +2450,24 @@
             "The fields, grouped \"South\", \"North\", \"Unzoned\" (and \"Other\" for fields with no area). If no fields have an area, they are in one list.",
             "For each field: \"Completed by\" with name and time, or \"Not completed\"; load securement; \"Carries over to next shift\"; \"Assigned:\"; the notes; and the photos.",
             "\"Photos required: none attached\" in red if a required photo is missing.",
+            "The sea can list, after the fields, only when \"Include in my reports (PDF, Word and email)\" is ticked on the Sea Can Movements tab. It shows the sea cans that have a number, with Sea can, From row, From level, Current row and Current level.",
             "\"Also today\": only the items you ticked, with the time and any photos.",
             "\"Weekend overtime\": the table and notes, only when \"Include in my reports\" is ticked on the Overtime tab."
           ]
         },
         {
           "type": "tip",
-          "text": "Unticked \"Also today\" items, unticked notes and sea can movements are not in the report."
+          "text": "Unticked \"Also today\" items and unticked notes are not in the report. Neither are sea cans or overtime unless their \"Include in my reports\" box is ticked."
         },
         {
           "type": "see",
           "id": "also-today",
           "text": "Related: The Also today list"
+        },
+        {
+          "type": "see",
+          "id": "sea-can-movements",
+          "text": "Related: Including the sea can list"
         },
         {
           "type": "see",
@@ -2576,6 +2626,72 @@
           "type": "see",
           "id": "hand-over-ownership",
           "text": "Related: Handing over ownership"
+        }
+      ]
+    },
+    {
+      "id": "user-manual",
+      "title": "Using this user manual (Support)",
+      "group": "Help",
+      "summary": "Open the manual from Support or your profile, search it, and use Back and Next.",
+      "keywords": [
+        "support",
+        "help",
+        "manual",
+        "user manual",
+        "search",
+        "guide",
+        "instructions",
+        "how to"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "This manual is built into the app. It covers every part of the app, with pictures."
+        },
+        {
+          "type": "text",
+          "text": "Ways to open it:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Tap \"Support\" on the opening screen, under \"Enter\".",
+            "Tap \"Support\" at the bottom of the \"Sign in\" screen.",
+            "Once signed in: tap the person icon on the \"Projects\" screen, then \"More…\", then \"User manual\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "On the \"Support\" page, tap \"User manual\". You see the list of topics, grouped by subject."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To find something, type a word in the search box, for example \"photos\", \"PIN\" or \"sea can\".",
+            "The topics that match show up, with your word marked in yellow.",
+            "Tap a topic to read it."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "At the bottom of each topic there are \"Back\" and \"Next\" buttons. They take you to the topic before or after, so you can read the manual like a book."
+        },
+        {
+          "type": "tip",
+          "text": "If nothing matches, try another word, like \"photo\", \"text\" or \"report\"."
+        },
+        {
+          "type": "see",
+          "id": "what-the-app-does",
+          "text": "Related: What the app does"
+        },
+        {
+          "type": "see",
+          "id": "tips",
+          "text": "Related: Troubleshooting & tips"
         }
       ]
     },
