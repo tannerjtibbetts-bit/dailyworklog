@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -15,11 +17,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Same id as the earlier Android app, so this installs as an update and keeps its data.
         applicationId = "com.dailyworklog.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
@@ -29,11 +29,28 @@ android {
         versionName = flutter.versionName
     }
 
+    // An app can only be updated by an APK signed with the same key. The earlier app was built in
+    // Termux and signed with Termux's ~/.android/debug.keystore, so the online build signs with
+    // that same keystore, given base64-encoded in the ANDROID_KEYSTORE_BASE64 secret.
+    val keystoreB64 = System.getenv("ANDROID_KEYSTORE_BASE64")
+    signingConfigs {
+        if (!keystoreB64.isNullOrBlank()) {
+            create("termux") {
+                val f = layout.buildDirectory.file("termux.keystore").get().asFile
+                f.parentFile.mkdirs()
+                f.writeBytes(Base64.getMimeDecoder().decode(keystoreB64))
+                storeFile = f
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystoreB64.isNullOrBlank()) signingConfigs.getByName("debug")
+            else signingConfigs.getByName("termux")
         }
     }
 }

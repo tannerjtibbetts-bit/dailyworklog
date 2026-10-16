@@ -34,8 +34,11 @@ class Store extends ChangeNotifier {
   bool _again = false;
 
   /// Loads the saved data. [base] is only given in tests.
+  ///
+  /// On Android this is the app's "files" folder, the same place the earlier Android app kept
+  /// worklog.json and photos, so installing this version as an update keeps everything.
   static Future<Store> open([Directory? base]) async {
-    final d = base ?? await getApplicationDocumentsDirectory();
+    final d = base ?? (Platform.isAndroid ? await getApplicationSupportDirectory() : await getApplicationDocumentsDirectory());
     final s = Store._(d);
     await s.photoDir.create(recursive: true);
     await s._load();
