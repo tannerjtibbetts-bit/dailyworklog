@@ -63,6 +63,42 @@ final class ScanReader {
         });
     }
 
+    interface LinesResult {
+        /** Every line of text found, in reading order. */
+        void onLines(List<String> lines);
+
+        void onError(String message);
+    }
+
+    /** Just the lines of text in a picture, e.g. a screenshot of a text message. */
+    static void readLines(Context c, Uri uri, LinesResult result) {
+        Context app = c.getApplicationContext();
+        Handler main = new Handler(Looper.getMainLooper());
+        PhotoUtil.BG.execute(() -> {
+            Bitmap bmp = load(app, uri);
+            main.post(() -> {
+                if (bmp == null) {
+                    result.onError("Couldn't open that picture");
+                    return;
+                }
+                TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+                recognizer.process(InputImage.fromBitmap(bmp, 0))
+                        .addOnSuccessListener(text -> {
+                            recognizer.close();
+                            List<String> lines = new ArrayList<>();
+                            for (Text.TextBlock block : text.getTextBlocks()) {
+                                for (Text.Line line : block.getLines()) lines.add(line.getText());
+                            }
+                            result.onLines(lines);
+                        })
+                        .addOnFailureListener(e -> {
+                            recognizer.close();
+                            result.onError("Couldn't read the text in that picture");
+                        });
+            });
+        });
+    }
+
     /** The photo's pixels, for reading cell colours. */
     private static ZoneSheet.Pixels pixels(Bitmap bmp) {
         return new ZoneSheet.Pixels() {

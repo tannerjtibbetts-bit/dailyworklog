@@ -10,6 +10,7 @@ import '../data/models.dart';
 import '../data/store.dart';
 import '../export/export.dart';
 import '../import/import_screen.dart';
+import '../services/done_text.dart';
 import '../services/photos.dart';
 import '../ui/common.dart';
 import '../ui/theme.dart';
@@ -151,6 +152,10 @@ class _LogScreenState extends State<LogScreen> {
     }
     HapticFeedback.selectionClick();
     store.save();
+    final p = project, l = log;
+    if (t.done && p != null && l != null) {
+      textDone(context, p, l, t, margin: const EdgeInsets.fromLTRB(16, 0, 16, 104)); // above the mic
+    }
   }
 
   void _addTask(String title, [String side = '']) {
@@ -223,6 +228,7 @@ class _LogScreenState extends State<LogScreen> {
       SheetItem(Icons.photo_camera_outlined, 'Take a photo of a task list', () => open(ImportSource.camera)),
       SheetItem(Icons.photo_library_outlined, 'Choose a photo', () => open(ImportSource.gallery)),
       SheetItem(Icons.table_chart_outlined, 'Import an Excel or CSV file', () => open(ImportSource.file)),
+      SheetItem(Icons.sms_outlined, 'Add a field from a text screenshot', () => open(ImportSource.textScreenshot)),
     ]);
   }
 

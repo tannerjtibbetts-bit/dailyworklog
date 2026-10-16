@@ -221,3 +221,34 @@ class ManualTest { public static void main(String[] a) throws Exception {
 class HiddenTabsTest { public static void main(String[] a) throws Exception {
   NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
   System.out.println("TABS PASS"); } }
+class DoneTextTest { public static void main(String[] a) throws Exception {
+  Models.Project p = new Models.Project(); p.name = "B44 Zone 2";
+  Models.DailyLog l = new Models.DailyLog(); l.date = "2026-10-16";
+  Models.Task t = new Models.Task(); t.title = "Pack up sea can 317503"; t.photosRequired = true;
+  // The exact text this app sends, as lines
+  String sent = SmsHelper.taskText(p, l, t, "Tanner", "12266688639");
+  java.util.List<AssignmentText> r = AssignmentText.parse(java.util.Arrays.asList(sent.split("\n", -1)));
+  NoteTest.check(r.size() == 1, "one found");
+  AssignmentText x = r.get(0);
+  NoteTest.check(x.title.equals("Pack up sea can 317503") && x.photosRequired && x.from.equals("Tanner") && x.phone.equals("12266688639")
+      && x.logTitle.equals("Daily work log 16/10/2026") && x.project.equals("B44 Zone 2"), "exact text " + x.title + "|" + x.from + "|" + x.phone + "|" + x.logTitle + "|" + x.project);
+  t.photosRequired = false;
+  x = AssignmentText.parse(java.util.Arrays.asList(SmsHelper.taskText(p, l, t, "Tanner", "").split("\n", -1))).get(0);
+  NoteTest.check(!x.photosRequired && x.phone.isEmpty() && x.from.equals("Tanner"), "no number");
+  // OCR-like screenshot: wrapped title, semicolon, odd dashes, time, Notify-style From
+  java.util.List<String> ocr = java.util.Arrays.asList("< Tanner", "Daily work log 16/10/2026 (B44)", "Assigned to you; Move pallets",
+      "to B07 laydown", "12:36 PM", "———————", "From: Tanner (B44 Zone 2)", "Call or text me at 1-226-668-8639",
+      "Daily work log 16/10/2026 (B44)", "Assigned to you: Clean crib.", "--------------------", "From: Tanner", "Call or text me at 226 668 8639");
+  r = AssignmentText.parse(ocr);
+  NoteTest.check(r.size() == 2, "two found");
+  NoteTest.check(r.get(0).title.equals("Move pallets to B07 laydown") && r.get(0).from.equals("Tanner") && r.get(0).phone.equals("12266688639"), "wrapped " + r.get(0).title);
+  NoteTest.check(r.get(1).title.equals("Clean crib") && r.get(1).phone.equals("2266688639") && r.get(1).project.equals("B44"), "second " + r.get(1).title);
+  NoteTest.check(AssignmentText.parse(java.util.Arrays.asList("hello", "see you at 7")).isEmpty(), "junk");
+  // Done text
+  t.done = true; t.completedAt = 0;
+  String d = SmsHelper.doneText(p, l, t, "Sam", "");
+  NoteTest.check(d.equals("Daily work log 16/10/2026 (B44 Zone 2)\n\nCompleted: Pack up sea can 317503\nDone by Sam, " + Fmt.stamp(0) + "\n\n--------------------\nFrom: Sam"), "done text " + d);
+  t.doneTextName = "Tanner"; t.doneTextPhone = "1-226-668-8639";
+  Models.Task q = Models.Task.fromJson(t.toJson());
+  NoteTest.check(q.doneTextName.equals("Tanner") && q.doneTextPhone.equals("1-226-668-8639") && t.carryCopy().doneTextName.equals("Tanner"), "saved and carried");
+  System.out.println("DONETEXT PASS"); } }

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/store.dart';
 import '../ui/common.dart';
@@ -18,6 +19,10 @@ class Sms {
   static const _channel = MethodChannel('dailyworklog/sms');
 
   static String digits(String? phone) => phoneDigits(phone);
+
+  /// For tests: called instead of opening Messages.
+  @visibleForTesting
+  static Future<void> Function(List<String> numbers, String body)? composeHook;
 
   /// The sms: link that opens Messages with [body] ready for [numbers].
   /// Android: sms:a;b?body=..  iOS: sms:/open?addresses=a,b&body=..
@@ -35,6 +40,8 @@ class Sms {
     String body, {
     List<File> photos = const [],
   }) async {
+    final hook = composeHook;
+    if (hook != null) return hook(numbers, body);
     final files = [
       for (final f in photos)
         if (f.existsSync()) f,
@@ -103,6 +110,16 @@ class Sms {
     s.write('\n\nAssigned to you: ${t.title}'); // blank line under the title
     // Field notes stay in the app; texts only carry the photo reminder.
     if (t.photosRequired) s.write('\n\nPhotos required.');
+    s.write(signOff(me, contact));
+    return s.toString();
+  }
+
+  /// Text to the person who wanted to know when a field is done.
+  static String doneText(Project p, DailyLog l, Task t, String me, String contact) {
+    final s = StringBuffer(l.displayTitle());
+    if (p.name.isNotEmpty) s.write(' (${p.name})');
+    s.write('\n\nCompleted: ${t.title}');
+    s.write('\nDone by $me, ${Fmt.stamp(t.completedAt)}');
     s.write(signOff(me, contact));
     return s.toString();
   }

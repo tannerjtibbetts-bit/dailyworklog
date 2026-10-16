@@ -10,14 +10,17 @@ import 'package:image_picker/image_picker.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/store.dart';
+import '../services/sms.dart';
 import '../ui/common.dart';
 import '../ui/theme.dart';
+import 'assignment_text.dart';
 import 'import_review.dart';
 import 'scan_reader.dart';
 import 'sheet_import.dart';
 
-/// How the import starts: a photo of a list, the North/South zone sheet photo, or a file.
-enum ImportSource { camera, gallery, zoneCamera, zoneGallery, file }
+/// How the import starts: a photo of a list, the North/South zone sheet photo, a file,
+/// or a screenshot of an assignment text.
+enum ImportSource { camera, gallery, zoneCamera, zoneGallery, file, textScreenshot }
 
 /// Pops with the number of fields added (0 if nothing was added).
 class ImportScreen extends StatefulWidget {
@@ -28,7 +31,11 @@ class ImportScreen extends StatefulWidget {
   /// For tests: skip picking and reading, and review these instead.
   final ImportReview? review;
 
-  const ImportScreen({super.key, required this.project, required this.log, required this.source, this.review});
+  /// For tests: skip picking and reading, and review these assignment texts instead.
+  final List<AssignmentText>? texts;
+
+  const ImportScreen(
+      {super.key, required this.project, required this.log, required this.source, this.review, this.texts});
 
   @override
   State<ImportScreen> createState() => _ImportScreenState();
@@ -36,13 +43,32 @@ class ImportScreen extends StatefulWidget {
 
 class _ImportScreenState extends State<ImportScreen> {
   ImportReview? review;
+  AssignmentReview? texts;
+  final titles = <TextEditingController>[];
   String busy = '';
 
   @override
   void initState() {
     super.initState();
     review = widget.review;
-    if (review == null) WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+    if (widget.texts != null) _showTexts(widget.texts!);
+    if (review == null && texts == null) WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  @override
+  void dispose() {
+    for (final c in titles) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _showTexts(List<AssignmentText> found) {
+    final r = AssignmentReview(found);
+    texts = r;
+    for (var i = 0; i < found.length; i++) {
+      titles.add(TextEditingController(text: r.titles[i]));
+    }
   }
 
   void _quit([String? message]) {
@@ -58,6 +84,7 @@ class _ImportScreenState extends State<ImportScreen> {
         await _photo(ImageSource.camera);
       case ImportSource.gallery:
       case ImportSource.zoneGallery:
+      case ImportSource.textScreenshot:
         await _photo(ImageSource.gallery);
       case ImportSource.file:
         await _file();
@@ -85,6 +112,17 @@ class _ImportScreenState extends State<ImportScreen> {
     }
     if (!mounted) return;
     if (r.error != null) return _quit(r.error);
+    if (widget.source == ImportSource.textScreenshot) {
+      final found = parseAssignmentTexts(r.lines);
+      if (found.isNotEmpty) {
+        setState(() {
+          busy = '';
+          _showTexts(found);
+        });
+        return;
+      }
+      if (!await _noTextFound() || !mounted) return _quit();
+    }
     if (r.zone != null) {
       setState(() {
         busy = '';
@@ -131,6 +169,23 @@ class _ImportScreenState extends State<ImportScreen> {
       busy = '';
       review = ImportReview.rows(rows!, 'the spreadsheet', header: true);
     });
+  }
+
+  /// Nothing like an assignment text in the picture. True to read it as a list instead.
+  Future<bool> _noTextFound() async {
+    final asList = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Add from text'),
+        content: const Text("Couldn't find an assignment text in that picture. Make sure the whole text, "
+            'starting at "Assigned to you", is in the screenshot.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Read it as a list')),
+        ],
+      ),
+    );
+    return asList == true;
   }
 
   // ----- actions -----
@@ -197,18 +252,34 @@ class _ImportScreenState extends State<ImportScreen> {
     Navigator.of(context).pop(tasks.length);
   }
 
+  void _addTexts() {
+    final r = texts!;
+    final tasks = r.toTasks(Store.instance.me());
+    if (tasks.isEmpty) return;
+    widget.log.tasks.addAll(tasks);
+    Store.instance.save();
+    toast(context, 'Added ${Fmt.plural(tasks.length, 'field', 'fields')}');
+    Navigator.of(context).pop(tasks.length);
+  }
+
   // ----- layout -----
 
   @override
   Widget build(BuildContext context) {
-    final r = review;
+    final r = review, x = texts;
     return Scaffold(
       backgroundColor: C.bg,
       body: SafeArea(
         child: Column(children: [
           _topBar(),
           Expanded(
-            child: r == null
+            child: x != null
+                ? Stack(children: [
+                    _textsBody(x),
+                    Positioned(
+                        left: 20, right: 20, bottom: 16, child: _bigButton(x.chosen().length, _addTexts)),
+                  ])
+                : r == null
                 ? Center(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       if (busy.isNotEmpty) const CircularProgressIndicator(),
@@ -234,7 +305,7 @@ class _ImportScreenState extends State<ImportScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(widget.project.name.toUpperCase(),
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: C.grey)),
-              const Text('Add fields', style: TextStyle(fontSize: 21, color: C.navy)),
+              Text(texts != null ? 'Add from text' : 'Add fields', style: const TextStyle(fontSize: 21, color: C.navy)),
             ]),
           ),
           Positioned(
@@ -345,8 +416,9 @@ class _ImportScreenState extends State<ImportScreen> {
         ),
       );
 
-  Widget _addButton(ImportReview r) {
-    final n = r.chosen().length;
+  Widget _addButton(ImportReview r) => _bigButton(r.chosen().length, _add);
+
+  Widget _bigButton(int n, VoidCallback onTap) {
     return Opacity(
       opacity: n == 0 ? 0.5 : 1,
       child: Material(
@@ -355,7 +427,7 @@ class _ImportScreenState extends State<ImportScreen> {
         borderRadius: BorderRadius.circular(100),
         child: InkWell(
           borderRadius: BorderRadius.circular(100),
-          onTap: _add,
+          onTap: onTap,
           child: SizedBox(
             height: 64,
             child: Center(
@@ -368,5 +440,65 @@ class _ImportScreenState extends State<ImportScreen> {
         ),
       ),
     );
+  }
+
+  // ----- assignment texts -----
+
+  Widget _textsBody(AssignmentReview r) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+        children: [
+          for (var i = 0; i < r.texts.length; i++)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: cardDecoration(),
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+              child: _textItem(r, i),
+            ),
+        ],
+      );
+
+  Widget _textItem(AssignmentReview r, int i) {
+    final t = r.texts[i];
+    final phone = t.phone.isEmpty ? '' : Sms.formatPhone(t.phone);
+    final fromLine = t.from.isEmpty ? '' : 'From ${t.from}${phone.isEmpty ? '' : ' · $phone'}';
+    final who = t.from.isNotEmpty ? t.from : phone;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Checkbox(value: r.ticked[i], onChanged: (on) => setState(() => r.ticked[i] = on ?? false)),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          TextField(
+            controller: titles[i],
+            minLines: 1,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            style: const TextStyle(fontSize: 17, color: C.text),
+            decoration: const InputDecoration(hintText: 'Field title'),
+            onChanged: (s) => setState(() => r.titles[i] = s),
+          ),
+          if (fromLine.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(fromLine, style: const TextStyle(fontSize: 14, color: C.grey)),
+            ),
+          if (t.photosRequired)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: C.sky, borderRadius: BorderRadius.circular(100)),
+                child: const Text('Photos required', style: TextStyle(fontSize: 13, color: C.deepBlue)),
+              ),
+            ),
+          if (t.phone.isNotEmpty)
+            InkWell(
+              onTap: () => setState(() => r.textWhenDone[i] = !r.textWhenDone[i]),
+              child: Row(children: [
+                IgnorePointer(child: Checkbox(value: r.textWhenDone[i], onChanged: (_) {})),
+                Flexible(child: Text("Text $who when it's done", style: const TextStyle(fontSize: 16))),
+              ]),
+            ),
+        ]),
+      ),
+    ]);
   }
 }

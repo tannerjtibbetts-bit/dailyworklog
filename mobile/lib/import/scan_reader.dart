@@ -20,17 +20,26 @@ class ScanResult {
   final List<ZoneTask>? zone;
   final String? error;
 
-  const ScanResult.rows(List<List<String>> this.rows)
+  /// The text read, line by line, top to bottom (in the reader's block and line order).
+  final List<String> lines;
+
+  const ScanResult.rows(List<List<String>> this.rows, {this.lines = const []})
       : zone = null,
         error = null;
 
-  const ScanResult.zone(List<ZoneTask> this.zone)
+  const ScanResult.zone(List<ZoneTask> this.zone, {this.lines = const []})
       : rows = null,
         error = null;
 
   const ScanResult.error(String this.error)
       : rows = null,
-        zone = null;
+        zone = null,
+        lines = const [];
+
+  const ScanResult._(this.rows, this.zone, this.error, this.lines);
+
+  /// The same result, with the plain lines read.
+  ScanResult withLines(List<String> lines) => ScanResult._(rows, zone, error, lines);
 }
 
 class ScanReader {
@@ -53,7 +62,7 @@ class ScanReader {
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
       final text = await recognizer.processImage(InputImage.fromFilePath(prepared.path));
-      return interpret(boxes(text), ImagePixels(prepared.image));
+      return interpret(boxes(text), ImagePixels(prepared.image)).withLines(textLines(text));
     } catch (_) {
       return const ScanResult.error("Couldn't read the text in that photo");
     } finally {
@@ -80,6 +89,12 @@ class ScanReader {
           for (final line in block.lines)
             Box(line.text, line.boundingBox.left.round(), line.boundingBox.top.round(),
                 line.boundingBox.right.round(), line.boundingBox.bottom.round())
+      ];
+
+  /// The lines read, in block and line order (top to bottom for a screenshot).
+  static List<String> textLines(RecognizedText text) => [
+        for (final block in text.blocks)
+          for (final line in block.lines) line.text
       ];
 
   /// Decodes the photo upright (camera photos are often stored sideways) and not too large.

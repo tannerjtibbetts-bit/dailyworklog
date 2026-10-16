@@ -84,6 +84,10 @@ class Task {
   List<String> assignees = [];
   List<Photo> photos = [];
 
+  /// Who gets a text when this field is completed, and their number (as typed). Empty: nobody.
+  String doneTextName = '';
+  String doneTextPhone = '';
+
   static String sideLabel(String side) => side == south
       ? 'South'
       : side == north
@@ -129,7 +133,9 @@ class Task {
     ..title = title
     ..photosRequired = photosRequired
     ..assignees = List.of(assignees)
-    ..side = side;
+    ..side = side
+    ..doneTextName = doneTextName
+    ..doneTextPhone = doneTextPhone;
 
   /// Unfinished field rolled into the next day: keeps the notes too.
   Task carryCopy() => freshCopy()..notes = notes;
@@ -151,6 +157,8 @@ class Task {
         'side': side,
         'assignees': assignees,
         'photos': [for (final p in photos) p.toJson()],
+        'doneTextName': doneTextName,
+        'doneTextPhone': doneTextPhone,
       };
 
   static Task fromJson(Map<String, dynamic> o) => Task()
@@ -169,7 +177,9 @@ class Task {
     ..nextShift = _b(o, 'nextShift')
     ..side = _s(o, 'side')
     ..assignees = _strings(o['assignees'])
-    ..photos = _objects(o['photos'], Photo.fromJson);
+    ..photos = _objects(o['photos'], Photo.fromJson)
+    ..doneTextName = _s(o, 'doneTextName')
+    ..doneTextPhone = _s(o, 'doneTextPhone');
 }
 
 /// A link used, note sent or template used, that can be included in the day's report.

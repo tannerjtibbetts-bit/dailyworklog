@@ -57,9 +57,10 @@ public class LogActivity extends AppCompatActivity {
 
     private String pendingTaskId, pendingFile, pendingScan;
     private ActivityResultLauncher<Uri> takePicture, scanCamera;
-    private ActivityResultLauncher<String> scanGallery, scanFile;
+    private ActivityResultLauncher<String> scanGallery, scanFile, scanText;
     private ActivityResultLauncher<Intent> voice;
     private ExportHelper exporter;
+    private DoneText doneText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,7 +104,11 @@ public class LogActivity extends AppCompatActivity {
         scanFile = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
             if (uri != null) readFile(uri);
         });
+        scanText = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            if (uri != null) readTextShot(uri);
+        });
         exporter = new ExportHelper(this);
+        doneText = new DoneText(this);
 
         topTitle = findViewById(R.id.topTitle);
         topDivider = findViewById(R.id.topDivider);
@@ -214,6 +219,7 @@ public class LogActivity extends AppCompatActivity {
         }
         store.save();
         list.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+        doneText.fieldDone(list, project, log, t);
         int idx = visible.indexOf(t);
         if (idx >= 0 && !matches(t)) {
             visible.remove(idx);
@@ -267,6 +273,13 @@ public class LogActivity extends AppCompatActivity {
                 Toast.makeText(this, "No gallery app found", Toast.LENGTH_LONG).show();
             }
         }));
+        items.add(new Ui.SheetItem(R.drawable.ic_send, "Add a field from a text screenshot", () -> {
+            try {
+                scanText.launch("image/*");
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(this, "No gallery app found", Toast.LENGTH_LONG).show();
+            }
+        }));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "Import an Excel or CSV file", () -> {
             try {
                 scanFile.launch("*/*");
@@ -307,6 +320,119 @@ public class LogActivity extends AppCompatActivity {
                 Toast.makeText(LogActivity.this, message, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    /** A screenshot of an assignment text: finds "Assigned to you: …" and offers it as a field. */
+    private void readTextShot(Uri uri) {
+        androidx.appcompat.app.AlertDialog busy = busy("Reading the screenshot\u2026");
+        ScanReader.readLines(this, uri, new ScanReader.LinesResult() {
+            @Override
+            public void onLines(List<String> lines) {
+                busy.dismiss();
+                List<AssignmentText> found = AssignmentText.parse(lines);
+                if (found.isEmpty()) {
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(LogActivity.this)
+                            .setTitle("Add from text")
+                            .setMessage("Couldn't find an assignment text in that picture. Make sure the whole text, "
+                                    + "starting at \"Assigned to you\", is in the screenshot.")
+                            .setPositiveButton("Read it as a list", (d, w) -> readPhoto(uri, null))
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                    return;
+                }
+                addFromText(found);
+            }
+
+            @Override
+            public void onError(String message) {
+                busy.dismiss();
+                Toast.makeText(LogActivity.this, message, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    /** Review what was read: fix the title, keep or drop each one, and whether to text the sender back. */
+    private void addFromText(List<AssignmentText> found) {
+        int pad = Ui.dp(this, 22);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, Ui.dp(this, 4), pad, 0);
+        List<android.widget.CheckBox> keep = new ArrayList<>(), textBack = new ArrayList<>();
+        List<android.widget.EditText> titles = new ArrayList<>();
+        androidx.appcompat.app.AlertDialog[] dialog = new androidx.appcompat.app.AlertDialog[1];
+        Runnable label = () -> {
+            int n = 0;
+            for (android.widget.CheckBox c : keep) if (c.isChecked()) n++;
+            if (dialog[0] != null) {
+                android.widget.Button b = dialog[0].getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE);
+                b.setText(n == 1 ? "Add 1 field" : "Add " + n + " fields");
+                b.setEnabled(n > 0);
+            }
+        };
+        for (AssignmentText a : found) {
+            android.widget.CheckBox add = new android.widget.CheckBox(this);
+            add.setText(a.photosRequired ? "Add this field  \u00B7  Photos required" : "Add this field");
+            add.setChecked(true);
+            add.setTextSize(16);
+            add.setOnCheckedChangeListener((b, on) -> label.run());
+            LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            alp.topMargin = Ui.dp(this, 10);
+            box.addView(add, alp);
+            android.widget.EditText title = new android.widget.EditText(this);
+            title.setText(a.title);
+            title.setTextSize(17);
+            title.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                    | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            box.addView(title);
+            if (!a.from.isEmpty()) {
+                TextView from = new TextView(this);
+                from.setText("From " + a.from + (a.phone.isEmpty() ? "" : " \u00B7 " + SmsHelper.formatPhone(a.phone)));
+                from.setTextColor(getColor(R.color.grey));
+                from.setTextSize(14);
+                box.addView(from);
+            }
+            android.widget.CheckBox back = new android.widget.CheckBox(this);
+            back.setText("Text " + (a.from.isEmpty() ? "them" : a.from) + " when it's done");
+            back.setChecked(!a.phone.isEmpty());
+            back.setVisibility(a.phone.isEmpty() ? View.GONE : View.VISIBLE);
+            box.addView(back);
+            keep.add(add);
+            titles.add(title);
+            textBack.add(back);
+        }
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(box);
+        androidx.appcompat.app.AlertDialog d = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Add from text").setView(scroll)
+                .setPositiveButton("Add", null).setNegativeButton("Cancel", null).create();
+        dialog[0] = d;
+        d.setOnShowListener(x -> {
+            label.run();
+            d.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                int added = 0;
+                for (int i = 0; i < found.size(); i++) {
+                    String t = titles.get(i).getText().toString().trim();
+                    if (!keep.get(i).isChecked() || t.isEmpty()) continue;
+                    AssignmentText a = found.get(i);
+                    Models.Task task = new Models.Task();
+                    task.title = Fmt.capitalize(t);
+                    task.photosRequired = a.photosRequired;
+                    task.createdBy = store.me();
+                    if (textBack.get(i).isChecked() && !a.phone.isEmpty()) {
+                        task.doneTextName = a.from;
+                        task.doneTextPhone = a.phone;
+                    }
+                    log.tasks.add(task);
+                    added++;
+                }
+                store.save();
+                rebuildVisible();
+                adapter.notifyDataSetChanged();
+                d.dismiss();
+                Toast.makeText(this, added == 1 ? "Added 1 field" : "Added " + added + " fields", Toast.LENGTH_SHORT).show();
+            });
+        });
+        d.show();
     }
 
     private void deleteTemp(File f) {

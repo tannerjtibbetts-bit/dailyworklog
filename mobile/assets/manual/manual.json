@@ -1428,6 +1428,11 @@
           "type": "see",
           "id": "field-photos",
           "text": "Related: Adding photos"
+        },
+        {
+          "type": "see",
+          "id": "text-when-completed",
+          "text": "Related: Texting someone when a field is done"
         }
       ]
     },
@@ -1613,7 +1618,7 @@
           "items": [
             "Open the checklist.",
             "Tap the camera icon at the top (or ⋮ then \"Add Fields from a Photo or Spreadsheet\").",
-            "Pick one: \"Take a photo of a task list\", \"Choose a photo\" or \"Import an Excel or CSV file\".",
+            "Pick one: \"Take a photo of a task list\", \"Choose a photo\", \"Add a field from a text screenshot\" or \"Import an Excel or CSV file\".",
             "Take the photo, or pick the photo or file.",
             "Wait while it says \"Reading the photo…\" or \"Opening the file…\".",
             "Check the list on the \"Add fields\" screen, then tap \"Add … fields\"."
@@ -1640,6 +1645,11 @@
           "type": "see",
           "id": "zone-sheet-photo",
           "text": "Related: Reading the North/South zone sheet"
+        },
+        {
+          "type": "see",
+          "id": "field-from-text-screenshot",
+          "text": "Related: Adding a field from a text screenshot"
         }
       ]
     },
@@ -1693,6 +1703,64 @@
           "type": "see",
           "id": "importing-fields",
           "text": "Related: Adding fields from a photo or file"
+        }
+      ]
+    },
+    {
+      "id": "field-from-text-screenshot",
+      "title": "Adding a field from a text screenshot",
+      "group": "Fields",
+      "summary": "Got an assignment text? Screenshot it and the app adds it as a field, set to text the sender back when it's done.",
+      "keywords": [
+        "screenshot",
+        "text message",
+        "assigned to you",
+        "import text",
+        "picture of text",
+        "sms",
+        "add field from text",
+        "completed"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "When someone assigns you a field from their Daily Work Log, you get a text that starts with \"Assigned to you:\". You can turn that text into a field in your own app."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Take a screenshot of the text in your Messages app. Make sure the whole text is in it, from \"Assigned to you\" down to \"Call or text me at\".",
+            "Open your checklist and tap the camera icon at the top (or ⋮ then \"Add Fields from a Photo or Spreadsheet\").",
+            "Tap \"Add a field from a text screenshot\" and pick the screenshot.",
+            "Wait while it says \"Reading the screenshot…\".",
+            "In \"Add from text\", check the field's title and fix any misread words.",
+            "Leave \"Text … when it's done\" ticked so the sender hears when you finish.",
+            "Tap \"Add 1 field\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The new field is added at the end of the checklist. If the text said \"Photos required.\", the field needs a photo too. Its \"Text when completed\" is already set to the person who sent it, using the name and number at the bottom of their text."
+        },
+        {
+          "type": "tip",
+          "text": "One screenshot can hold several assignment texts. Each one shows in the list. Untick any you don't want."
+        },
+        {
+          "type": "tip",
+          "text": "If you see \"Couldn't find an assignment text in that picture\", take the screenshot again with the whole text showing, or tap \"Read it as a list\" to use the normal photo import."
+        },
+        {
+          "type": "see",
+          "id": "text-when-completed",
+          "text": "Related: Texting someone when a field is done"
+        },
+        {
+          "type": "see",
+          "id": "assignment-texts",
+          "text": "Related: How assignment texts work"
         }
       ]
     },
@@ -1888,6 +1956,81 @@
           "type": "see",
           "id": "texts-not-arriving",
           "text": "Related: Texts not arriving"
+        },
+        {
+          "type": "tip",
+          "text": "The person who gets your text can screenshot it and add it to their own app with \"Add a field from a text screenshot\". Their app then texts you when they mark it complete."
+        },
+        {
+          "type": "see",
+          "id": "field-from-text-screenshot",
+          "text": "Related: Adding a field from a text screenshot"
+        }
+      ]
+    },
+    {
+      "id": "text-when-completed",
+      "title": "Texting someone when a field is done",
+      "group": "Crew & texting",
+      "summary": "Pick a person on a field and the app texts them as soon as you mark it complete.",
+      "keywords": [
+        "text when completed",
+        "completion",
+        "done text",
+        "notify when done",
+        "finished",
+        "complete",
+        "sms",
+        "let them know"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "On any field you can choose someone who should hear when it's finished, for example the supervisor who gave you the job."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the field (tap its card).",
+            "Tap \"Text when completed\".",
+            "Pick a crew member from the list, or pick \"Someone else\" and type their name and phone number.",
+            "Tap \"Save\". The row now shows their name and number."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Now, as soon as the field is marked complete (on the field page or with the round tick on the checklist), the app texts them. The text says the checklist and project, \"Completed:\" with the field title, and \"Done by\" with your name and the time, then your name and number at the bottom."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Android: the text goes straight from the app. You see \"Texting … that it's done…\" with \"Undo\" for 5 seconds, then \"Texted …\". Tap \"Undo\" to stop it.",
+            "iPhone: Messages opens with the text ready. Tap Send.",
+            "Unticking a field doesn't send anything."
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To stop it, open \"Text when completed\" again.",
+            "Tap \"Turn off\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Only crew members with a phone number are in the list. Add numbers in Manage crew, or use \"Someone else\"."
+        },
+        {
+          "type": "see",
+          "id": "field-from-text-screenshot",
+          "text": "Related: Adding a field from a text screenshot"
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Managing your crew"
         }
       ]
     },

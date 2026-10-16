@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/store.dart';
+import '../services/done_text.dart';
 import '../services/photos.dart';
 import '../services/sms.dart';
 import '../ui/common.dart';
@@ -38,6 +39,103 @@ String addedLine(Task t) {
   if (t.createdAt <= 0) return '';
   final by = t.createdBy.isEmpty ? '' : ' by ${t.createdBy}';
   return 'Added$by, ${Fmt.stamp(t.createdAt)}';
+}
+
+/// The grey line under "Text when completed".
+String doneTextLine(Task t) {
+  if (!hasDoneText(t)) return 'Off — tap to choose who gets a text when this is done';
+  final phone = Sms.formatPhone(t.doneTextPhone);
+  return t.doneTextName.trim().isEmpty ? phone : '${t.doneTextName.trim()} · $phone';
+}
+
+/// Picks who gets a text when the field is done: a crew member with a number, or someone else.
+/// Returns (name, phone), ('', '') for Turn off, or null if cancelled.
+Future<(String, String)?> showDoneTextDialog(BuildContext context, Project p, Task t) {
+  final crew = [
+    for (final n in p.crew)
+      if (phoneDigits(p.phoneOf(n)).isNotEmpty) n,
+  ];
+  final on = hasDoneText(t);
+  // -1 is "Someone else"
+  var pick = on ? crew.indexWhere((n) => n == t.doneTextName && Sms.digits(p.phoneOf(n)) == Sms.digits(t.doneTextPhone)) : -1;
+  if (!on && crew.isNotEmpty) pick = 0;
+  final name = TextEditingController(text: on && pick < 0 ? t.doneTextName : '');
+  final phone = TextEditingController(text: on && pick < 0 ? t.doneTextPhone : '');
+  String? nameError, phoneError;
+  return showDialog<(String, String)>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, set) {
+        Widget option(int i, String title, String? sub) => InkWell(
+          onTap: () => set(() => pick = i),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(pick == i ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: C.blue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 18, color: C.text)),
+                      if (sub != null) Text(sub, style: const TextStyle(fontSize: 14, color: C.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        void save() {
+          if (pick >= 0) {
+            Navigator.pop(c, (crew[pick], p.phoneOf(crew[pick])));
+            return;
+          }
+          final n = name.text.trim(), ph = phone.text.trim();
+          set(() {
+            nameError = n.isEmpty ? 'Required' : null;
+            phoneError = ph.replaceAll(RegExp(r'[^0-9]'), '').length < 7 ? 'Enter a phone number' : null;
+          });
+          if (nameError == null && phoneError == null) Navigator.pop(c, (n, ph));
+        }
+
+        return AlertDialog(
+          title: const Text('Text when completed'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("When this field is marked complete, the app texts this person that it's done."),
+                const SizedBox(height: 8),
+                for (var i = 0; i < crew.length; i++) option(i, crew[i], Sms.formatPhone(p.phoneOf(crew[i]))),
+                option(-1, 'Someone else', null),
+                if (pick < 0) ...[
+                  TextField(
+                    controller: name,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(labelText: 'Name', errorText: nameError),
+                  ),
+                  TextField(
+                    controller: phone,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(labelText: 'Phone number', errorText: phoneError),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            if (on) TextButton(onPressed: () => Navigator.pop(c, ('', '')), child: const Text('Turn off')),
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+            TextButton(onPressed: save, child: const Text('Save')),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 class TaskScreen extends StatefulWidget {
@@ -125,6 +223,20 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
       return;
     }
     HapticFeedback.selectionClick();
+    store.save();
+    final p = project, l = log;
+    if (t.done && p != null && l != null) textDone(context, p, l, t);
+  }
+
+  // ----- text when completed -----
+
+  Future<void> _chooseDoneText() async {
+    final p = project, t = task;
+    if (p == null || t == null) return;
+    final r = await showDoneTextDialog(context, p, t);
+    if (r == null || !mounted) return;
+    t.doneTextName = r.$1;
+    t.doneTextPhone = r.$2;
     store.save();
   }
 
@@ -477,6 +589,8 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     _blueRow('Assign User', _assign),
     for (final name in t.assignees) _assigneeRow(p, t, name),
     _divider,
+    _doneTextRow(t),
+    _divider,
     Padding(
       padding: const EdgeInsets.symmetric(vertical: 18),
       child: Row(
@@ -586,6 +700,31 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
       ),
     );
   }
+
+  Widget _doneTextRow(Task t) => InkWell(
+    onTap: _chooseDoneText,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Icon(hasDoneText(t) ? Icons.sms : Icons.sms_outlined, color: C.blue, size: 30),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Text when completed', style: TextStyle(color: C.navy, fontSize: 21)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(doneTextLine(t), style: const TextStyle(color: C.greyLight, fontSize: 15)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _assigneeRow(Project p, Task t, String name) {
     final number = p.phoneOf(name);

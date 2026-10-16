@@ -108,6 +108,17 @@ final class SmsHelper {
         return s.toString();
     }
 
+    /** Text to the person who wanted to know when a field is done. */
+    static String doneText(Models.Project p, Models.DailyLog l, Models.Task t, String me, String contact) {
+        StringBuilder s = new StringBuilder();
+        s.append(l.displayTitle());
+        if (!p.name.isEmpty()) s.append(" (").append(p.name).append(")");
+        s.append("\n\nCompleted: ").append(t.title);
+        s.append("\nDone by ").append(me).append(", ").append(Fmt.stamp(t.completedAt));
+        s.append(signOff(me, contact));
+        return s.toString();
+    }
+
     static String noticeText(Models.Project p, String note, String me, String contact) {
         return note.trim() + signOff(me + (p.name.isEmpty() ? "" : " (" + p.name + ")"), contact);
     }

@@ -75,6 +75,8 @@ public final class Models {
         public long securedAt;
         /** Marked to carry over to the next shift's checklist; shown on the report. */
         public boolean nextShift;
+        /** Who gets a text when this field is completed (blank: nobody). */
+        public String doneTextName = "", doneTextPhone = "";
         /** SOUTH, NORTH, UNZONED or "" (not set). Reports list South, then North, then Unzoned. */
         public String side = "";
 
@@ -119,6 +121,8 @@ public final class Models {
             t.photosRequired = photosRequired;
             t.assignees = new ArrayList<>(assignees);
             t.side = side;
+            t.doneTextName = doneTextName;
+            t.doneTextPhone = doneTextPhone;
             return t;
         }
 
@@ -145,6 +149,8 @@ public final class Models {
             o.put("securedAt", securedAt);
             o.put("nextShift", nextShift);
             o.put("side", side);
+            o.put("doneTextName", doneTextName);
+            o.put("doneTextPhone", doneTextPhone);
             o.put("assignees", toArray(assignees));
             JSONArray ph = new JSONArray();
             for (Photo p : photos) ph.put(p.toJson());
@@ -168,6 +174,8 @@ public final class Models {
             t.securedAt = o.optLong("securedAt", 0L);
             t.nextShift = o.optBoolean("nextShift", false);
             t.side = o.optString("side", "");
+            t.doneTextName = o.optString("doneTextName", "");
+            t.doneTextPhone = o.optString("doneTextPhone", "");
             t.assignees = fromArray(o.optJSONArray("assignees"));
             JSONArray ph = o.optJSONArray("photos");
             if (ph != null) {

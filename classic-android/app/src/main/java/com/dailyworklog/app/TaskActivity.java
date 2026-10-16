@@ -57,6 +57,7 @@ public class TaskActivity extends AppCompatActivity {
     private ActivityResultLauncher<String> pickImages;
     private ActivityResultLauncher<Intent> dictate;
     private ActivityResultLauncher<String> smsPermission;
+    private DoneText doneText;
     private Runnable afterSmsPermission;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -90,6 +91,7 @@ public class TaskActivity extends AppCompatActivity {
             saveText();
         });
 
+        doneText = new DoneText(this);
         smsPermission = registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
             Runnable r = afterSmsPermission;
             afterSmsPermission = null;
@@ -109,6 +111,8 @@ public class TaskActivity extends AppCompatActivity {
         nextShift = findViewById(R.id.nextShift);
         nextShift.setChecked(task.nextShift);
         bindSide(findViewById(R.id.sideSouth), findViewById(R.id.sideNorth), findViewById(R.id.sideUnzoned));
+        bindDoneText();
+        findViewById(R.id.doneTextRow).setOnClickListener(v -> chooseDoneText());
 
         ((TextView) findViewById(R.id.topLog)).setText(log.displayTitle());
         title.setText(task.title);
@@ -187,11 +191,120 @@ public class TaskActivity extends AppCompatActivity {
         root.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
         check.setChecked(task.done, true);
         bindStamp();
+        doneText.fieldDone(root, project, log, task);
     }
 
     private void bindStamp() {
         stamp.setVisibility(task.done ? View.VISIBLE : View.GONE);
         if (task.done) stamp.setText(task.completedBy + ", " + Fmt.stamp(task.completedAt));
+    }
+
+    // ----- text when completed -----
+
+    private void bindDoneText() {
+        TextView sub = findViewById(R.id.doneTextSub);
+        if (DoneText.wanted(task)) {
+            sub.setText((task.doneTextName.isEmpty() ? "" : task.doneTextName + " \u00B7 ") + SmsHelper.formatPhone(task.doneTextPhone));
+            sub.setTextColor(getColor(R.color.deep_blue));
+        } else {
+            sub.setText("Off \u2014 tap to choose who gets a text when this is done");
+            sub.setTextColor(getColor(R.color.grey));
+        }
+    }
+
+    /** Pick a crew member with a number, or type someone else's name and number. */
+    private void chooseDoneText() {
+        int pad = Ui.dp(this, 22);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, Ui.dp(this, 8), pad, 0);
+        TextView msg = new TextView(this);
+        msg.setText("When this field is marked complete, the app texts this person that it's done.");
+        msg.setTextSize(15);
+        msg.setTextColor(getColor(R.color.grey));
+        box.addView(msg);
+        android.widget.RadioGroup group = new android.widget.RadioGroup(this);
+        List<String> withPhones = new ArrayList<>();
+        for (String n : project.crew) if (SmsHelper.digits(project.phoneOf(n)).length() >= 7) withPhones.add(n);
+        int checked = -1;
+        for (int i = 0; i < withPhones.size(); i++) {
+            String n = withPhones.get(i);
+            android.widget.RadioButton rb = new android.widget.RadioButton(this);
+            rb.setId(1000 + i);
+            rb.setText(n + "  \u00B7  " + SmsHelper.formatPhone(project.phoneOf(n)));
+            rb.setTextSize(16);
+            group.addView(rb);
+            if (n.equals(task.doneTextName) && SmsHelper.digits(project.phoneOf(n)).equals(SmsHelper.digits(task.doneTextPhone))) checked = rb.getId();
+        }
+        android.widget.RadioButton other = new android.widget.RadioButton(this);
+        other.setId(999);
+        other.setText("Someone else");
+        other.setTextSize(16);
+        group.addView(other);
+        box.addView(group);
+        android.widget.EditText name = new android.widget.EditText(this);
+        name.setHint("Name");
+        name.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        android.widget.EditText phone = new android.widget.EditText(this);
+        phone.setHint("Phone number");
+        phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        box.addView(name);
+        box.addView(phone);
+        if (checked < 0 && DoneText.wanted(task)) {
+            checked = 999;
+            name.setText(task.doneTextName);
+            phone.setText(task.doneTextPhone);
+        }
+        if (checked < 0) checked = withPhones.isEmpty() ? 999 : -1;
+        if (checked >= 0) group.check(checked);
+        Runnable showOther = () -> {
+            int vis = group.getCheckedRadioButtonId() == 999 ? View.VISIBLE : View.GONE;
+            name.setVisibility(vis);
+            phone.setVisibility(vis);
+        };
+        group.setOnCheckedChangeListener((g, id) -> showOther.run());
+        showOther.run();
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(box);
+        com.google.android.material.dialog.MaterialAlertDialogBuilder b = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Text when completed").setView(scroll)
+                .setPositiveButton("Save", null).setNegativeButton("Cancel", null);
+        if (DoneText.wanted(task)) {
+            b.setNeutralButton("Turn off", (d, w) -> {
+                task.doneTextName = "";
+                task.doneTextPhone = "";
+                store.save();
+                bindDoneText();
+            });
+        }
+        androidx.appcompat.app.AlertDialog d = b.create();
+        d.setOnShowListener(x -> d.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            int id = group.getCheckedRadioButtonId();
+            if (id == 999) {
+                String n = name.getText().toString().trim();
+                String ph = phone.getText().toString().trim();
+                if (n.isEmpty()) {
+                    name.setError("Enter a name");
+                    return;
+                }
+                if (SmsHelper.digits(ph).replace("+", "").length() < 7) {
+                    phone.setError("Enter a phone number");
+                    return;
+                }
+                task.doneTextName = Fmt.capitalize(n);
+                task.doneTextPhone = ph;
+            } else if (id >= 1000) {
+                String n = withPhones.get(id - 1000);
+                task.doneTextName = n;
+                task.doneTextPhone = project.phoneOf(n);
+            } else {
+                return;  // nothing picked
+            }
+            store.save();
+            bindDoneText();
+            d.dismiss();
+        }));
+        d.show();
     }
 
     // ----- south / north -----
