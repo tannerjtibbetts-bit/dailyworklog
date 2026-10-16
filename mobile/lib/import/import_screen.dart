@@ -336,7 +336,12 @@ class _ImportScreenState extends State<ImportScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 13, color: C.grey),
               ),
-              Text(texts != null ? 'Add from text' : 'Add fields', style: const TextStyle(fontSize: 21, color: C.navy)),
+              Text(
+                texts != null ? 'Add from text' : 'Add fields',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 21, color: C.navy),
+              ),
             ],
           ),
         ),

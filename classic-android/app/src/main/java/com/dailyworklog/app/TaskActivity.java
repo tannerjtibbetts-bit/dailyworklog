@@ -255,7 +255,7 @@ public class TaskActivity extends AppCompatActivity {
             name.setText(task.doneTextName);
             phone.setText(task.doneTextPhone);
         }
-        if (checked < 0) checked = withPhones.isEmpty() ? 999 : -1;
+        if (checked < 0) checked = withPhones.isEmpty() ? 999 : 1000;
         if (checked >= 0) group.check(checked);
         Runnable showOther = () -> {
             int vis = group.getCheckedRadioButtonId() == 999 ? View.VISIBLE : View.GONE;
