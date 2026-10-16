@@ -1,5 +1,4 @@
 // A project's screen: Checklists, Notify, Links, Overtime, Notes and Sea Can Movements tabs.
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +13,7 @@ import '../services/sms.dart';
 import '../ui/common.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
+import 'field_widgets.dart' show ProgressRing;
 import 'log_screen.dart';
 import 'note_screen.dart';
 import 'notify_screen.dart';
@@ -103,99 +103,6 @@ void clearAllNotes(Store store, Project p) {
   p.notes.clear();
 }
 
-/// Percentage ring like the old app; turns into a green check at 100%.
-class ProgressRing extends StatelessWidget {
-  final double progress;
-  final double size;
-
-  /// true: solid green disc (list cards). false: green outline (checklist header).
-  final bool filledWhenComplete;
-
-  const ProgressRing(this.progress, {super.key, this.size = 58, this.filledWhenComplete = true});
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-        width: size,
-        height: size,
-        child: CustomPaint(painter: _RingPainter(progress.clamp(0.0, 1.0), filledWhenComplete)),
-      );
-}
-
-class _RingPainter extends CustomPainter {
-  final double shown;
-  final bool filled;
-
-  _RingPainter(this.shown, this.filled);
-
-  @override
-  void paint(Canvas canvas, Size s) {
-    final size = math.min(s.width, s.height);
-    final c = Offset(s.width / 2, s.height / 2);
-    final stroke = size * 0.1;
-    if (shown >= 0.999) {
-      final r = size / 2;
-      final path = Path()
-        ..moveTo(c.dx - r * 0.36, c.dy + r * 0.02)
-        ..lineTo(c.dx - r * 0.09, c.dy + r * 0.29)
-        ..lineTo(c.dx + r * 0.38, c.dy - r * 0.25);
-      final tick = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      if (filled) {
-        canvas.drawCircle(c, r, Paint()..color = C.green);
-        tick
-          ..color = Colors.white
-          ..strokeWidth = size * 0.085;
-      } else {
-        canvas.drawCircle(
-            c,
-            r - stroke * 0.4,
-            Paint()
-              ..color = C.green
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = stroke * 0.8);
-        tick
-          ..color = C.green
-          ..strokeWidth = size * 0.07;
-      }
-      canvas.drawPath(path, tick);
-      return;
-    }
-    final rect = Rect.fromCircle(center: c, radius: size / 2 - stroke / 2);
-    canvas.drawArc(
-        rect,
-        0,
-        math.pi * 2,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = stroke
-          ..color = C.ringTrack);
-    if (shown > 0) {
-      canvas.drawArc(
-          rect,
-          -math.pi / 2,
-          math.pi * 2 * shown,
-          false,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = stroke
-            ..strokeCap = StrokeCap.round
-            ..color = C.blue);
-    }
-    final tp = TextPainter(
-      text: TextSpan(
-          text: '${(shown * 100).round()}%',
-          style: TextStyle(color: C.navy, fontSize: size * 0.25, fontWeight: FontWeight.bold)),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) => old.shown != shown || old.filled != filled;
-}
 
 class ProjectScreen extends StatefulWidget {
   final String projectId;
@@ -611,7 +518,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 14, 18),
           child: Row(children: [
-            ProgressRing(total == 0 ? 0 : done / total),
+            ProgressRing(progress: total == 0 ? 0 : done / total, size: 58),
             const SizedBox(width: 18),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

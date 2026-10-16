@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../support/support_screens.dart';
 import '../access/access.dart';
 import '../ui/theme.dart';
 
@@ -148,6 +149,11 @@ class _IntroScreenState extends State<IntroScreen> with SingleTickerProviderStat
                             ),
                           ),
                         ),
+                      ),
+                      // Support: the user manual, before or after signing in
+                      _rise(
+                        1000,
+                        const Padding(padding: EdgeInsets.only(bottom: 8), child: SupportButton(onDark: true)),
                       ),
                       const Padding(
                         padding: EdgeInsets.only(bottom: 12),

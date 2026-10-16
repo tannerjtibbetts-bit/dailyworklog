@@ -73,6 +73,8 @@ flutter:
   assets:
     # The app owner's public key (same as the Android build's). Empty means anyone can use the app.
     - assets/owner_key.txt
+    # The user manual (also shown by the classic Android app) and its screenshots.
+    - assets/manual/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

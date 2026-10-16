@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../support/support_screens.dart';
 import '../access/access.dart';
 import '../data/backup.dart';
 import '../data/fmt.dart';
@@ -205,6 +206,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               .push(MaterialPageRoute(builder: (_) => const ApprovalsScreen()));
         },
       ),
+      SheetItem(Icons.menu_book_outlined, 'User manual', () => openSupport(context)),
       SheetItem(Icons.save_alt, 'Back up all my work', _backup),
       SheetItem(Icons.restore, 'Restore from a backup', _restore),
       if (pin)

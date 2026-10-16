@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../support/support_screens.dart';
 import '../access/access.dart';
 import '../access/access_codes.dart';
 import '../access/access_ui.dart';
@@ -93,7 +94,14 @@ class _SignInScreenState extends State<SignInScreen> {
       default:
         return const Scaffold(body: SizedBox());
     }
-    return accessPage([...body, accessCredit()]);
+    return accessPage([
+      ...body,
+      const Padding(
+        padding: EdgeInsets.only(top: 24),
+        child: Center(child: SupportButton()),
+      ),
+      accessCredit(),
+    ]);
   }
 
   // ----- asking the owner for access -----

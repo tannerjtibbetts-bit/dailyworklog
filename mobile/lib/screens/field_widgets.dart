@@ -163,7 +163,10 @@ class ProgressRing extends StatelessWidget {
     tween: Tween(end: progress.clamp(0.0, 1.0)),
     duration: const Duration(milliseconds: 420),
     curve: Curves.decelerate,
-    builder: (c, v, _) => CustomPaint(size: Size.square(size), painter: _RingPainter(v, filledWhenComplete)),
+    builder: (c, v, _) => CustomPaint(
+      size: Size.square(size),
+      painter: _RingPainter(v, filledWhenComplete, DefaultTextStyle.of(c).style),
+    ),
   );
 }
 
@@ -171,7 +174,10 @@ class _RingPainter extends CustomPainter {
   final double shown;
   final bool filled;
 
-  _RingPainter(this.shown, this.filled);
+  /// The app's text style, so the percentage uses the same font as the rest of the screen.
+  final TextStyle base;
+
+  _RingPainter(this.shown, this.filled, this.base);
 
   @override
   void paint(Canvas canvas, Size s) {
@@ -241,7 +247,7 @@ class _RingPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: '${(shown * 100).round()}%',
-        style: TextStyle(color: C.navy, fontSize: size * 0.25, fontWeight: FontWeight.bold),
+        style: base.copyWith(color: C.navy, fontSize: size * 0.25, fontWeight: FontWeight.bold),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -249,7 +255,7 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.shown != shown || old.filled != filled;
+  bool shouldRepaint(_RingPainter old) => old.shown != shown || old.filled != filled || old.base != base;
 }
 
 /// Pill-shaped label on a field card ("Load secured", "South", "Next shift", "Photos Required").
