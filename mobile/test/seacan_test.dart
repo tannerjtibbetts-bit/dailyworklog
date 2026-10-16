@@ -113,9 +113,9 @@ void main() {
     expect(rects[3].left - rects[2].right, greaterThan(20)); // room for the arrow
     expect(find.bySemanticsLabel('moved to'), findsWidgets);
 
-    // From letter: a dash, then A to Z; pick D
+    // From letter: a dash, then the site's letters; pick D
     final letterBox = tester.widget<DropdownButton<String>>(boxes.first);
-    expect(letterBox.items!.map((e) => e.value), ['–', for (var c = 0x41; c <= 0x5A; c++) String.fromCharCode(c)]);
+    expect(letterBox.items!.map((e) => e.value), ['–', 'A', 'B', 'D', 'E', 'F']);
     await tester.tap(boxes.first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('D').last);
@@ -236,7 +236,7 @@ void main() {
           for (var i = 0; i < 3; i++)
             SeaCanMove()
               ..can = i == 0 ? 'MSCU 123456' : 'BPPU 211028-7 LONG NUMBER $i'
-              ..fromLetter = 'W'
+              ..fromLetter = 'D'
               ..fromRow = '40'
               ..fromLevel = '3'
               ..toLetter = 'M'
@@ -252,7 +252,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('W'), findsWidgets);
+      expect(find.text('D'), findsWidgets);
       expect(find.text('40'), findsWidgets);
       // The From / Current headings sit over their three dropdowns.
       final boxes = find.byType(DropdownButton<String>);

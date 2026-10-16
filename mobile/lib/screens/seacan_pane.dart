@@ -1,4 +1,4 @@
-// Sea Can Movements tab: one line per sea can. Type its identifier, then pick the letter (A to Z),
+// Sea Can Movements tab: one line per sea can. Type its identifier, then pick the letter (A, B, D, E or F),
 // row (1 to 40) and level (1 to 3) it's coming from and the letter, row and level it's at now,
 // with a blue arrow between the two, then its weight. The lines are wider than a phone, so the
 // whole table (headings and lines together) scrolls sideways; the title and actions don't.
@@ -13,8 +13,8 @@ import '../ui/theme.dart';
 
 const seaCanRows = 40, seaCanLevels = 3;
 
-/// Letters A to Z for the Letter dropdowns.
-final seaCanLetters = [for (var c = 0x41; c <= 0x5A; c++) String.fromCharCode(c)];
+/// The site's row letters.
+const seaCanLetters = ['A', 'B', 'D', 'E', 'F'];
 
 /// Lines shown to start with; more can be added (there's no limit).
 const seaCanStartLines = 20;

@@ -2474,7 +2474,7 @@
           "items": [
             "Open the project and tap \"Sea Can Movements\".",
             "In \"Sea can #\", type the sea can identifier, for example BPPU 201006-1.",
-            "Under \"From location\", pick the \"Letter\" (A to Z), \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from. For D33 L3, pick D, 33 and 3.",
+            "Under \"From location\", pick the \"Letter\" (A, B, D, E or F), \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from. For D33 L3, pick D, 33 and 3.",
             "Under \"Current location\", pick the letter, row and level where it is now.",
             "At the end of the line, type the sea can's weight in \"Weight\"."
           ]

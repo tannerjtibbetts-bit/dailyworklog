@@ -20,13 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Sea Can Movements tab: one line per sea can. Type its identifier, then pick the letter (A to Z),
+ * Sea Can Movements tab: one line per sea can. Type its identifier, then pick the letter (A, B, D, E or F),
  * row (1 to 40) and level (1 to 3) it's coming from and the ones it's at now.
  */
 final class SeaCanPane {
     private SeaCanPane() {}
 
     static final int ROWS = 40, LEVELS = 3;
+    static final String[] LETTERS = {"A", "B", "D", "E", "F"};
     /** Lines shown to start with; more can be added (there's no limit). */
     static final int START_LINES = 20;
     private static final String BLANK = "–";
@@ -226,7 +227,8 @@ final class SeaCanPane {
 
     private static List<String> letters() {
         List<String> items = new ArrayList<>();
-        for (char c = 'A'; c <= 'Z'; c++) items.add(String.valueOf(c));
+        // The site's row letters
+        for (String c : LETTERS) items.add(c);
         return items;
     }
 
