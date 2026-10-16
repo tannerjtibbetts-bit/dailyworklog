@@ -307,7 +307,7 @@ class _LogScreenState extends State<LogScreen> {
         if (filter != FieldFilter.none) setState(() => filter = FieldFilter.none);
         _snack('Press and hold a field, then drag it up or down');
       }),
-      SheetItem(Icons.send_outlined, 'Email report', () => Export.report(context, p, l, word: false)),
+      SheetItem(Icons.send_outlined, 'Email report', () => Export.email(context, p, l)),
       SheetItem(Icons.picture_as_pdf_outlined, 'Export to PDF', () => Export.report(context, p, l, word: false)),
       SheetItem(Icons.description_outlined, 'Export to Word', () => Export.report(context, p, l, word: true)),
       SheetItem(Icons.bookmark_add_outlined, 'Save Checklist as Template', () async {
