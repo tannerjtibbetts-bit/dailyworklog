@@ -15,6 +15,9 @@ const seaCanStartLines = 20;
 const _blank = '–';
 const _canFlex = 24, _cellFlex = 10;
 
+/// Width of the arrow between From and Current location.
+const _arrowW = 24.0;
+
 /// Makes sure there are at least [seaCanStartLines] lines to type into.
 void prepareSeaCans(Project p) {
   while (p.seaCans.length < seaCanStartLines) {
@@ -153,16 +156,19 @@ class _SeaCanPaneState extends State<SeaCanPane> {
     },
   );
 
-  /// Sea can box, then four cells; [cells] has five widgets.
-  Widget _row(List<Widget> cells) => Padding(
+  /// Sea can box, then four cells; [cells] has five widgets. With [arrow], a blue arrow sits
+  /// between From and Current location ("came from here, went to here"); without, just the gap.
+  Widget _row(List<Widget> cells, {bool arrow = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
       children: [
-        for (var i = 0; i < cells.length; i++)
+        for (var i = 0; i < cells.length; i++) ...[
+          if (i == 3) arrow ? const _MoveArrow() : const SizedBox(width: _arrowW),
           Expanded(
             flex: i == 0 ? _canFlex : _cellFlex,
             child: Padding(padding: const EdgeInsets.only(right: 4), child: cells[i]),
           ),
+        ],
       ],
     ),
   );
@@ -181,7 +187,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
       _dropdown(seaCanLevels, m.fromLevel, (v) => m.fromLevel = v),
       _dropdown(seaCanRows, m.toRow, (v) => m.toRow = v),
       _dropdown(seaCanLevels, m.toLevel, (v) => m.toLevel = v),
-    ]),
+    ], arrow: true),
   );
 
   Widget _action(String s, Color color, VoidCallback onTap) => Align(
@@ -294,6 +300,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
                   children: [
                     Expanded(flex: _canFlex, child: _label('Sea can')),
                     Expanded(flex: _cellFlex * 2, child: _label('From location')),
+                    const SizedBox(width: _arrowW),
                     Expanded(flex: _cellFlex * 2, child: _label('Current location')),
                   ],
                 ),
@@ -349,4 +356,25 @@ class _SeaCanPaneState extends State<SeaCanPane> {
       },
     );
   }
+}
+
+/// The little arrow between From and Current location on each line.
+class _MoveArrow extends StatelessWidget {
+  const _MoveArrow();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: _arrowW,
+    child: Center(
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(colors: [C.blue, C.deepBlue]),
+        ),
+        child: const Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white, semanticLabel: 'moved to'),
+      ),
+    ),
+  );
 }

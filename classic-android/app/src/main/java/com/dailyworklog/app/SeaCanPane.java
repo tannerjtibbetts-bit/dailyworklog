@@ -84,11 +84,13 @@ final class SeaCanPane {
         LinearLayout head = row(a);
         head.addView(cellLabel(a, "Sea can"), weight(a, CAN_W));
         head.addView(cellLabel(a, "From location"), weight(a, 2f));
+        head.addView(new View(a), arrowLp(a));
         head.addView(cellLabel(a, "Current location"), weight(a, 2f));
         card.addView(head);
         LinearLayout sub = row(a);
         sub.addView(cellLabel(a, "Identifier"), weight(a, CAN_W));
         for (int i = 0; i < 2; i++) {
+            if (i == 1) sub.addView(new View(a), arrowLp(a));
             sub.addView(cellLabel(a, "Row"), weight(a, 1f));
             sub.addView(cellLabel(a, "Level"), weight(a, 1f));
         }
@@ -163,9 +165,37 @@ final class SeaCanPane {
         line.addView(can, weight(a, CAN_W));
         line.addView(dropdown(a, ROWS, m.fromRow, v -> { m.fromRow = v; store.save(); }), weight(a, 1f));
         line.addView(dropdown(a, LEVELS, m.fromLevel, v -> { m.fromLevel = v; store.save(); }), weight(a, 1f));
+        line.addView(arrow(a), arrowLp(a));
         line.addView(dropdown(a, ROWS, m.toRow, v -> { m.toRow = v; store.save(); }), weight(a, 1f));
         line.addView(dropdown(a, LEVELS, m.toLevel, v -> { m.toLevel = v; store.save(); }), weight(a, 1f));
         return line;
+    }
+
+    /** The little arrow between From and Current location: "came from here, went to here". */
+    private static View arrow(Activity a) {
+        TextView t = new TextView(a);
+        t.setText("\u2192");
+        t.setTextColor(0xFFFFFFFF);
+        t.setTextSize(13);
+        t.setTypeface(null, Typeface.BOLD);
+        t.setGravity(Gravity.CENTER);
+        t.setIncludeFontPadding(false);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{a.getColor(R.color.blue), a.getColor(R.color.deep_blue)});
+        bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        t.setBackground(bg);
+        t.setContentDescription("moved to");
+        LinearLayout box = new LinearLayout(a);
+        box.setGravity(Gravity.CENTER);
+        box.addView(t, new LinearLayout.LayoutParams(Ui.dp(a, 20), Ui.dp(a, 20)));
+        return box;
+    }
+
+    private static LinearLayout.LayoutParams arrowLp(Activity a) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(a, 20), ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMarginEnd(Ui.dp(a, 4));
+        return lp;
     }
 
     interface Pick {

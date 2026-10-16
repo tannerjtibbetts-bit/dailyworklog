@@ -2304,7 +2304,8 @@
         "excel",
         "csv",
         "word",
-        "include in my reports"
+        "include in my reports",
+        "arrow"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2326,6 +2327,10 @@
             "Under \"From location\", pick the \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from.",
             "Under \"Current location\", pick the row and level where it is now."
           ]
+        },
+        {
+          "type": "text",
+          "text": "The blue arrow on each line points from where the sea can came from to where it is now, so each line reads: sea can, from here, to here."
         },
         {
           "type": "text",
