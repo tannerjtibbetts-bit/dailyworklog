@@ -2462,7 +2462,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project. Each sea can takes two lines: its identifier on top, and where it came from and where it is now underneath."
+          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project, one per line: the sea can's identifier, where it came from, and where it is now."
         },
         {
           "type": "image",
@@ -2480,7 +2480,7 @@
         },
         {
           "type": "text",
-          "text": "The blue arrow between the two sets of boxes points from where the sea can came from to where it is now."
+          "text": "The blue arrow on each line points from where the sea can came from to where it is now, so each line reads: sea can, from here, to here. A long sea can number wraps onto a second line in its box."
         },
         {
           "type": "text",

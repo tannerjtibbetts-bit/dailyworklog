@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Sea Can Movements tab: two lines per sea can. Type its identifier, then pick the letter (A to Z),
+ * Sea Can Movements tab: one line per sea can. Type its identifier, then pick the letter (A to Z),
  * row (1 to 40) and level (1 to 3) it's coming from and the ones it's at now.
  */
 final class SeaCanPane {
@@ -30,6 +30,8 @@ final class SeaCanPane {
     /** Lines shown to start with; more can be added (there's no limit). */
     static final int START_LINES = 20;
     private static final String BLANK = "–";
+    /** Widths on a line: identifier, then letter, row, level on each side. */
+    private static final float CAN_W = 2.2f, LETTER_W = 0.7f, ROW_W = 0.9f, LEVEL_W = 0.7f;
 
     static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
@@ -79,21 +81,21 @@ final class SeaCanPane {
         };
         refreshCount.run();
 
-        // Headings: the identifier on its own line, then From / Current location over Letter, Row, Level
-        TextView idHead = cellLabel(a, "Sea can identifier");
-        idHead.setGravity(Gravity.START);
-        card.addView(idHead);
+        // Two header lines: the three columns, then Letter / Row / Level under each location
+        float side = LETTER_W + ROW_W + LEVEL_W;
         LinearLayout head = row(a);
-        head.addView(cellLabel(a, "From location"), weight(a, 3f));
+        head.addView(cellLabel(a, "Sea can"), weight(a, CAN_W));
+        head.addView(cellLabel(a, "From location"), weight(a, side));
         head.addView(new View(a), arrowLp(a));
-        head.addView(cellLabel(a, "Current location"), weight(a, 3f));
+        head.addView(cellLabel(a, "Current location"), weight(a, side));
         card.addView(head);
         LinearLayout sub = row(a);
+        sub.addView(cellLabel(a, "Identifier"), weight(a, CAN_W));
         for (int i = 0; i < 2; i++) {
             if (i == 1) sub.addView(new View(a), arrowLp(a));
-            sub.addView(cellLabel(a, "Letter"), weight(a, 1f));
-            sub.addView(cellLabel(a, "Row"), weight(a, 1f));
-            sub.addView(cellLabel(a, "Level"), weight(a, 1f));
+            sub.addView(cellLabel(a, "Letter"), weight(a, LETTER_W));
+            sub.addView(cellLabel(a, "Row"), weight(a, ROW_W));
+            sub.addView(cellLabel(a, "Level"), weight(a, LEVEL_W));
         }
         card.addView(sub);
 
@@ -139,23 +141,22 @@ final class SeaCanPane {
         box.addView(clear);
     }
 
-    /** One sea can: the identifier box, then From and Current letter / row / level dropdowns under it. */
+    /** One sea can: identifier box, then From and Current letter / row / level dropdowns. */
     private static LinearLayout line(Activity a, Store store, Models.SeaCanMove m, Runnable refreshCount) {
-        LinearLayout block = new LinearLayout(a);
-        block.setOrientation(LinearLayout.VERTICAL);
-        block.setPadding(0, Ui.dp(a, 6), 0, Ui.dp(a, 6));
         LinearLayout line = row(a);
         EditText can = new EditText(a);
         can.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        can.setSingleLine(true);
-        can.setTextSize(14);
+        // A long number wraps onto a second line instead of being cut off.
+        can.setMaxLines(2);
+        can.setHorizontallyScrolling(false);
+        can.setTextSize(13);
         can.setTypeface(null, Typeface.BOLD);
         can.setTextColor(a.getColor(R.color.text));
         can.setHint("Sea can #");
         can.setHintTextColor(a.getColor(R.color.grey_light));
         can.setBackgroundResource(R.drawable.bg_cell);
         can.setMinHeight(Ui.dp(a, 44));
-        can.setPadding(Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 4), Ui.dp(a, 8));
+        can.setPadding(Ui.dp(a, 6), Ui.dp(a, 8), Ui.dp(a, 2), Ui.dp(a, 8));
         can.setText(m.can);
         can.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) {}
@@ -166,23 +167,15 @@ final class SeaCanPane {
                 refreshCount.run();
             }
         });
-        line.addView(can, weight(a, 1f));
-        block.addView(line);
-        LinearLayout places = row(a);
-        places.addView(dropdown(a, letters(), m.fromLetter, v -> { m.fromLetter = v; store.save(); }), weight(a, 1f));
-        places.addView(dropdown(a, numbers(ROWS), m.fromRow, v -> { m.fromRow = v; store.save(); }), weight(a, 1f));
-        places.addView(dropdown(a, numbers(LEVELS), m.fromLevel, v -> { m.fromLevel = v; store.save(); }), weight(a, 1f));
-        places.addView(arrow(a), arrowLp(a));
-        places.addView(dropdown(a, letters(), m.toLetter, v -> { m.toLetter = v; store.save(); }), weight(a, 1f));
-        places.addView(dropdown(a, numbers(ROWS), m.toRow, v -> { m.toRow = v; store.save(); }), weight(a, 1f));
-        places.addView(dropdown(a, numbers(LEVELS), m.toLevel, v -> { m.toLevel = v; store.save(); }), weight(a, 1f));
-        block.addView(places);
-        View divider = new View(a);
-        divider.setBackgroundColor(a.getColor(R.color.divider));
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(a, 1));
-        dlp.topMargin = Ui.dp(a, 6);
-        block.addView(divider, dlp);
-        return block;
+        line.addView(can, weight(a, CAN_W));
+        line.addView(dropdown(a, letters(), m.fromLetter, v -> { m.fromLetter = v; store.save(); }), weight(a, LETTER_W));
+        line.addView(dropdown(a, numbers(ROWS), m.fromRow, v -> { m.fromRow = v; store.save(); }), weight(a, ROW_W));
+        line.addView(dropdown(a, numbers(LEVELS), m.fromLevel, v -> { m.fromLevel = v; store.save(); }), weight(a, LEVEL_W));
+        line.addView(arrow(a), arrowLp(a));
+        line.addView(dropdown(a, letters(), m.toLetter, v -> { m.toLetter = v; store.save(); }), weight(a, LETTER_W));
+        line.addView(dropdown(a, numbers(ROWS), m.toRow, v -> { m.toRow = v; store.save(); }), weight(a, ROW_W));
+        line.addView(dropdown(a, numbers(LEVELS), m.toLevel, v -> { m.toLevel = v; store.save(); }), weight(a, LEVEL_W));
+        return line;
     }
 
     private static List<String> numbers(int max) {
@@ -239,10 +232,10 @@ final class SeaCanPane {
             public View getView(int position, View convertView, ViewGroup parent) {
                 TextView t = (TextView) super.getView(position, convertView, parent);
                 boolean blank = position == 0;
-                t.setTextSize(16);
+                t.setTextSize(15);
                 t.setSingleLine(true);
                 t.setGravity(Gravity.CENTER);
-                t.setPadding(Ui.dp(a, 2), Ui.dp(a, 10), Ui.dp(a, 2), Ui.dp(a, 10));
+                t.setPadding(0, Ui.dp(a, 10), 0, Ui.dp(a, 10));
                 t.setTypeface(null, blank ? Typeface.NORMAL : Typeface.BOLD);
                 t.setTextColor(blank ? a.getColor(R.color.grey_light) : a.getColor(R.color.deep_blue));
                 return t;
@@ -297,8 +290,9 @@ final class SeaCanPane {
     }
 
     private static TextView cellLabel(Activity a, String s) {
-        TextView t = text(a, s, 13, R.color.grey, true);
+        TextView t = text(a, s, 11, R.color.grey, true);
         t.setGravity(Gravity.CENTER);
+        t.setMaxLines(1);
         return t;
     }
 
