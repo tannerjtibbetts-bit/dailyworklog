@@ -31,8 +31,14 @@ class ReportDocx {
   /// Photos are shrunk to 1100 pixels on the long side, like the Android app.
   static Encoded? defaultEncoder(File f) => PhotoLayout.encode(f, 1100, 1100, quality: 82);
 
-  static Uint8List write(Project p, DailyLog log, String generatedBy, int generatedAt, String photoDir,
-      {ImageEncoder encoder = defaultEncoder}) {
+  static Uint8List write(
+    Project p,
+    DailyLog log,
+    String generatedBy,
+    int generatedAt,
+    String photoDir, {
+    ImageEncoder encoder = defaultEncoder,
+  }) {
     final r = ReportDocx._(encoder);
     r._render(p, log, generatedBy, generatedAt, photoDir);
     return r._finish();
@@ -48,8 +54,10 @@ class ReportDocx {
     _para('Generated ${Fmt.longStamp(at)} by $by', false, 10, _grey, 120, false);
 
     final summary = '$done/$total fields completed';
-    _body.write('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="8" w:color="D5D9DE"/></w:pBdr>'
-        '<w:spacing w:before="0" w:after="240"/></w:pPr>');
+    _body.write(
+      '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="8" w:color="D5D9DE"/></w:pBdr>'
+      '<w:spacing w:before="0" w:after="240"/></w:pPr>',
+    );
     _run(summary, true, 12, done == total && total > 0 ? _green : _navy);
     final people = log.people();
     if (people.isNotEmpty) _run('     Crew: ${Fmt.join(people)}', false, 11, _grey);
@@ -96,12 +104,15 @@ class ReportDocx {
       _overtimeNotes(notes);
       return;
     }
-    const b = '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
+    const b =
+        '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:bottom w:val="single" w:sz="4" w:color="D5D9DE"/><w:right w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
-    _body.write('<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
-        '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4080"/>'
-        '<w:gridCol w:w="1500"/><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/></w:tblGrid>');
+    _body.write(
+      '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
+      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4080"/>'
+      '<w:gridCol w:w="1500"/><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/></w:tblGrid>',
+    );
     _otRow(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours'], true, 'E4E7EC', true);
     for (final r in rows) {
       _otRow([r.name, _dash(r.fri), _dash(r.sat), _dash(r.sun), _dash(r.hours)], false, null, true);
@@ -125,15 +136,17 @@ class ReportDocx {
     for (var i = 0; i < cells.length; i++) {
       _body.write('<w:tc><w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/>');
       if (shade != null) _body.write('<w:shd w:val="clear" w:color="auto" w:fill="$shade"/>');
-      _body.write('</w:tcPr><w:p><w:pPr>${keep ? '<w:keepNext/>' : ''}<w:spacing w:before="40" w:after="40"/>'
-          '${i == 0 ? '' : '<w:jc w:val="center"/>'}</w:pPr>');
+      _body.write(
+        '</w:tcPr><w:p><w:pPr>${keep ? '<w:keepNext/>' : ''}<w:spacing w:before="40" w:after="40"/>'
+        '${i == 0 ? '' : '<w:jc w:val="center"/>'}</w:pPr>',
+      );
       final v = cells[i];
       final yesNo = i > 0 && (v == Overtime.yes || v == Overtime.no);
       final col = i > 0 && v == Overtime.yes
           ? _green
           : i > 0 && v == Overtime.no
-              ? _red
-              : _text;
+          ? _red
+          : _text;
       _run(v, bold || yesNo, 10, col);
       _body.write('</w:p></w:tc>');
     }
@@ -142,7 +155,9 @@ class ReportDocx {
 
   void _renderTask(Task t, String photoDir) {
     // Title line with a status mark; keepNext holds it on the page with its details.
-    _body.write('<w:p><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="40"/><w:ind w:left="440" w:hanging="440"/></w:pPr>');
+    _body.write(
+      '<w:p><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="40"/><w:ind w:left="440" w:hanging="440"/></w:pPr>',
+    );
     _run(t.done ? '✔  ' : '○  ', true, 13, t.done ? _green : 'A3ACB7', 'Segoe UI Symbol');
     _run(t.title.isEmpty ? '(Untitled field)' : t.title, true, 13, _navy);
     _body.write('</w:p>');
@@ -179,9 +194,11 @@ class ReportDocx {
         colTw.add((w * 20).round());
         grid.write('<w:gridCol w:w="${colTw[k]}"/>');
       }
-      _body.write('<w:tbl><w:tblPr><w:tblInd w:w="440" w:type="dxa"/><w:tblLayout w:type="fixed"/>'
-          '<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>'
-          '</w:tblPr><w:tblGrid>$grid</w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>');
+      _body.write(
+        '<w:tbl><w:tblPr><w:tblInd w:w="440" w:type="dxa"/><w:tblLayout w:type="fixed"/>'
+        '<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>'
+        '</w:tblPr><w:tblGrid>$grid</w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>',
+      );
       for (var k = 0; k < row.length; k++) {
         final cell = row[k];
         _body.write('<w:tc><w:tcPr><w:tcW w:w="${colTw[k]}" w:type="dxa"/></w:tcPr>');
@@ -203,23 +220,27 @@ class ReportDocx {
     final rid = 'rIdImg$id';
     final name = 'image$id.jpeg';
     _media.addFile(ArchiveFile.bytes('word/media/$name', e.jpeg));
-    _rels.write('<Relationship Id="$rid" '
-        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/$name"/>');
+    _rels.write(
+      '<Relationship Id="$rid" '
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/$name"/>',
+    );
 
     final cx = (wPt / 72.0 * _emuPerInch).round();
     final cy = (hPt / 72.0 * _emuPerInch).round();
-    _body.write('<w:p><w:pPr><w:keepNext/><w:spacing w:before="60" w:after="0"/></w:pPr><w:r><w:drawing>'
-        '<wp:inline distT="0" distB="0" distL="0" distR="0">'
-        '<wp:extent cx="$cx" cy="$cy"/>'
-        '<wp:docPr id="$id" name="Photo $id"/>'
-        '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'
-        '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-        '<pic:pic><pic:nvPicPr><pic:cNvPr id="$id" name="$name"/>'
-        '<pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="$rid"/>'
-        '<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/>'
-        '<a:ext cx="$cx" cy="$cy"/></a:xfrm>'
-        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>'
-        '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>');
+    _body.write(
+      '<w:p><w:pPr><w:keepNext/><w:spacing w:before="60" w:after="0"/></w:pPr><w:r><w:drawing>'
+      '<wp:inline distT="0" distB="0" distL="0" distR="0">'
+      '<wp:extent cx="$cx" cy="$cy"/>'
+      '<wp:docPr id="$id" name="Photo $id"/>'
+      '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+      '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+      '<pic:pic><pic:nvPicPr><pic:cNvPr id="$id" name="$name"/>'
+      '<pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="$rid"/>'
+      '<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/>'
+      '<a:ext cx="$cx" cy="$cy"/></a:xfrm>'
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>'
+      '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>',
+    );
     _para(PhotoLayout.caption(p, _logIso), false, 7, _grey, 60, false);
   }
 
@@ -240,8 +261,10 @@ class ReportDocx {
     final f = font ?? 'Calibri';
     _body.write('<w:r><w:rPr><w:rFonts w:ascii="$f" w:hAnsi="$f" w:cs="$f"/>');
     if (bold) _body.write('<w:b/>');
-    _body.write('<w:color w:val="$color"/><w:sz w:val="${pt * 2}"/><w:szCs w:val="${pt * 2}"/></w:rPr>'
-        '<w:t xml:space="preserve">${esc(text)}</w:t></w:r>');
+    _body.write(
+      '<w:color w:val="$color"/><w:sz w:val="${pt * 2}"/><w:szCs w:val="${pt * 2}"/></w:rPr>'
+      '<w:t xml:space="preserve">${esc(text)}</w:t></w:r>',
+    );
   }
 
   static String esc(String s) {
@@ -267,24 +290,34 @@ class ReportDocx {
   Uint8List _finish() {
     const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
     final zip = Archive()
-      ..addFile(ArchiveFile.string(
+      ..addFile(
+        ArchiveFile.string(
           '[Content_Types].xml',
           '$head<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
               '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
               '<Default Extension="xml" ContentType="application/xml"/>'
               '<Default Extension="jpeg" ContentType="image/jpeg"/>'
               '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
-              '</Types>'))
-      ..addFile(ArchiveFile.string(
+              '</Types>',
+        ),
+      )
+      ..addFile(
+        ArchiveFile.string(
           '_rels/.rels',
           '$head<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
               '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
-              '</Relationships>'))
-      ..addFile(ArchiveFile.string(
+              '</Relationships>',
+        ),
+      )
+      ..addFile(
+        ArchiveFile.string(
           'word/_rels/document.xml.rels',
           '$head<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-              '$_rels</Relationships>'))
-      ..addFile(ArchiveFile.string(
+              '$_rels</Relationships>',
+        ),
+      )
+      ..addFile(
+        ArchiveFile.string(
           'word/document.xml',
           '$head<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
               ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
@@ -294,7 +327,9 @@ class ReportDocx {
               '$_body'
               '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'
               '<w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="708" w:footer="708" w:gutter="0"/>'
-              '</w:sectPr></w:body></w:document>'));
+              '</w:sectPr></w:body></w:document>',
+        ),
+      );
     for (final f in _media.files) {
       zip.addFile(f);
     }

@@ -43,7 +43,13 @@ class PhotoLayout {
 
   /// sizes: each photo's pixel size, or null if missing (drawn as a small placeholder).
   /// Every photo is scaled to [rowHeight], or narrower if it would overflow the width.
-  static List<List<Cell>> rows(List<PhotoSize?> sizes, double width, double rowHeight, double gap, double missingWidth) {
+  static List<List<Cell>> rows(
+    List<PhotoSize?> sizes,
+    double width,
+    double rowHeight,
+    double gap,
+    double missingWidth,
+  ) {
     final rows = <List<Cell>>[];
     var row = <Cell>[];
     double used = 0;
@@ -154,10 +160,12 @@ class PhotoLayout {
       im = img.bakeOrientation(im);
       final k = math.min(1.0, math.min(maxW / im.width, maxH / im.height));
       if (k < 1.0) {
-        im = img.copyResize(im,
-            width: math.max(1, (im.width * k).round()),
-            height: math.max(1, (im.height * k).round()),
-            interpolation: img.Interpolation.average);
+        im = img.copyResize(
+          im,
+          width: math.max(1, (im.width * k).round()),
+          height: math.max(1, (im.height * k).round()),
+          interpolation: img.Interpolation.average,
+        );
       }
       im.exif = img.ExifData();
       return Encoded(img.encodeJpg(im, quality: quality), im.width, im.height);

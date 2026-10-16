@@ -18,7 +18,10 @@ void main() {
     final req = AccessCodes.requestCode('install-123', 'Sam Maint');
     final sms = 'Daily Work Log access request from Sam Maint:\n$req';
     final ok = AccessCodes.approvalCode(
-        '2027-10-16', AccessCodes.sign(owner.privateKey, AccessCodes.payload('install-123', 'Sam Maint', '2027-10-16')), '');
+      '2027-10-16',
+      AccessCodes.sign(owner.privateKey, AccessCodes.payload('install-123', 'Sam Maint', '2027-10-16')),
+      '',
+    );
     final reply = 'Your Daily Work Log approval. Copy this whole text, then paste it on the sign-in screen:\n$ok';
 
     test('request round-trip', () {
@@ -30,17 +33,32 @@ void main() {
     test('approvals', () {
       final ap = AccessCodes.parseApproval(reply);
       expect(AccessCodes.verify(built, 'install-123', 'Sam Maint', ap), isTrue, reason: "owner's approval accepted");
-      expect(AccessCodes.verify(built, 'install-999', 'Sam Maint', ap), isFalse, reason: 'same code on another phone rejected');
-      expect(AccessCodes.verify(built, 'install-123', 'Someone Else', ap), isFalse, reason: 'different name rejected');
-      final forged = AccessCodes.approvalCode('2027-10-16',
-          AccessCodes.sign(stranger.privateKey, AccessCodes.payload('install-123', 'Sam Maint', '2027-10-16')), null);
-      expect(AccessCodes.verify(built, 'install-123', 'Sam Maint', AccessCodes.parseApproval(forged)), isFalse,
-          reason: 'forged approval rejected');
       expect(
-          AccessCodes.verify(
-              built, 'install-123', 'Sam Maint', AccessCodes.parseApproval(ok.replaceAll('MjAyNy0xMC0xNnw', 'MjA5OS0xMC0xNnw'))),
-          isFalse,
-          reason: 'edited expiry rejected');
+        AccessCodes.verify(built, 'install-999', 'Sam Maint', ap),
+        isFalse,
+        reason: 'same code on another phone rejected',
+      );
+      expect(AccessCodes.verify(built, 'install-123', 'Someone Else', ap), isFalse, reason: 'different name rejected');
+      final forged = AccessCodes.approvalCode(
+        '2027-10-16',
+        AccessCodes.sign(stranger.privateKey, AccessCodes.payload('install-123', 'Sam Maint', '2027-10-16')),
+        null,
+      );
+      expect(
+        AccessCodes.verify(built, 'install-123', 'Sam Maint', AccessCodes.parseApproval(forged)),
+        isFalse,
+        reason: 'forged approval rejected',
+      );
+      expect(
+        AccessCodes.verify(
+          built,
+          'install-123',
+          'Sam Maint',
+          AccessCodes.parseApproval(ok.replaceAll('MjAyNy0xMC0xNnw', 'MjA5OS0xMC0xNnw')),
+        ),
+        isFalse,
+        reason: 'edited expiry rejected',
+      );
       expect(AccessCodes.parseApproval('hello'), isNull);
       expect(AccessCodes.parseRequest('DWL-REQ-!!'), isNull);
     });
@@ -48,32 +66,65 @@ void main() {
     test('hand over: owner -> work phone -> another phone; old approvals keep working', () {
       final work = AccessCodes.generateKeyPair();
       final wurl = AccessCodes.keyUrl(work.publicKey);
-      final chain = AccessCodes.extendChain('', wurl, AccessCodes.sign(owner.privateKey, AccessCodes.handoverPayload(wurl)));
-      final text = 'Daily Work Log owner handover:\n${AccessCodes.handoverCode(AccessCodes.privateKeyPkcs8(work.privateKey), chain, '482913')}';
+      final chain = AccessCodes.extendChain(
+        '',
+        wurl,
+        AccessCodes.sign(owner.privateKey, AccessCodes.handoverPayload(wurl)),
+      );
+      final text =
+          'Daily Work Log owner handover:\n${AccessCodes.handoverCode(AccessCodes.privateKeyPkcs8(work.privateKey), chain, '482913')}';
       expect(AccessCodes.looksLikeHandover(text), isTrue);
       expect(AccessCodes.openHandover(text, '482914'), isNull, reason: 'wrong code rejected');
       final got = AccessCodes.openHandover(text, '482913')!;
       expect(got.chain, chain);
       final wk = AccessCodes.privateKeyFromPkcs8(got.privateKeyPkcs8)!;
-      expect(AccessCodes.sameKey(AccessCodes.chainEnd(built, got.chain), work.publicKey), isTrue, reason: 'chain leads to work phone');
-      final ok2 = AccessCodes.approvalCode(
-          '2027-11-01', AccessCodes.sign(wk, AccessCodes.payload('install-777', 'New Guy', '2027-11-01')), got.chain);
-      expect(AccessCodes.verify(built, 'install-777', 'New Guy', AccessCodes.parseApproval('Approval:\n$ok2\n')), isTrue);
-      expect(AccessCodes.verify(built, 'install-123', 'Sam Maint', AccessCodes.parseApproval(reply)), isTrue,
-          reason: 'old approval still valid');
       expect(
-          AccessCodes.verify(built, 'install-777', 'New Guy',
-              AccessCodes.parseApproval(AccessCodes.approvalCode('2027-11-01', AccessCodes.parseApproval(ok2)!.signature, ''))),
-          isFalse,
-          reason: 'work signature without chain rejected');
-      final fake = AccessCodes.extendChain('', wurl, AccessCodes.sign(stranger.privateKey, AccessCodes.handoverPayload(wurl)));
+        AccessCodes.sameKey(AccessCodes.chainEnd(built, got.chain), work.publicKey),
+        isTrue,
+        reason: 'chain leads to work phone',
+      );
+      final ok2 = AccessCodes.approvalCode(
+        '2027-11-01',
+        AccessCodes.sign(wk, AccessCodes.payload('install-777', 'New Guy', '2027-11-01')),
+        got.chain,
+      );
+      expect(
+        AccessCodes.verify(built, 'install-777', 'New Guy', AccessCodes.parseApproval('Approval:\n$ok2\n')),
+        isTrue,
+      );
+      expect(
+        AccessCodes.verify(built, 'install-123', 'Sam Maint', AccessCodes.parseApproval(reply)),
+        isTrue,
+        reason: 'old approval still valid',
+      );
+      expect(
+        AccessCodes.verify(
+          built,
+          'install-777',
+          'New Guy',
+          AccessCodes.parseApproval(
+            AccessCodes.approvalCode('2027-11-01', AccessCodes.parseApproval(ok2)!.signature, ''),
+          ),
+        ),
+        isFalse,
+        reason: 'work signature without chain rejected',
+      );
+      final fake = AccessCodes.extendChain(
+        '',
+        wurl,
+        AccessCodes.sign(stranger.privateKey, AccessCodes.handoverPayload(wurl)),
+      );
       expect(AccessCodes.chainEnd(built, fake), isNull, reason: 'fake handover rejected');
       final bad = text.substring(0, text.length - 3) + (text.endsWith('A') ? 'BBB' : 'AAA');
       expect(AccessCodes.openHandover(bad, '482913'), isNull, reason: 'edited handover rejected');
       final back = AccessCodes.generateKeyPair();
       final burl = AccessCodes.keyUrl(back.publicKey);
       final chain2 = AccessCodes.extendChain(got.chain, burl, AccessCodes.sign(wk, AccessCodes.handoverPayload(burl)));
-      expect(AccessCodes.sameKey(AccessCodes.chainEnd(built, chain2), back.publicKey), isTrue, reason: 'second handover');
+      expect(
+        AccessCodes.sameKey(AccessCodes.chainEnd(built, chain2), back.publicKey),
+        isTrue,
+        reason: 'second handover',
+      );
       expect(AccessCodes.verify(built, 'install-777', 'New Guy', AccessCodes.parseApproval(ok2)), isTrue);
     });
 
@@ -111,8 +162,13 @@ void main() {
       final w = AccessCodes.parseApproval(j['workApproval'] as String)!;
       expect(w.chain, j['chain']);
       expect(AccessCodes.verify(javaOwner, 'install-777', 'New Guy', w), isTrue);
-      expect(AccessCodes.sameKey(AccessCodes.chainEnd(javaOwner, j['chain'] as String), AccessCodes.publicKey(j['workKey'] as String)),
-          isTrue);
+      expect(
+        AccessCodes.sameKey(
+          AccessCodes.chainEnd(javaOwner, j['chain'] as String),
+          AccessCodes.publicKey(j['workKey'] as String),
+        ),
+        isTrue,
+      );
     });
 
     test('Java PKCS8 private key reads and signs', () {
@@ -133,19 +189,35 @@ void main() {
 
       // Codes for InteropVerify.java
       final dartOwner = AccessCodes.generateKeyPair();
-      final dartApproval = AccessCodes.approvalCode('2027-12-01',
-          AccessCodes.sign(dartOwner.privateKey, AccessCodes.payload('install-d1', 'Dart User', '2027-12-01')), '');
-      final dartWorkApproval = AccessCodes.approvalCode('2027-12-02',
-          AccessCodes.sign(work, AccessCodes.payload('install-888', 'Flutter Person', '2027-12-02')), h.chain);
-      expect(AccessCodes.verify(javaOwner, 'install-888', 'Flutter Person', AccessCodes.parseApproval(dartWorkApproval)), isTrue);
+      final dartApproval = AccessCodes.approvalCode(
+        '2027-12-01',
+        AccessCodes.sign(dartOwner.privateKey, AccessCodes.payload('install-d1', 'Dart User', '2027-12-01')),
+        '',
+      );
+      final dartWorkApproval = AccessCodes.approvalCode(
+        '2027-12-02',
+        AccessCodes.sign(work, AccessCodes.payload('install-888', 'Flutter Person', '2027-12-02')),
+        h.chain,
+      );
+      expect(
+        AccessCodes.verify(javaOwner, 'install-888', 'Flutter Person', AccessCodes.parseApproval(dartWorkApproval)),
+        isTrue,
+      );
       final next = AccessCodes.generateKeyPair();
       final nurl = AccessCodes.keyUrl(next.publicKey);
       final chain2 = AccessCodes.extendChain(h.chain, nurl, AccessCodes.sign(work, AccessCodes.handoverPayload(nurl)));
-      final dartHandover = 'Daily Work Log owner handover:\n'
+      final dartHandover =
+          'Daily Work Log owner handover:\n'
           '${AccessCodes.handoverCode(AccessCodes.privateKeyPkcs8(next.privateKey), chain2, '135790')}';
-      final dartApproval2 = AccessCodes.approvalCode('2028-01-05',
-          AccessCodes.sign(next.privateKey, AccessCodes.payload('install-999', 'Third Phone', '2028-01-05')), chain2);
-      expect(AccessCodes.verify(javaOwner, 'install-999', 'Third Phone', AccessCodes.parseApproval(dartApproval2)), isTrue);
+      final dartApproval2 = AccessCodes.approvalCode(
+        '2028-01-05',
+        AccessCodes.sign(next.privateKey, AccessCodes.payload('install-999', 'Third Phone', '2028-01-05')),
+        chain2,
+      );
+      expect(
+        AccessCodes.verify(javaOwner, 'install-999', 'Third Phone', AccessCodes.parseApproval(dartApproval2)),
+        isTrue,
+      );
 
       final out = Platform.environment['DWL_INTEROP_OUT'];
       if (out != null && out.isNotEmpty) {
@@ -153,7 +225,8 @@ void main() {
           'javaOwnerKey': j['ownerKey'] as String,
           'dartOwnerKey': AccessCodes.encodeKey(dartOwner.publicKey),
           'dartApproval': dartApproval,
-          'dartRequest': 'Daily Work Log access request from Dart User:\n${AccessCodes.requestCode('install-d1', 'Dart User')}',
+          'dartRequest':
+              'Daily Work Log access request from Dart User:\n${AccessCodes.requestCode('install-d1', 'Dart User')}',
           'dartRequestUnicode': AccessCodes.requestCode('install-d3', 'José Ñuñez'),
           'dartWorkApproval': dartWorkApproval,
           'dartHandover': dartHandover,

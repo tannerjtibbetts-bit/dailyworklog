@@ -45,12 +45,10 @@ class AccessCodes {
   static const rounds = 120000;
   static final _reqCode = RegExp(r'DWL-REQ-([A-Za-z0-9_-]+)');
   static final _okCode = RegExp(r'DWL-OK-([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_.*-]+))?');
-  static final _ownerCode =
-      RegExp(r'DWL-OWNER-([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)~([A-Za-z0-9_.*-]+)');
+  static final _ownerCode = RegExp(r'DWL-OWNER-([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)~([A-Za-z0-9_.*-]+)');
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
-  static String requestCode(String installId, String name) =>
-      req + _b64('v1|$installId|${javaTrim(name)}');
+  static String requestCode(String installId, String name) => req + _b64('v1|$installId|${javaTrim(name)}');
 
   /// Finds a request code anywhere in pasted text (e.g. the whole text message).
   static AccessRequest? parseRequest(String? text) {
@@ -151,8 +149,15 @@ class AccessCodes {
     if (m == null) return null;
     try {
       final c = GCMBlockCipher(AESEngine())
-        ..init(false,
-            AEADParameters(KeyParameter(_codeKey(code, unb64(m.group(1)!))), 128, unb64(m.group(2)!), _bytes(m.group(4)!)));
+        ..init(
+          false,
+          AEADParameters(
+            KeyParameter(_codeKey(code, unb64(m.group(1)!))),
+            128,
+            unb64(m.group(2)!),
+            _bytes(m.group(4)!),
+          ),
+        );
       return Handover(c.process(unb64(m.group(3)!)), m.group(4)!);
     } catch (_) {
       return null;
@@ -186,7 +191,12 @@ class AccessCodes {
   /// X.509 SubjectPublicKeyInfo DER, as Java's PublicKey.getEncoded().
   static Uint8List publicKeyDer(ECPublicKey k) {
     final alg = ASN1Sequence(elements: [ASN1ObjectIdentifier(_ecPublicKeyOid), ASN1ObjectIdentifier(_p256Oid)]);
-    final spki = ASN1Sequence(elements: [alg, ASN1BitString(stringValues: k.Q!.getEncoded(false))]);
+    final spki = ASN1Sequence(
+      elements: [
+        alg,
+        ASN1BitString(stringValues: k.Q!.getEncoded(false)),
+      ],
+    );
     return spki.encode();
   }
 
@@ -217,13 +227,21 @@ class AccessCodes {
   static Uint8List privateKeyPkcs8(ECPrivateKey k) {
     final d = _fixed(k.d!, 32);
     final pub = (curve.G * k.d)!.getEncoded(false);
-    final ecKey = ASN1Sequence(elements: [
-      ASN1Integer(BigInt.one),
-      ASN1OctetString(octets: d),
-      ASN1Sequence(tag: 0xA1, elements: [ASN1BitString(stringValues: pub)]),
-    ]);
+    final ecKey = ASN1Sequence(
+      elements: [
+        ASN1Integer(BigInt.one),
+        ASN1OctetString(octets: d),
+        ASN1Sequence(tag: 0xA1, elements: [ASN1BitString(stringValues: pub)]),
+      ],
+    );
     final alg = ASN1Sequence(elements: [ASN1ObjectIdentifier(_ecPublicKeyOid), ASN1ObjectIdentifier(_p256Oid)]);
-    return ASN1Sequence(elements: [ASN1Integer(BigInt.zero), alg, ASN1OctetString(octets: ecKey.encode())]).encode();
+    return ASN1Sequence(
+      elements: [
+        ASN1Integer(BigInt.zero),
+        alg,
+        ASN1OctetString(octets: ecKey.encode()),
+      ],
+    ).encode();
   }
 
   /// Reads a PKCS#8 EC P-256 private key (from Java's getEncoded() or [privateKeyPkcs8]); null if not one.
@@ -252,12 +270,13 @@ class AccessCodes {
   static AsymmetricKeyPair<ECPublicKey, ECPrivateKey> generateKeyPair() {
     final g = ECKeyGenerator()..init(ParametersWithRandom(ECKeyGeneratorParameters(curve), _random()));
     final p = g.generateKeyPair();
-    return AsymmetricKeyPair(p.publicKey as ECPublicKey, p.privateKey as ECPrivateKey);
+    return AsymmetricKeyPair(p.publicKey, p.privateKey);
   }
 
   /// SHA256withECDSA, DER-encoded like Java's Signature.sign().
   static Uint8List sign(ECPrivateKey k, Uint8List data) {
-    final s = ECDSASigner(SHA256Digest())..init(true, ParametersWithRandom(PrivateKeyParameter<ECPrivateKey>(k), _random()));
+    final s = ECDSASigner(SHA256Digest())
+      ..init(true, ParametersWithRandom(PrivateKeyParameter<ECPrivateKey>(k), _random()));
     final sig = s.generateSignature(data) as ECSignature;
     return ASN1Sequence(elements: [ASN1Integer(sig.r), ASN1Integer(sig.s)]).encode();
   }

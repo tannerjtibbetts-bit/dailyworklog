@@ -30,8 +30,16 @@ class Sms {
   }
 
   /// Opens Messages with the text (and photos) ready; numbers may be empty.
-  static Future<void> compose(BuildContext context, List<String> numbers, String body, {List<File> photos = const []}) async {
-    final files = [for (final f in photos) if (f.existsSync()) f];
+  static Future<void> compose(
+    BuildContext context,
+    List<String> numbers,
+    String body, {
+    List<File> photos = const [],
+  }) async {
+    final files = [
+      for (final f in photos)
+        if (f.existsSync()) f,
+    ];
     final hasNumbers = numbers.any((n) => digits(n).isNotEmpty);
     if (files.isNotEmpty) {
       // Photos go through the share sheet, which can't fill in who it's to.
@@ -39,10 +47,12 @@ class Sms {
         toast(context, 'Pick Messages, then choose who to send it to', long: true);
       }
       try {
-        await SharePlus.instance.share(ShareParams(
-          text: body,
-          files: [for (final f in files) XFile(f.path, mimeType: 'image/jpeg')],
-        ));
+        await SharePlus.instance.share(
+          ShareParams(
+            text: body,
+            files: [for (final f in files) XFile(f.path, mimeType: 'image/jpeg')],
+          ),
+        );
       } catch (_) {
         if (context.mounted) toast(context, 'No messaging app found on this phone', long: true);
       }

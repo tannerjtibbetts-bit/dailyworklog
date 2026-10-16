@@ -16,7 +16,7 @@ List<MapEntry<String, List<String>>> crewGroups(Project p, String query) {
   for (final role in Project.allRoles) {
     final group = [
       for (final name in p.crew)
-        if (p.roleOf(name) == role && (q.isEmpty || name.toLowerCase().contains(q))) name
+        if (p.roleOf(name) == role && (q.isEmpty || name.toLowerCase().contains(q))) name,
     ];
     if (group.isNotEmpty) out.add(MapEntry(role, group));
   }
@@ -132,17 +132,17 @@ class _AssignSheetState extends State<_AssignSheet> {
   }
 
   Future<void> _remove(String name) => confirm(
-        context,
-        'Remove $name from the crew?',
-        "They'll stay on fields they're already assigned to.",
-        'Remove',
-        () {
-          p.crew.remove(name);
-          selected.remove(name);
-          store.save();
-          _render();
-        },
-      );
+    context,
+    'Remove $name from the crew?',
+    "They'll stay on fields they're already assigned to.",
+    'Remove',
+    () {
+      p.crew.remove(name);
+      selected.remove(name);
+      store.save();
+      _render();
+    },
+  );
 
   Future<void> _editPhone(String name) async {
     final n = await promptPhone(context, 'Phone number for $name', p.phoneOf(name));
@@ -153,8 +153,16 @@ class _AssignSheetState extends State<_AssignSheet> {
   }
 
   Future<void> _editPerson(String name) async {
-    final d = await crewDialog(context, name, 'Save', name, p.phoneOf(name), p.roleOf(name),
-        p.assignTexts.contains(name), () => _remove(name));
+    final d = await crewDialog(
+      context,
+      name,
+      'Save',
+      name,
+      p.phoneOf(name),
+      p.roleOf(name),
+      p.assignTexts.contains(name),
+      () => _remove(name),
+    );
     if (d == null || !mounted) return;
     if (!updateCrewMember(store, p, name, d)) {
       await showDialog<void>(
@@ -171,10 +179,12 @@ class _AssignSheetState extends State<_AssignSheet> {
   }
 
   Widget _heading(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
-        child: Text(label.toUpperCase(),
-            style: const TextStyle(color: C.grey, fontSize: 13, letterSpacing: 0.8, fontWeight: FontWeight.bold)),
-      );
+    padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+    child: Text(
+      label.toUpperCase(),
+      style: const TextStyle(color: C.grey, fontSize: 13, letterSpacing: 0.8, fontWeight: FontWeight.bold),
+    ),
+  );
 
   Widget _row(String name) {
     final number = p.phoneOf(name);
@@ -184,13 +194,16 @@ class _AssignSheetState extends State<_AssignSheet> {
         ? Text(
             (number.isEmpty ? 'No phone number' : number) +
                 (p.assignTexts.contains(name) ? '  ·  texted when assigned' : ''),
-            style: const TextStyle(color: C.grey, fontSize: 15))
+            style: const TextStyle(color: C.grey, fontSize: 15),
+          )
         : InkWell(
             onTap: () => _editPhone(name),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(number.isEmpty ? '+ Add phone number' : '$number  ·  edit',
-                  style: TextStyle(color: number.isEmpty ? C.blue : C.grey, fontSize: 15)),
+              child: Text(
+                number.isEmpty ? '+ Add phone number' : '$number  ·  edit',
+                style: TextStyle(color: number.isEmpty ? C.blue : C.grey, fontSize: 15),
+              ),
             ),
           );
     return InkWell(
@@ -198,36 +211,46 @@ class _AssignSheetState extends State<_AssignSheet> {
       onTap: manage
           ? () => _editPerson(name)
           : () => setState(() {
-                if (!selected.remove(name)) selected.add(name);
-              }),
+              if (!selected.remove(name)) selected.add(name);
+            }),
       onLongPress: () => _remove(name),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 72),
         child: Padding(
           padding: EdgeInsets.fromLTRB(manage ? 20 : 16, 0, 20, 0),
-          child: Row(children: [
-            if (!manage)
-              IgnorePointer(child: Checkbox(value: on, onChanged: (_) {})),
-            Container(
-              width: 44,
-              height: 44,
-              margin: const EdgeInsets.only(left: 8),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                  color: Colors.white, shape: BoxShape.circle, border: Border.all(color: C.cardStroke)),
-              child: Text(Fmt.initials(name), style: const TextStyle(color: C.navy, fontSize: 14)),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(name, style: const TextStyle(color: C.text, fontSize: 20)),
-                  phone,
-                ]),
+          child: Row(
+            children: [
+              if (!manage)
+                IgnorePointer(
+                  child: Checkbox(value: on, onChanged: (_) {}),
+                ),
+              Container(
+                width: 44,
+                height: 44,
+                margin: const EdgeInsets.only(left: 8),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: C.cardStroke),
+                ),
+                child: Text(Fmt.initials(name), style: const TextStyle(color: C.navy, fontSize: 14)),
               ),
-            ),
-          ]),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: const TextStyle(color: C.text, fontSize: 20)),
+                      phone,
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -244,76 +267,87 @@ class _AssignSheetState extends State<_AssignSheet> {
       }
     }
     if (offerAdd(p, q)) {
-      rows.add(InkWell(
-        onTap: () => _add(q),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-          child: Text(q.isEmpty ? '+  Add crew member' : '+  Add “$q” to crew',
-              style: const TextStyle(color: C.blue, fontSize: 19)),
+      rows.add(
+        InkWell(
+          onTap: () => _add(q),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+            child: Text(
+              q.isEmpty ? '+  Add crew member' : '+  Add “$q” to crew',
+              style: const TextStyle(color: C.blue, fontSize: 19),
+            ),
+          ),
         ),
-      ));
+      );
     }
     final bold = const TextStyle(fontSize: 19, fontWeight: FontWeight.bold);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.92),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 44,
-            height: 5,
-            margin: const EdgeInsets.only(top: 14),
-            decoration: BoxDecoration(color: C.cardStroke, borderRadius: BorderRadius.circular(3)),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-            child: Row(children: [
-              Visibility(
-                visible: !widget.manage,
-                maintainSize: true,
-                maintainAnimation: true,
-                maintainState: true,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: bold.copyWith(color: C.navy)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 5,
+              margin: const EdgeInsets.only(top: 14),
+              decoration: BoxDecoration(color: C.cardStroke, borderRadius: BorderRadius.circular(3)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+              child: Row(
+                children: [
+                  Visibility(
+                    visible: !widget.manage,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel', style: bold.copyWith(color: C.navy)),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: C.navy, fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, selected.toList()),
+                    child: Text(widget.manage ? 'Done' : 'Assign', style: bold.copyWith(color: C.blue)),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+              child: TextField(
+                controller: search,
+                textCapitalization: TextCapitalization.words,
+                onChanged: (_) => _render(),
+                style: const TextStyle(fontSize: 18),
+                decoration: InputDecoration(
+                  hintText: 'Search Users',
+                  prefixIcon: const Icon(Icons.search, color: C.text),
+                  filled: true,
+                  fillColor: C.bg,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
               ),
-              Expanded(
-                child: Text(widget.title,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: C.navy, fontSize: 22, fontWeight: FontWeight.bold)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, selected.toList()),
-                child: Text(widget.manage ? 'Done' : 'Assign', style: bold.copyWith(color: C.blue)),
-              ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
-            child: TextField(
-              controller: search,
-              textCapitalization: TextCapitalization.words,
-              onChanged: (_) => _render(),
-              style: const TextStyle(fontSize: 18),
-              decoration: InputDecoration(
-                hintText: 'Search Users',
-                prefixIcon: const Icon(Icons.search, color: C.text),
-                filled: true,
-                fillColor: C.bg,
-                contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
               ),
             ),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
-            ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }

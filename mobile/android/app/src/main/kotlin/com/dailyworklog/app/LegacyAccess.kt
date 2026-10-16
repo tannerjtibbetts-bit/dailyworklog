@@ -36,7 +36,7 @@ object LegacyAccess {
                         "keystoreOwnerPublicKey" -> ownerEntry()?.certificate?.publicKey?.encoded?.let {
                             Base64.encodeToString(it, Base64.NO_WRAP)
                         }
-                        "keystoreSign" -> sign(call.argument<ByteArray>("data") ?: call.arguments as ByteArray)
+                        "keystoreSign" -> sign(call.argument<ByteArray>("data") ?: throw IllegalArgumentException("no data"))
                         else -> {
                             main.post { result.notImplemented() }
                             return@Thread

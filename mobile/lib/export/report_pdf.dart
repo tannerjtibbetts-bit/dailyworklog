@@ -13,11 +13,13 @@ import 'photo_layout.dart';
 
 class _Style {
   final double size;
-  final PdfColor color;
+  final int argb;
   final bool bold;
   final double spacing;
 
-  const _Style(this.size, int argb, {this.bold = false, this.spacing = 0}) : color = PdfColor.fromInt(argb);
+  const _Style(this.size, this.argb, {this.bold = false, this.spacing = 0});
+
+  PdfColor get color => PdfColor.fromInt(argb);
 
   /// Line height like Android's StaticLayout with 1.12 line spacing.
   double get lineH => size * 1.172 * 1.12;
@@ -62,6 +64,9 @@ class ReportPdf {
   int _pageNo = 0;
   final String _footerTitle;
   final String _photoDir;
+
+  /// Photos already in the file (the same photo can be on a field and a note).
+  final Map<String, PdfImage> _images = {};
 
   /// The log's date, so photo captions only show a date when it's a different day.
   String _logIso = '';
@@ -117,7 +122,14 @@ class ReportPdf {
 
     for (final g in Task.reportGroups(log.tasks)) {
       if (g.key.isNotEmpty) {
-        _ensure(70);
+        // Keep the area heading with its first field.
+        final first = g.value.first;
+        _ensure(
+          math.min(
+            math.max(70, _heading.lineH + 8 + _keep(first, _photoRows(first.photos, _w - 2 * _m - _indent))),
+            _h - 2 * _m - 40,
+          ),
+        );
         _text('${g.key} (${g.value.length})', _heading, _m, w, 8);
       }
       for (final t in g.value) {
@@ -161,8 +173,8 @@ class ReportPdf {
         final tp = v[d] == Overtime.yes
             ? _otYes
             : v[d] == Overtime.no
-                ? _otNo
-                : _small;
+            ? _otNo
+            : _small;
         _drawString(s, tp, _m + nameW + d * dayW + (dayW - _measure(s, tp)) / 2, _y + 13.5);
       }
       _y += rowH;
@@ -214,14 +226,8 @@ class ReportPdf {
   void _drawTask(Task t) {
     const x = _m + _indent, w = _w - _m - x;
     final head = _wrap(t.title.isEmpty ? '(Untitled field)' : t.title, _heading, w);
-    // Keep the title with its details and, when it has photos, the first row of them.
-    var keep = head.length * _heading.lineH + 40;
-    List<List<Cell>>? rows;
-    if (t.photos.isNotEmpty) {
-      rows = _photoRows(t.photos, w);
-      keep += 30 + PhotoLayout.height(rows.first) + captionH;
-    }
-    _ensure(math.min(keep, _h - 2 * _m - 40));
+    final rows = t.photos.isEmpty ? null : _photoRows(t.photos, w);
+    _ensure(math.min(_keep(t, rows), _h - 2 * _m - 40));
 
     final g = _g!;
     final cy = _y + _heading.ascent - _heading.size * 0.35;
@@ -291,6 +297,15 @@ class ReportPdf {
     _y += 16;
   }
 
+  /// Room to keep a field's title with its details and, when it has photos, the first row of them.
+  double _keep(Task t, List<List<Cell>>? rows) {
+    var keep =
+        _wrap(t.title.isEmpty ? '(Untitled field)' : t.title, _heading, _w - 2 * _m - _indent).length * _heading.lineH +
+        40;
+    if (rows != null && rows.isNotEmpty) keep += 30 + PhotoLayout.height(rows.first) + captionH;
+    return keep;
+  }
+
   List<List<Cell>> _photoRows(List<Photo> photos, double width) {
     final sizes = [for (final p in photos) PhotoLayout.size(File('$_photoDir/${p.file}'))];
     return PhotoLayout.rows(sizes, width, photoH, photoGap, 90);
@@ -311,12 +326,17 @@ class ReportPdf {
 
   void _drawPhoto(Photo p, File f, double left, double dw, double dh) {
     // Shrink the photo to photoDpi for its printed size, so it's sharp but the file stays small.
-    final e = PhotoLayout.encode(f, (dw * photoDpi / 72).round(), (dh * photoDpi / 72).round());
-    if (e == null) {
-      _drawString('(Photo missing)', _smallRed, left, _y + 12);
-      return;
+    final pw = (dw * photoDpi / 72).round(), ph = (dh * photoDpi / 72).round();
+    final key = '${f.path}@${pw}x$ph';
+    var im = _images[key];
+    if (im == null) {
+      final e = PhotoLayout.encode(f, pw, ph);
+      if (e == null) {
+        _drawString('(Photo missing)', _smallRed, left, _y + 12);
+        return;
+      }
+      im = _images[key] = PdfImage.jpeg(_doc, image: e.jpeg, orientation: PdfImageOrientation.topLeft);
     }
-    final im = PdfImage.jpeg(_doc, image: e.jpeg, orientation: PdfImageOrientation.topLeft);
     _g!.drawImage(im, left, _h - (_y + dh), dw, dh);
     final cap = PhotoLayout.caption(p, _logIso);
     final room = math.max(dw + photoGap - 2, 40.0);
@@ -339,10 +359,8 @@ class ReportPdf {
         final m = _winAnsi[r];
         if (m != null) {
           b.writeCharCode(m);
-        } else if (r == 0x2713 || r == 0x2714) {
-          b.write('v');
-        } else if (r >= 0xFE00 && r <= 0xFE0F || r == 0x200D) {
-          continue; // emoji joiners and variation selectors
+        } else if ((r >= 0x2600 && r <= 0x27BF) || r >= 0x1F000 || (r >= 0xFE00 && r <= 0xFE0F) || r == 0x200D) {
+          continue; // symbols and emoji: there's no way to draw them
         } else {
           b.write('?');
         }
@@ -352,11 +370,39 @@ class ReportPdf {
   }
 
   static const _winAnsi = <int, int>{
-    0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87,
-    0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91,
-    0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98,
-    0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F, 0x2212: 0x2D,
-    0x00A0: 0x20, 0x2010: 0x2D, 0x2011: 0x2D, 0x2032: 0x27, 0x2033: 0x22,
+    0x20AC: 0x80,
+    0x201A: 0x82,
+    0x0192: 0x83,
+    0x201E: 0x84,
+    0x2026: 0x85,
+    0x2020: 0x86,
+    0x2021: 0x87,
+    0x02C6: 0x88,
+    0x2030: 0x89,
+    0x0160: 0x8A,
+    0x2039: 0x8B,
+    0x0152: 0x8C,
+    0x017D: 0x8E,
+    0x2018: 0x91,
+    0x2019: 0x92,
+    0x201C: 0x93,
+    0x201D: 0x94,
+    0x2022: 0x95,
+    0x2013: 0x96,
+    0x2014: 0x97,
+    0x02DC: 0x98,
+    0x2122: 0x99,
+    0x0161: 0x9A,
+    0x203A: 0x9B,
+    0x0153: 0x9C,
+    0x017E: 0x9E,
+    0x0178: 0x9F,
+    0x2212: 0x2D,
+    0x00A0: 0x20,
+    0x2010: 0x2D,
+    0x2011: 0x2D,
+    0x2032: 0x27,
+    0x2033: 0x22,
   };
 
   PdfFont _font(_Style s) => s.bold ? _boldFont : _regular;
@@ -379,7 +425,7 @@ class ReportPdf {
   /// Word wrap to [width]; line breaks in the text are kept, over-long words are split.
   List<String> _wrap(String s, _Style st, double width) {
     final out = <String>[];
-    for (final para in clean(s.replaceAll('\r\n', '\n').replaceAll('\t', ' ')).split('\n')) {
+    for (final para in s.replaceAll('\r\n', '\n').replaceAll('\t', ' ').split('\n')) {
       var line = '';
       for (final word in para.split(' ')) {
         final next = line.isEmpty ? word : '$line $word';
@@ -425,7 +471,7 @@ class ReportPdf {
     if (c.trim().isEmpty) return;
     _g!
       ..setFillColor(st.color)
-      ..drawString(_font(st), st.size, c, x, _h - baseline, charSpace: st.spacing == 0 ? null : st.spacing * st.size);
+      ..drawString(_font(st), st.size, c, x, _h - baseline, charSpace: st.spacing * st.size);
   }
 
   // ----- shapes -----
