@@ -30,6 +30,7 @@ SeaCanMove _can(
   String tl = '',
   String fLetter = '',
   String tLetter = '',
+  String weight = '',
 ]) => SeaCanMove()
   ..can = can
   ..fromLetter = fLetter
@@ -37,7 +38,8 @@ SeaCanMove _can(
   ..fromLevel = fl
   ..toLetter = tLetter
   ..toRow = tr
-  ..toLevel = tl;
+  ..toLevel = tl
+  ..weight = weight;
 
 void main() {
   late Directory tmp;
@@ -54,11 +56,11 @@ void main() {
       ..name = 'B44 Zone 2'
       ..location = 'B44'
       ..seaCans = [
-        _can('MSCU 123456', '12', '2', '40', '1', 'D', 'E'),
-        _can('TCLU, "A" 7', '3'),
+        _can('MSCU 123456', '12', '2', '40', '1', 'D', 'E', '24.5'),
+        _can('TCLU, "A" 7', '3', '', '', '', '', '', 'about 3t'),
         _can('', '5', '1'), // no number: left out
         _can('   '),
-        _can('Line\nTwo & <co>', '', '', '9', '3'),
+        _can('Line\nTwo & <co>', '', '', '9', '3', '', '', '1200'),
       ];
     log = DailyLog()..date = '2026-10-05';
   });
@@ -80,9 +82,9 @@ void main() {
     const header = 'Moves,Can #,From Location,To Location,Weight,Bin #,From Location,To Location\r\n';
     expect(
       utf8.decode(bytes.sublist(3)),
-      '${header}1,MSCU 123456,D12 L2,E40 L1,,,,\r\n'
-      '2,"TCLU, ""A"" 7",3,,,,,\r\n'
-      '3,"Line\nTwo & <co>",,9 L3,,,,\r\n',
+      '${header}1,MSCU 123456,D12 L2,E40 L1,24.5,,,\r\n'
+      '2,"TCLU, ""A"" 7",3,,about 3t,,,\r\n'
+      '3,"Line\nTwo & <co>",,9 L3,1200,,,\r\n',
     );
     expect(utf8.decode(Export.seaCanCsv(Project()).sublist(3)), header);
   });
@@ -149,9 +151,20 @@ void main() {
       }
       expect(style('A$r'), style('A4'));
     }
-    expect([for (final c in 'BCDEFGH'.split('')) value('${c}4')], ['MSCU 123456', 'D12 L2', 'E40 L1', '', '', '', '']);
-    expect([value('B5'), value('C5'), value('D5')], ['TCLU, "A" 7', '3', '']);
-    expect([value('B6'), value('C6'), value('D6')], ['Line\nTwo & <co>', '', '9 L3']);
+    expect(
+      [for (final c in 'BCDEFGH'.split('')) value('${c}4')],
+      ['MSCU 123456', 'D12 L2', 'E40 L1', '24.5', '', '', ''],
+    );
+    expect([value('B5'), value('C5'), value('D5'), value('E5')], ['TCLU, "A" 7', '3', '', 'about 3t']);
+    expect([value('B6'), value('C6'), value('D6'), value('E6')], ['Line\nTwo & <co>', '', '9 L3', '1200']);
+    // Weight: a number cell when it reads as a number, else text.
+    expect(cells['E4']!.getAttribute('t'), isNull);
+    expect(cells['E4']!.findElements('v').single.innerText, '24.5');
+    expect(cells['E6']!.getAttribute('t'), isNull);
+    expect(cells['E6']!.findElements('v').single.innerText, '1200');
+    expect(cells['E5']!.getAttribute('t'), 'inlineStr');
+    expect(cells['C5']!.getAttribute('t'), 'inlineStr'); // a location is always text, even "3"
+    expect(style('E4'), style('B4'));
     expect(xml, contains('Two &amp; &lt;co&gt;'));
     for (var r = 7; r <= 11; r++) {
       expect(value('B$r'), '');
@@ -227,22 +240,27 @@ void main() {
       'Can #',
       'From location',
       'Current location',
+      'Weight',
       'MSCU 123456',
       'D12 L2',
       'E40 L1',
+      '24.5',
       'TCLU, "A" 7',
       '3',
+      'about 3t',
       '9 L3',
+      '1200',
       '3 sea cans',
     ]) {
       expect(text, contains(s));
     }
     // Moves column: 1, 2, 3, each followed by its sea can.
-    expect(text.sublist(text.indexOf('Current location') + 1, text.indexOf('Current location') + 5), [
+    expect(text.sublist(text.indexOf('Weight') + 1, text.indexOf('Weight') + 6), [
       '1',
       'MSCU 123456',
       'D12 L2',
       'E40 L1',
+      '24.5',
     ]);
     expect(doc, contains('Two &amp; &lt;co&gt;'));
     expect(text.where((t) => t == '–').length, 2);
@@ -268,16 +286,19 @@ void main() {
       'Can #',
       'From location',
       'Current location',
+      'Weight',
       'MSCU 123456',
       'D12 L2',
       'E40 L1',
       '9 L3',
+      'about 3t',
       'TCLU, "A" 7',
       '3 sea cans',
     ]) {
       expect(text, contains(s));
     }
-    expect(text, contains(RegExp(r'1\s+MSCU 123456\s+D12 L2\s+E40 L1')));
+    expect(text, contains(RegExp(r'1\s+MSCU 123456\s+D12 L2\s+E40 L1\s+24\.5')));
+    expect(text, contains(RegExp(r'Current location\s+Weight')));
     final e = File('${tmp.path}/seacans_empty.pdf')
       ..writeAsBytesSync(await ReportPdf.writeSeaCans(Project(), 'T', day));
     expect(await _pdfText(e), contains('No sea cans entered yet.'));
