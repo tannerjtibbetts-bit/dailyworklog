@@ -95,6 +95,18 @@ class PhotoLayout {
 
   /// Upright pixel size of a saved photo without decoding it, or null if it's missing.
   static PhotoSize? size(File f) {
+    // The size is near the start of a JPEG, so usually only that much is read.
+    try {
+      final raf = f.openSync();
+      try {
+        final s = _jpegSize(raf.readSync(256 * 1024));
+        if (s != null) return s;
+      } finally {
+        raf.closeSync();
+      }
+    } catch (_) {
+      return null;
+    }
     Uint8List bytes;
     try {
       bytes = f.readAsBytesSync();
@@ -117,6 +129,17 @@ class PhotoLayout {
       } catch (_) {
         return null;
       }
+    }
+  }
+
+  static PhotoSize? _jpegSize(Uint8List bytes) {
+    try {
+      final info = PdfJpegInfo(bytes);
+      final w = info.width ?? 0, h = info.height;
+      if (w <= 0 || h <= 0) return null;
+      return info.orientation.index >= 4 ? PhotoSize(h, w) : PhotoSize(w, h);
+    } catch (_) {
+      return null;
     }
   }
 
