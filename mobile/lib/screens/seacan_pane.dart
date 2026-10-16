@@ -427,7 +427,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
           confirm(
             context,
             'Clear all sea cans?',
-            'Every sea can number, location and weight on this tab is cleared. This can’t be undone.',
+            'Every sea can number and location on this tab is cleared. This can’t be undone.',
             'Clear all',
             () {
               p.seaCans.clear();
