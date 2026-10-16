@@ -52,9 +52,10 @@ Future<void> textDone(BuildContext context, Project p, DailyLog l, Task t, {Edge
         ..showSnackBar(bar('Texted $name', 2));
       return;
     }
+    if (!messenger.mounted) return;
     messenger.hideCurrentSnackBar();
     // Couldn't send: open Messages with the text ready instead.
-    await Sms.compose(context, [phone], body);
+    await Sms.compose(messenger.context, [phone], body);
   });
   messenger
     ..hideCurrentSnackBar()
