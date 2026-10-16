@@ -51,6 +51,7 @@ android {
         release {
             signingConfig = if (keystoreB64.isNullOrBlank()) signingConfigs.getByName("debug")
             else signingConfigs.getByName("termux")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
