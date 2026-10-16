@@ -48,7 +48,7 @@ void main() {
   });
 
   tearDownAll(() async {
-    await Store.instance.flush();
+    // No flush: saves started inside widget tests' fake clock never finish.
     try {
       await dir.delete(recursive: true);
     } catch (_) {}
