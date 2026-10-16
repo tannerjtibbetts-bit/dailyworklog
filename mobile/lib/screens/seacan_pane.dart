@@ -1,6 +1,8 @@
 // Sea Can Movements tab: one line per sea can. Type its identifier, then pick the letter (A to Z),
 // row (1 to 40) and level (1 to 3) it's coming from and the letter, row and level it's at now,
-// with a blue arrow between the two.
+// with a blue arrow between the two, then its weight. The lines are wider than a phone, so the
+// whole table (headings and lines together) scrolls sideways; the title and actions don't.
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
@@ -18,10 +20,13 @@ final seaCanLetters = [for (var c = 0x41; c <= 0x5A; c++) String.fromCharCode(c)
 const seaCanStartLines = 20;
 const _blank = '–';
 
-/// Widths on a line: identifier, then Letter / Row / Level for each location.
-const _canFlex = 22, _letterFlex = 7, _rowFlex = 9, _levelFlex = 7;
+/// Widths on a line: identifier, then Letter / Row / Level for each location, then weight.
+const _canFlex = 30, _letterFlex = 7, _rowFlex = 9, _levelFlex = 7, _weightFlex = 10;
 const _locFlex = _letterFlex + _rowFlex + _levelFlex;
-const _cellFlexes = [_canFlex, _letterFlex, _rowFlex, _levelFlex, _letterFlex, _rowFlex, _levelFlex];
+const _cellFlexes = [_canFlex, _letterFlex, _rowFlex, _levelFlex, _letterFlex, _rowFlex, _levelFlex, _weightFlex];
+
+/// The table is at least this wide (logical px) and scrolls sideways on narrower screens.
+const seaCanTableMinWidth = 560.0;
 
 /// Gap after each box.
 const _cellGap = 3.0;
@@ -51,22 +56,28 @@ class SeaCanPane extends StatefulWidget {
 }
 
 class _SeaCanPaneState extends State<SeaCanPane> {
-  final Map<SeaCanMove, TextEditingController> _cans = {};
+  final Map<SeaCanMove, TextEditingController> _cans = {}, _weights = {};
   final _scroll = ScrollController();
+
+  /// The sideways scroll of the table.
+  final _across = ScrollController();
 
   Store get store => Store.instance;
   Project get p => widget.project;
 
   @override
   void dispose() {
-    for (final c in _cans.values) {
+    for (final c in [..._cans.values, ..._weights.values]) {
       c.dispose();
     }
     _scroll.dispose();
+    _across.dispose();
     super.dispose();
   }
 
   TextEditingController _canFor(SeaCanMove m) => _cans.putIfAbsent(m, () => TextEditingController(text: m.can));
+  TextEditingController _weightFor(SeaCanMove m) =>
+      _weights.putIfAbsent(m, () => TextEditingController(text: m.weight));
 
   void _addRows(int count) {
     for (var i = 0; i < count; i++) {
@@ -140,7 +151,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
 
   Widget _canBox(SeaCanMove m) => TextField(
     controller: _canFor(m),
-    // Long numbers ("BPPU 201006-1") wrap onto a second line rather than being cut off.
+    // Very long numbers wrap onto a second line rather than being cut off.
     minLines: 1,
     maxLines: 2,
     keyboardType: TextInputType.text,
@@ -155,7 +166,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
       isDense: true,
       filled: true,
       fillColor: const Color(0xFFF2F7FD),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: C.cardStroke),
@@ -173,10 +184,39 @@ class _SeaCanPaneState extends State<SeaCanPane> {
     },
   );
 
+  static OutlineInputBorder _border(Color c) =>
+      OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c));
+
+  /// Weight: a number (decimals allowed), saved as it's typed.
+  Widget _weightBox(SeaCanMove m) => TextField(
+    controller: _weightFor(m),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+    textInputAction: TextInputAction.done,
+    textAlign: TextAlign.center,
+    maxLines: 1,
+    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: C.deepBlue),
+    decoration: InputDecoration(
+      hintText: _blank,
+      hintStyle: const TextStyle(color: C.greyLight, fontWeight: FontWeight.normal),
+      isDense: true,
+      filled: true,
+      fillColor: const Color(0xFFF2F7FD),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      enabledBorder: _border(C.cardStroke),
+      focusedBorder: _border(C.blue),
+    ),
+    onChanged: (s) {
+      m.weight = s.trim();
+      store.save();
+    },
+  );
+
   static List<String> _numbers(int max) => [for (var i = 1; i <= max; i++) '$i'];
 
-  /// Identifier box, then six cells (Letter / Row / Level for From, then Current location). With
-  /// [arrow], a blue arrow sits between the two ("came from here, went to here"); without, just the gap.
+  /// Identifier box, six cells (Letter / Row / Level for From, then Current location), then weight.
+  /// With [arrow], a blue arrow sits between the two locations ("came from here, went to here");
+  /// without, just the gap.
   Widget _row(List<Widget> cells, {bool arrow = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
@@ -215,6 +255,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
       _dropdown(seaCanLetters, m.toLetter, (v) => m.toLetter = v),
       _dropdown(_numbers(seaCanRows), m.toRow, (v) => m.toRow = v),
       _dropdown(_numbers(seaCanLevels), m.toLevel, (v) => m.toLevel = v),
+      _weightBox(m),
     ], arrow: true),
   );
 
@@ -233,158 +274,168 @@ class _SeaCanPaneState extends State<SeaCanPane> {
   Widget build(BuildContext context) {
     prepareSeaCans(p);
     // Lines removed elsewhere drop their boxes.
-    _cans.removeWhere((m, c) {
-      if (p.seaCans.contains(m)) return false;
-      c.dispose();
-      return true;
-    });
+    for (final boxes in [_cans, _weights]) {
+      boxes.removeWhere((m, c) {
+        if (p.seaCans.contains(m)) return false;
+        c.dispose();
+        return true;
+      });
+    }
     final n = seaCansEntered(p);
     final lines = p.seaCans;
-    // Header, the lines, then the actions: a lazy list so 100+ sea cans stay smooth.
-    return ListView.builder(
+    const side = BorderSide(color: C.cardStroke);
+    // The card's top (title, Export, tick, count), then the table that scrolls sideways, then the actions.
+    return ListView(
       controller: _scroll,
       padding: const EdgeInsets.fromLTRB(12, 18, 12, 120),
-      itemCount: lines.length + 2,
-      itemBuilder: (c, i) {
-        if (i == 0) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-              border: Border(
-                top: BorderSide(color: C.cardStroke),
-                left: BorderSide(color: C.cardStroke),
-                right: BorderSide(color: C.cardStroke),
-              ),
-            ),
-            padding: const EdgeInsets.fromLTRB(12, 16, 8, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Title, with an Export button for sending just this list
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Sea can movements',
-                        style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
-                      ),
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+            border: Border(top: side, left: side, right: side),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 16, 8, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Title, with an Export button for sending just this list
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Sea can movements',
+                      style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
                     ),
-                    Semantics(
-                      label: 'Export sea cans to PDF, Excel, CSV or Word',
-                      button: true,
-                      child: Material(
-                        color: C.sky,
+                  ),
+                  Semantics(
+                    label: 'Export sea cans to PDF, Excel, CSV or Word',
+                    button: true,
+                    child: Material(
+                      color: C.sky,
+                      borderRadius: BorderRadius.circular(100),
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(100),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(100),
-                          onTap: widget.onExport,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                            child: Text(
-                              'Export',
-                              style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold),
-                            ),
+                        onTap: widget.onExport,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                          child: Text(
+                            'Export',
+                            style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: InkWell(
+                  onTap: () {
+                    p.seaCanInclude = !p.seaCanInclude;
+                    store.save();
+                  },
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: p.seaCanInclude,
+                        onChanged: (v) {
+                          p.seaCanInclude = v ?? false;
+                          store.save();
+                        },
+                      ),
+                      const Expanded(
+                        child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                      ),
+                    ],
+                  ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: InkWell(
-                    onTap: () {
-                      p.seaCanInclude = !p.seaCanInclude;
-                      store.save();
-                    },
-                    child: Row(
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 10),
+                child: Text(
+                  n == 0
+                      ? 'Type a sea can number, then pick where it came from and where it is now.'
+                      : '${Fmt.plural(n, 'sea can', 'sea cans')} entered',
+                  style: const TextStyle(fontSize: 15, color: C.grey),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // The table: headings and every line scroll sideways together.
+        Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+            border: Border(left: side, right: side, bottom: side),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 0, 8, 12),
+          child: LayoutBuilder(
+            builder: (c, box) {
+              final width = box.maxWidth < seaCanTableMinWidth ? seaCanTableMinWidth : box.maxWidth;
+              return Scrollbar(
+                controller: _across,
+                thumbVisibility: width > box.maxWidth,
+                child: SingleChildScrollView(
+                  key: const Key('seaCanTable'),
+                  controller: _across,
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.only(bottom: width > box.maxWidth ? 10 : 0),
+                  child: SizedBox(
+                    width: width,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Checkbox(
-                          value: p.seaCanInclude,
-                          onChanged: (v) {
-                            p.seaCanInclude = v ?? false;
-                            store.save();
-                          },
+                        // The columns, then Letter / Row / Level under each location
+                        Row(
+                          children: [
+                            Expanded(flex: _canFlex, child: _label('Sea can')),
+                            Expanded(flex: _locFlex, child: _label('From location')),
+                            const SizedBox(width: _arrowW),
+                            Expanded(flex: _locFlex, child: _label('Current location')),
+                            Expanded(flex: _weightFlex, child: _label('Weight')),
+                          ],
                         ),
-                        const Expanded(
-                          child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
-                        ),
+                        const SizedBox(height: 4),
+                        _row([
+                          _label('Identifier'),
+                          for (var k = 0; k < 2; k++) ...[_label('Letter'), _label('Row'), _label('Level')],
+                          const SizedBox(),
+                        ]),
+                        for (final m in lines) _line(m),
                       ],
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 10),
-                  child: Text(
-                    n == 0
-                        ? 'Type a sea can number, then pick where it came from and where it is now.'
-                        : '${Fmt.plural(n, 'sea can', 'sea cans')} entered',
-                    style: const TextStyle(fontSize: 15, color: C.grey),
-                  ),
-                ),
-                // The three columns, then Letter / Row / Level under each location
-                Row(
-                  children: [
-                    Expanded(flex: _canFlex, child: _label('Sea can')),
-                    Expanded(flex: _locFlex, child: _label('From location')),
-                    const SizedBox(width: _arrowW),
-                    Expanded(flex: _locFlex, child: _label('Current location')),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                _row([
-                  _label('Identifier'),
-                  for (var k = 0; k < 2; k++) ...[_label('Letter'), _label('Row'), _label('Level')],
-                ]),
-              ],
-            ),
-          );
-        }
-        if (i <= lines.length) {
-          final last = i == lines.length;
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: last ? const BorderRadius.vertical(bottom: Radius.circular(22)) : null,
-              border: Border(
-                left: const BorderSide(color: C.cardStroke),
-                right: const BorderSide(color: C.cardStroke),
-                bottom: last ? const BorderSide(color: C.cardStroke) : BorderSide.none,
-              ),
-            ),
-            padding: EdgeInsets.fromLTRB(12, 0, 8, last ? 12 : 0),
-            child: _line(lines[i - 1]),
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _action('+  Add 10 rows', C.blue, () => _addRows(10)),
-            _action('Remove empty rows', C.deepBlue, () {
-              final before = p.seaCans.length;
-              p.seaCans.removeWhere((m) => m.isEmpty);
-              if (p.seaCans.length == before) {
-                toast(context, 'No empty rows to remove');
-                return;
-              }
-              store.save();
-            }),
-            _action('Clear all', C.red, () {
-              confirm(
-                context,
-                'Clear all sea cans?',
-                'Every sea can number and location on this tab is cleared. This can’t be undone.',
-                'Clear all',
-                () {
-                  p.seaCans.clear();
-                  store.save();
-                },
               );
-            }),
-          ],
-        );
-      },
+            },
+          ),
+        ),
+        _action('+  Add 10 rows', C.blue, () => _addRows(10)),
+        _action('Remove empty rows', C.deepBlue, () {
+          final before = p.seaCans.length;
+          p.seaCans.removeWhere((m) => m.isEmpty);
+          if (p.seaCans.length == before) {
+            toast(context, 'No empty rows to remove');
+            return;
+          }
+          store.save();
+        }),
+        _action('Clear all', C.red, () {
+          confirm(
+            context,
+            'Clear all sea cans?',
+            'Every sea can number, location and weight on this tab is cleared. This can’t be undone.',
+            'Clear all',
+            () {
+              p.seaCans.clear();
+              store.save();
+            },
+          );
+        }),
+      ],
     );
   }
 }

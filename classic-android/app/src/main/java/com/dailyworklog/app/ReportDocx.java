@@ -157,19 +157,19 @@ final class ReportDocx {
                 + "<w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>"
                 + "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>";
         body.append("<w:tbl><w:tblPr><w:tblW w:w=\"10080\" w:type=\"dxa\"/><w:tblBorders>").append(b)
-                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"1200\"/>")
-                .append("<w:gridCol w:w=\"3280\"/><w:gridCol w:w=\"2800\"/><w:gridCol w:w=\"2800\"/></w:tblGrid>");
+                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"1100\"/>")
+                .append("<w:gridCol w:w=\"2900\"/><w:gridCol w:w=\"2400\"/><w:gridCol w:w=\"2400\"/><w:gridCol w:w=\"1280\"/></w:tblGrid>");
         // The heading row repeats at the top of each page.
-        seaCanRow(new String[]{"Moves", "Can #", "From location", "Current location"}, true);
+        seaCanRow(new String[]{"Moves", "Can #", "From location", "Current location", "Weight"}, true);
         for (int i = 0; i < rows.size(); i++) {
             Models.SeaCanMove m = rows.get(i);
-            seaCanRow(new String[]{String.valueOf(i + 1), m.can, dash(m.fromLocation()), dash(m.toLocation())}, false);
+            seaCanRow(new String[]{String.valueOf(i + 1), m.can, dash(m.fromLocation()), dash(m.toLocation()), dash(m.weight.trim())}, false);
         }
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
     }
 
     private void seaCanRow(String[] cells, boolean head) {
-        int[] widths = {1200, 3280, 2800, 2800};
+        int[] widths = {1100, 2900, 2400, 2400, 1280};
         body.append("<w:tr><w:trPr><w:cantSplit/>").append(head ? "<w:tblHeader/>" : "").append("</w:trPr>");
         for (int i = 0; i < cells.length; i++) {
             body.append("<w:tc><w:tcPr><w:tcW w:w=\"").append(widths[i]).append("\" w:type=\"dxa\"/>");

@@ -570,10 +570,12 @@ public final class Models {
     /** One sea can on the Sea Can Movements tab: where it was (letter, row, level) and where it is now. */
     public static class SeaCanMove {
         public String can = "", fromLetter = "", fromRow = "", fromLevel = "", toLetter = "", toRow = "", toLevel = "";
+        /** As typed (e.g. "14" or "4.5"). */
+        public String weight = "";
 
         public boolean isEmpty() {
             return can.trim().isEmpty() && fromLetter.isEmpty() && fromRow.isEmpty() && fromLevel.isEmpty()
-                    && toLetter.isEmpty() && toRow.isEmpty() && toLevel.isEmpty();
+                    && toLetter.isEmpty() && toRow.isEmpty() && toLevel.isEmpty() && weight.trim().isEmpty();
         }
 
         /** "D33 L3": letter and row, then the level. */
@@ -600,6 +602,7 @@ public final class Models {
             o.put("toLetter", toLetter);
             o.put("toRow", toRow);
             o.put("toLevel", toLevel);
+            o.put("weight", weight);
             return o;
         }
 
@@ -612,6 +615,7 @@ public final class Models {
             m.toLetter = o.optString("toLetter", "");
             m.toRow = o.optString("toRow", "");
             m.toLevel = o.optString("toLevel", "");
+            m.weight = o.optString("weight", "");
             return m;
         }
     }

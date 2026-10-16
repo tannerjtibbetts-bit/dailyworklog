@@ -161,8 +161,8 @@ final class ReportPdf {
                 seaCanHeader(w, rowH, x);
             }
             c.drawLine(M, y, M + w, y, line);
-            String[] v = {String.valueOf(i + 1), m.can, m.fromLocation(), m.toLocation()};
-            for (int d = 0; d < 4; d++) {
+            String[] v = {String.valueOf(i + 1), m.can, m.fromLocation(), m.toLocation(), m.weight.trim()};
+            for (int d = 0; d < 5; d++) {
                 String s = v[d].isEmpty() ? "-" : v[d];
                 TextPaint tp = v[d].isEmpty() || d == 0 ? small : body;
                 float cw = x[d + 1] - x[d];
@@ -174,17 +174,17 @@ final class ReportPdf {
         y += 14;
     }
 
-    /** Column edges: Moves, Can #, From location, Current location. */
+    /** Column edges: Moves, Can #, From location, Current location, Weight. */
     private static float[] seaCanColumns(float w) {
-        return new float[]{M, M + w * 0.12f, M + w * 0.44f, M + w * 0.72f, M + w};
+        return new float[]{M, M + w * 0.11f, M + w * 0.40f, M + w * 0.63f, M + w * 0.86f, M + w};
     }
 
     /** The heading row. */
     private void seaCanHeader(float w, float rowH, float[] x) {
         TextPaint bold = text(9.5f, 0xFF14233A, true);
         c.drawRect(M, y, M + w, y + rowH, barTrack);
-        String[] h = {"Moves", "Can #", "From location", "Current location"};
-        for (int d = 0; d < 4; d++) {
+        String[] h = {"Moves", "Can #", "From location", "Current location", "Weight"};
+        for (int d = 0; d < 5; d++) {
             float cw = x[d + 1] - x[d];
             c.drawText(h[d], d == 1 ? x[d] + 6 : x[d] + (cw - bold.measureText(h[d])) / 2f, y + 13.5f, bold);
         }

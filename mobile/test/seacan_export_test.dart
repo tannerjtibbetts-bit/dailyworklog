@@ -22,10 +22,20 @@ Map<String, String> _unzip(List<int> bytes) {
   };
 }
 
-SeaCanMove _can(String can, [String fr = '', String fl = '', String tr = '', String tl = '']) => SeaCanMove()
+SeaCanMove _can(
+  String can, [
+  String fr = '',
+  String fl = '',
+  String tr = '',
+  String tl = '',
+  String fLetter = '',
+  String tLetter = '',
+]) => SeaCanMove()
   ..can = can
+  ..fromLetter = fLetter
   ..fromRow = fr
   ..fromLevel = fl
+  ..toLetter = tLetter
   ..toRow = tr
   ..toLevel = tl;
 
@@ -44,7 +54,7 @@ void main() {
       ..name = 'B44 Zone 2'
       ..location = 'B44'
       ..seaCans = [
-        _can('MSCU 123456', '12', '2', '40', '1'),
+        _can('MSCU 123456', '12', '2', '40', '1', 'D', 'E'),
         _can('TCLU, "A" 7', '3'),
         _can('', '5', '1'), // no number: left out
         _can('   '),
@@ -67,14 +77,14 @@ void main() {
     final bytes = Export.seaCanCsv(p);
     expect(bytes.take(3), [0xEF, 0xBB, 0xBF]);
     // utf8.decode drops a leading BOM, so it's checked as bytes above.
+    const header = 'Moves,Can #,From Location,To Location,Weight,Bin #,From Location,To Location\r\n';
     expect(
       utf8.decode(bytes.sublist(3)),
-      'Sea can,From row,From level,Current row,Current level\r\n'
-      'MSCU 123456,12,2,40,1\r\n'
-      '"TCLU, ""A"" 7",3,,,\r\n'
-      '"Line\nTwo & <co>",,,9,3\r\n',
+      '${header}1,MSCU 123456,D12 L2,E40 L1,,,,\r\n'
+      '2,"TCLU, ""A"" 7",3,,,,,\r\n'
+      '3,"Line\nTwo & <co>",,9 L3,,,,\r\n',
     );
-    expect(utf8.decode(Export.seaCanCsv(Project()).sublist(3)), 'Sea can,From row,From level,Current row,Current level\r\n');
+    expect(utf8.decode(Export.seaCanCsv(Project()).sublist(3)), header);
   });
 
   test('file names', () {
@@ -82,31 +92,125 @@ void main() {
     expect(Export.seaCanFileName(Project(), day, 'pdf'), 'Sea can movements - 05-10-2026.pdf');
   });
 
-  test('xlsx', () {
+  test('xlsx: laid out like the master sheet', () {
     final bytes = SeaCanXlsx.write(p, 'Tester', day);
     _keep(File('${tmp.path}/seacans.xlsx')..writeAsBytesSync(bytes));
     final files = _unzip(bytes);
     for (final x in files.values) {
       XmlDocument.parse(x);
     }
-    final sheet = files['xl/worksheets/sheet1.xml']!;
-    expect(sheet, contains('Sea can movements - B44 Zone 2'));
-    expect(sheet, contains('Exported Oct 5, 2026 at 7:32 AM by Tester'));
-    expect(sheet, contains('<row r="5"><c r="A5" t="inlineStr" s="2"><is><t xml:space="preserve">Sea can</t>'));
-    expect(sheet, contains('<t xml:space="preserve">Current level</t>'));
+    expect(files['xl/workbook.xml'], contains('<sheet name="Sea Can Movements"'));
+    final sheet = XmlDocument.parse(files['xl/worksheets/sheet1.xml']!);
+    final xml = files['xl/worksheets/sheet1.xml']!;
+    // No "exported by" lines, so the rows paste straight into the master sheet.
+    expect(xml, isNot(contains('Tester')));
+    expect(xml, isNot(contains('Exported')));
+
+    // Cell text / number, and style, by reference.
+    final cells = {for (final c in sheet.findAllElements('c')) c.getAttribute('r')!: c};
+    String value(String ref) => cells[ref]!.innerText;
+    String? style(String ref) => cells[ref]!.getAttribute('s');
+    final rows = sheet.findAllElements('row').toList();
+
+    // Merged titles.
+    expect(sheet.findAllElements('mergeCell').map((e) => e.getAttribute('ref')), ['A1:E1', 'F1:H1']);
+    expect(sheet.findAllElements('mergeCells').single.getAttribute('count'), '2');
+    expect(value('A1'), 'Sea Can Movements');
+    expect(value('F1'), 'Blue Bin Movements');
+    for (final c in 'BCDEGH'.split('')) {
+      expect(value('${c}1'), '');
+      expect(style('${c}1'), style('A1')); // borders show all the way across
+    }
+    // Headings.
     expect(
-      sheet,
-      contains(
-        '<row r="6"><c r="A6" t="inlineStr" s="1"><is><t xml:space="preserve">MSCU 123456</t></is></c>'
-        '<c r="B6"><v>12</v></c><c r="C6"><v>2</v></c><c r="D6"><v>40</v></c><c r="E6"><v>1</v></c></row>',
-      ),
+      [for (final c in 'ABCDEFGH'.split('')) value('${c}2')],
+      ['Moves', 'Can #', 'From Location', 'To Location', 'Weight', 'Bin #', 'From Location', 'To Location'],
     );
-    expect(sheet, contains('TCLU, &quot;A&quot; 7'));
-    expect(sheet, contains('<c r="B7"><v>3</v></c><c r="C7" t="inlineStr" s="3"><is><t xml:space="preserve">–</t>'));
-    expect(sheet, contains('Two &amp; &lt;co&gt;'));
-    expect(sheet, contains('3 sea cans'));
-    expect(files['xl/workbook.xml'], contains('name="Sea cans"'));
-    expect(_unzip(SeaCanXlsx.write(Project(), 'T', day))['xl/worksheets/sheet1.xml'], contains('No sea cans entered yet.'));
+    expect(style('A2'), style('A1'));
+    // Row heights: title 24, headings 42, divider 12.
+    for (final (i, ht) in [(0, '24.0'), (1, '42.0'), (2, '12.0')]) {
+      expect(rows[i].getAttribute('ht'), ht);
+      expect(rows[i].getAttribute('customHeight'), '1');
+    }
+    // Divider: all 8 cells, no text.
+    expect([for (final c in 'ABCDEFGH'.split('')) value('${c}3')], List.filled(8, ''));
+    final divider = style('A3');
+    expect(divider, isNot(style('A1')));
+
+    // Moves: numbered rows, 3 sea cans then 5 spare rows (numbered), all 8 cells formatted.
+    expect(rows.length, 3 + 3 + SeaCanXlsx.spareRows);
+    for (var n = 1; n <= 8; n++) {
+      final r = n + 3;
+      expect(cells['A$r']!.getAttribute('t'), isNull); // a number, not text
+      expect(cells['A$r']!.findElements('v').single.innerText, '$n');
+      for (final c in 'BCDEFGH'.split('')) {
+        expect(cells.containsKey('$c$r'), isTrue);
+        expect(style('$c$r'), style('B4'));
+      }
+      expect(style('A$r'), style('A4'));
+    }
+    expect([for (final c in 'BCDEFGH'.split('')) value('${c}4')], ['MSCU 123456', 'D12 L2', 'E40 L1', '', '', '', '']);
+    expect([value('B5'), value('C5'), value('D5')], ['TCLU, "A" 7', '3', '']);
+    expect([value('B6'), value('C6'), value('D6')], ['Line\nTwo & <co>', '', '9 L3']);
+    expect(xml, contains('Two &amp; &lt;co&gt;'));
+    for (var r = 7; r <= 11; r++) {
+      expect(value('B$r'), '');
+    }
+    expect(cells.containsKey('A12'), isFalse);
+
+    // Column widths A..H.
+    expect(
+      sheet
+          .findAllElements('col')
+          .map((e) => '${e.getAttribute('min')}-${e.getAttribute('max')}:${e.getAttribute('width')}'),
+      ['1-1:16', '2-2:20', '3-3:20', '4-4:18', '5-5:11', '6-6:12', '7-7:20', '8-8:18'],
+    );
+
+    // Styles: Times New Roman, peach / near black / light blue fills, thin black borders.
+    final styles = XmlDocument.parse(files['xl/styles.xml']!);
+    final fonts = styles.findAllElements('font').toList();
+    final fills = styles.findAllElements('fill').toList();
+    final borders = styles.findAllElements('border').toList();
+    final xfs = styles.findAllElements('cellXfs').single.findElements('xf').toList();
+    XmlElement xf(String ref) => xfs[int.parse(style(ref)!)];
+    XmlElement font(String ref) => fonts[int.parse(xf(ref).getAttribute('fontId')!)];
+    String fill(String ref) =>
+        fills[int.parse(xf(ref).getAttribute('fillId')!)].findAllElements('fgColor').single.getAttribute('rgb')!;
+    String fontDesc(XmlElement f) =>
+        '${f.findElements('name').single.getAttribute('val')} '
+        '${f.findElements('sz').single.getAttribute('val')}${f.findElements('b').isEmpty ? '' : ' bold'}';
+    String? align(String ref, String a) => xf(ref).findElements('alignment').firstOrNull?.getAttribute(a);
+
+    expect(fontDesc(font('A1')), 'Times New Roman 14 bold');
+    expect(fill('A1'), 'FFF8CBAD');
+    expect(align('A2', 'horizontal'), 'center');
+    expect(align('A2', 'vertical'), 'center');
+    expect(fill('A3'), 'FF262626');
+    expect(fontDesc(font('A4')), 'Times New Roman 12');
+    expect(align('A4', 'horizontal'), 'right');
+    expect(fontDesc(font('B4')), 'Times New Roman 12 bold');
+    expect(align('B4', 'horizontal'), 'center');
+    expect(fill('A4'), 'FFDCE6F1');
+    expect(fill('B4'), 'FFDCE6F1');
+    for (final ref in ['A1', 'A2', 'A4', 'B4', 'H11']) {
+      final border = borders[int.parse(xf(ref).getAttribute('borderId')!)];
+      for (final side in ['left', 'right', 'top', 'bottom']) {
+        final e = border.findElements(side).single;
+        expect(e.getAttribute('style'), 'thin');
+        expect(e.findElements('color').single.getAttribute('rgb'), 'FF000000');
+      }
+    }
+  });
+
+  test('xlsx with no sea cans: titles, headings, divider and 5 numbered rows', () {
+    final sheet = XmlDocument.parse(_unzip(SeaCanXlsx.write(Project(), 'T', day))['xl/worksheets/sheet1.xml']!);
+    final rows = sheet.findAllElements('row').toList();
+    expect(rows.length, 3 + 5);
+    final cells = {for (final c in sheet.findAllElements('c')) c.getAttribute('r')!: c.innerText};
+    expect(cells['A1'], 'Sea Can Movements');
+    expect(cells['B2'], 'Can #');
+    expect([for (var r = 4; r <= 8; r++) cells['A$r']], ['1', '2', '3', '4', '5']);
+    expect([for (var r = 4; r <= 8; r++) cells['B$r']], List.filled(5, ''));
   });
 
   test('word', () {
@@ -119,18 +223,31 @@ void main() {
     for (final s in [
       'Sea can movements - B44 Zone 2',
       'Generated Oct 5, 2026 at 7:32 AM by Tester',
-      'Sea can',
+      'Moves',
+      'Can #',
       'From location',
       'Current location',
       'MSCU 123456',
-      '40',
+      'D12 L2',
+      'E40 L1',
       'TCLU, "A" 7',
+      '3',
+      '9 L3',
       '3 sea cans',
     ]) {
       expect(text, contains(s));
     }
+    // Moves column: 1, 2, 3, each followed by its sea can.
+    expect(text.sublist(text.indexOf('Current location') + 1, text.indexOf('Current location') + 5), [
+      '1',
+      'MSCU 123456',
+      'D12 L2',
+      'E40 L1',
+    ]);
     expect(doc, contains('Two &amp; &lt;co&gt;'));
-    expect(text.where((t) => t == '–').length, 5);
+    expect(text.where((t) => t == '–').length, 2);
+    expect(text, isNot(contains('Row')));
+    expect(text, isNot(contains('Level')));
     expect(doc, contains('<w:tblHeader/>'));
     final empty = _unzip(ReportDocx.writeSeaCans(Project(), 'T', day))['word/document.xml']!;
     expect(empty, contains('No sea cans entered yet.'));
@@ -147,20 +264,29 @@ void main() {
     for (final s in [
       'Sea can movements - B44 Zone 2',
       'Generated Oct 5, 2026 at 7:32 AM by Tester',
+      'Moves',
+      'Can #',
       'From location',
       'Current location',
       'MSCU 123456',
+      'D12 L2',
+      'E40 L1',
+      '9 L3',
       'TCLU, "A" 7',
       '3 sea cans',
     ]) {
       expect(text, contains(s));
     }
-    final e = File('${tmp.path}/seacans_empty.pdf')..writeAsBytesSync(await ReportPdf.writeSeaCans(Project(), 'T', day));
+    expect(text, contains(RegExp(r'1\s+MSCU 123456\s+D12 L2\s+E40 L1')));
+    final e = File('${tmp.path}/seacans_empty.pdf')
+      ..writeAsBytesSync(await ReportPdf.writeSeaCans(Project(), 'T', day));
     expect(await _pdfText(e), contains('No sea cans entered yet.'));
   });
 
   test('120 sea cans run onto more pages', () async {
-    p.seaCans = [for (var i = 1; i <= 120; i++) _can('CAN ${i.toString().padLeft(3, '0')}', '${i % 40 + 1}', '${i % 3 + 1}')];
+    p.seaCans = [
+      for (var i = 1; i <= 120; i++) _can('CAN ${i.toString().padLeft(3, '0')}', '${i % 40 + 1}', '${i % 3 + 1}'),
+    ];
     final bytes = await ReportPdf.writeSeaCans(p, 'Tester', day);
     final f = File('${tmp.path}/seacans_120.pdf')..writeAsBytesSync(bytes);
     _keep(f);
@@ -170,8 +296,10 @@ void main() {
     expect(text, contains('CAN 001'));
     expect(text, contains('CAN 120'));
     expect(text, contains('120 sea cans'));
+    expect(text, contains(RegExp(r'120\s+CAN 120')));
     // The header repeats on every page.
     expect('Current location'.allMatches(text).length, _pages(bytes));
+    expect(RegExp(r'Moves\s+Can #').allMatches(text).length, _pages(bytes));
   });
 
   test('daily report has the sea cans only when ticked', () async {
@@ -216,7 +344,8 @@ void main() {
       ..rows = [OtRow()..name = 'Jim McLaren'];
     final doc = _unzip(ReportDocx.write(p, log, 'Tester', day, tmp.path))['word/document.xml']!;
     expect(doc.indexOf('Weekend overtime') < doc.indexOf('Sea can movements'), isTrue);
-    final f = File('${tmp.path}/report_both.pdf')..writeAsBytesSync(await ReportPdf.write(p, log, 'Tester', day, tmp.path));
+    final f = File('${tmp.path}/report_both.pdf')
+      ..writeAsBytesSync(await ReportPdf.write(p, log, 'Tester', day, tmp.path));
     final text = await _pdfText(f);
     if (text == null) return;
     expect(text.indexOf('Weekend overtime') < text.indexOf('Sea can movements'), isTrue);
@@ -276,7 +405,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'Export sea cans to PDF, Excel, CSV or Word'),
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Export sea cans to PDF, Excel, CSV or Word',
+      ),
       findsOneWidget,
     );
     expect(find.text('Include in my reports (PDF, Word and email)'), findsOneWidget);

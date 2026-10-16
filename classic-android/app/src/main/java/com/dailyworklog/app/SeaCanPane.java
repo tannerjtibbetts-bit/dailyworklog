@@ -31,7 +31,9 @@ final class SeaCanPane {
     static final int START_LINES = 20;
     private static final String BLANK = "–";
     /** Widths on a line: identifier, then letter, row, level on each side. */
-    private static final float CAN_W = 2.2f, LETTER_W = 0.7f, ROW_W = 0.9f, LEVEL_W = 0.7f;
+    private static final float CAN_W = 3f, LETTER_W = 0.7f, ROW_W = 0.9f, LEVEL_W = 0.7f, WEIGHT_W = 1f;
+    /** The lines scroll sideways when the screen is narrower than this. */
+    private static final int MIN_WIDTH_DP = 560;
 
     static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
@@ -88,7 +90,16 @@ final class SeaCanPane {
         head.addView(cellLabel(a, "From location"), weight(a, side));
         head.addView(new View(a), arrowLp(a));
         head.addView(cellLabel(a, "Current location"), weight(a, side));
-        card.addView(head);
+        head.addView(cellLabel(a, "Weight"), weight(a, WEIGHT_W));
+        // The headings and lines scroll sideways together on narrow screens.
+        LinearLayout grid = new LinearLayout(a);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        grid.setMinimumWidth(Ui.dp(a, MIN_WIDTH_DP));
+        android.widget.HorizontalScrollView sideways = new android.widget.HorizontalScrollView(a);
+        sideways.setFillViewport(true);
+        sideways.addView(grid, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(sideways);
+        grid.addView(head);
         LinearLayout sub = row(a);
         sub.addView(cellLabel(a, "Identifier"), weight(a, CAN_W));
         for (int i = 0; i < 2; i++) {
@@ -97,11 +108,12 @@ final class SeaCanPane {
             sub.addView(cellLabel(a, "Row"), weight(a, ROW_W));
             sub.addView(cellLabel(a, "Level"), weight(a, LEVEL_W));
         }
-        card.addView(sub);
+        sub.addView(cellLabel(a, ""), weight(a, WEIGHT_W));
+        grid.addView(sub);
 
         LinearLayout table = new LinearLayout(a);
         table.setOrientation(LinearLayout.VERTICAL);
-        card.addView(table);
+        grid.addView(table);
         for (Models.SeaCanMove m : p.seaCans) table.addView(line(a, store, m, refreshCount));
 
         TextView addTen = action(a, "+  Add 10 rows", R.color.blue);
@@ -175,7 +187,35 @@ final class SeaCanPane {
         line.addView(dropdown(a, letters(), m.toLetter, v -> { m.toLetter = v; store.save(); }), weight(a, LETTER_W));
         line.addView(dropdown(a, numbers(ROWS), m.toRow, v -> { m.toRow = v; store.save(); }), weight(a, ROW_W));
         line.addView(dropdown(a, numbers(LEVELS), m.toLevel, v -> { m.toLevel = v; store.save(); }), weight(a, LEVEL_W));
+        line.addView(weightBox(a, store, m), weight(a, WEIGHT_W));
         return line;
+    }
+
+    /** Typed weight for the sea can, saved as you type. */
+    private static EditText weightBox(Activity a, Store store, Models.SeaCanMove m) {
+        EditText e = new EditText(a);
+        e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        e.setSingleLine(true);
+        e.setGravity(Gravity.CENTER);
+        e.setTextSize(15);
+        e.setTypeface(null, Typeface.BOLD);
+        e.setTextColor(a.getColor(R.color.deep_blue));
+        e.setHint(BLANK);
+        e.setHintTextColor(a.getColor(R.color.grey_light));
+        e.setBackgroundResource(R.drawable.bg_cell);
+        e.setMinHeight(Ui.dp(a, 44));
+        e.setPadding(Ui.dp(a, 2), Ui.dp(a, 8), Ui.dp(a, 2), Ui.dp(a, 8));
+        e.setSelectAllOnFocus(true);
+        e.setText(m.weight);
+        e.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                m.weight = s.toString().trim();
+                store.save();
+            }
+        });
+        return e;
     }
 
     private static List<String> numbers(int max) {

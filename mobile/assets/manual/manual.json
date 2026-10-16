@@ -2462,7 +2462,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project, one per line: the sea can's identifier, where it came from, and where it is now."
+          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project, one per line: the sea can's identifier, where it came from, where it is now, and its weight."
         },
         {
           "type": "image",
@@ -2475,12 +2475,13 @@
             "Open the project and tap \"Sea Can Movements\".",
             "In \"Sea can #\", type the sea can identifier, for example BPPU 201006-1.",
             "Under \"From location\", pick the \"Letter\" (A to Z), \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from. For D33 L3, pick D, 33 and 3.",
-            "Under \"Current location\", pick the letter, row and level where it is now."
+            "Under \"Current location\", pick the letter, row and level where it is now.",
+            "At the end of the line, type the sea can's weight in \"Weight\"."
           ]
         },
         {
           "type": "text",
-          "text": "The blue arrow on each line points from where the sea can came from to where it is now, so each line reads: sea can, from here, to here. A long sea can number wraps onto a second line in its box."
+          "text": "The blue arrow on each line points from where the sea can came from to where it is now, so each line reads: sea can, from here, to here. On a narrow screen, slide the list left or right to see the Weight box."
         },
         {
           "type": "text",
@@ -2509,7 +2510,7 @@
         },
         {
           "type": "text",
-          "text": "The Excel file is laid out like the site's movement sheet, so rows can be copied straight into it: the columns are \"Moves\", \"Can #\", \"From Location\", \"To Location\", \"Weight\", then \"Bin #\", \"From Location\", \"To Location\" under \"Blue Bin Movements\". Locations read like \"D33 L3\". Weight and the Blue Bin columns are left empty for you to fill in, and there are 5 spare numbered rows at the bottom."
+          "text": "The Excel file is laid out like the site's movement sheet, so rows can be copied straight into it: the columns are \"Moves\", \"Can #\", \"From Location\", \"To Location\", \"Weight\", then \"Bin #\", \"From Location\", \"To Location\" under \"Blue Bin Movements\". Locations read like \"D33 L3\" and the weight fills the Weight column. The Blue Bin columns are left empty for you to fill in, and there are 5 spare numbered rows at the bottom."
         },
         {
           "type": "tip",
@@ -2528,7 +2529,7 @@
         },
         {
           "type": "text",
-          "text": "The report lists only sea cans that have a number, with the columns Moves, Can #, From location and Current location (for example D33 L3)."
+          "text": "The report lists only sea cans that have a number, with the columns Moves, Can #, From location, Current location (for example D33 L3) and Weight."
         },
         {
           "type": "tip",

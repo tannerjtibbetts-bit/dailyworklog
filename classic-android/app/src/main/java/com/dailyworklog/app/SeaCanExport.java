@@ -10,7 +10,7 @@ import java.util.zip.ZipOutputStream;
 /**
  * The Sea Can Movements tab as an Excel (.xlsx) file laid out like the site's movement sheet
  * (Moves, Can #, From / To Location, Weight, then the Blue Bin columns), or as a CSV file.
- * Weight and the Blue Bin columns are left empty, ready to fill in or paste into.
+ * The Blue Bin columns are left empty, ready to fill in or paste into.
  */
 final class SeaCanExport {
     private SeaCanExport() {}
@@ -49,7 +49,15 @@ final class SeaCanExport {
                 if (v[i].isEmpty()) blank(rows, COLS.charAt(i + 1) + "" + r, DATA);
                 else cell(rows, COLS.charAt(i + 1) + "" + r, v[i], DATA);
             }
-            for (int i = 4; i < 8; i++) blank(rows, COLS.charAt(i) + "" + r, DATA);
+            String w = m == null ? "" : m.weight.trim();
+            if (w.matches("\\d+(\\.\\d+)?")) {
+                rows.append("<c r=\"E").append(r).append("\" s=\"").append(DATA).append("\"><v>").append(w).append("</v></c>");
+            } else if (!w.isEmpty()) {
+                cell(rows, "E" + r, w, DATA);
+            } else {
+                blank(rows, "E" + r, DATA);
+            }
+            for (int i = 5; i < 8; i++) blank(rows, COLS.charAt(i) + "" + r, DATA);
             rows.append("</row>");
         }
 
@@ -123,7 +131,7 @@ final class SeaCanExport {
         List<Models.SeaCanMove> filled = p.filledSeaCans();
         for (int i = 0; i < filled.size(); i++) {
             Models.SeaCanMove m = filled.get(i);
-            csvLine(b, new String[]{String.valueOf(i + 1), m.can, m.fromLocation(), m.toLocation(), "", "", "", ""});
+            csvLine(b, new String[]{String.valueOf(i + 1), m.can, m.fromLocation(), m.toLocation(), m.weight.trim(), "", "", ""});
         }
         out.write(b.toString().getBytes(StandardCharsets.UTF_8));
     }

@@ -460,9 +460,11 @@ class Overtime {
   }
 }
 
-/// One sea can on the Sea Can Movements tab: where it was (letter, row and level) and where it is now.
+/// One sea can on the Sea Can Movements tab: where it was (letter, row and level), where it is now,
+/// and its weight.
 class SeaCanMove {
   String can = '', fromLetter = '', fromRow = '', fromLevel = '', toLetter = '', toRow = '', toLevel = '';
+  String weight = '';
 
   bool get isEmpty =>
       can.trim().isEmpty &&
@@ -471,7 +473,8 @@ class SeaCanMove {
       fromLevel.isEmpty &&
       toLetter.isEmpty &&
       toRow.isEmpty &&
-      toLevel.isEmpty;
+      toLevel.isEmpty &&
+      weight.trim().isEmpty;
 
   /// A location as one piece of text: letter and row, then " L" and the level,
   /// e.g. ("D", "33", "3") -> "D33 L3", ("", "12", "2") -> "12 L2", ("", "", "3") -> "L3".
@@ -495,6 +498,7 @@ class SeaCanMove {
     'toLetter': toLetter,
     'toRow': toRow,
     'toLevel': toLevel,
+    'weight': weight,
   };
 
   static SeaCanMove fromJson(Map<String, dynamic> o) => SeaCanMove()
@@ -504,7 +508,8 @@ class SeaCanMove {
     ..fromLevel = _s(o, 'fromLevel')
     ..toLetter = _s(o, 'toLetter')
     ..toRow = _s(o, 'toRow')
-    ..toLevel = _s(o, 'toLevel');
+    ..toLevel = _s(o, 'toLevel')
+    ..weight = _s(o, 'weight');
 }
 
 class Project {
