@@ -184,8 +184,10 @@ class _SeaCanPaneState extends State<SeaCanPane> {
     },
   );
 
-  static OutlineInputBorder _border(Color c) =>
-      OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c));
+  static OutlineInputBorder _border(Color c) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(10),
+    borderSide: BorderSide(color: c),
+  );
 
   /// Weight: a number (decimals allowed), saved as it's typed.
   Widget _weightBox(SeaCanMove m) => TextField(

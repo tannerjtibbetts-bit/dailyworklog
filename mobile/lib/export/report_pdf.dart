@@ -211,9 +211,9 @@ class ReportPdf {
 
   static const double _canRowH = 20;
 
-  /// Sea can table columns: Moves (number), Can #, From location, Current location.
-  static const _canCols = [0.12, 0.36, 0.26, 0.26];
-  static const _canHeads = ['Moves', 'Can #', 'From location', 'Current location'];
+  /// Sea can table columns: Moves (number), Can #, From location, Current location, Weight.
+  static const _canCols = [0.10, 0.32, 0.21, 0.21, 0.16];
+  static const _canHeads = ['Moves', 'Can #', 'From location', 'Current location', 'Weight'];
 
   /// Sea can table. In the daily report only when ticked (with a heading); force draws just the table.
   void _drawSeaCans(Project p, bool force) {
@@ -235,9 +235,9 @@ class ReportPdf {
         _seaCanHeader();
       }
       _hLine(_m, _m + w, _y);
-      final v = ['$n', m.can.trim(), m.fromLocation(), m.toLocation()];
+      final v = ['$n', m.can.trim(), m.fromLocation(), m.toLocation(), m.weight.trim()];
       var x = _m;
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < v.length; i++) {
         final cw = w * _canCols[i];
         final st = i == 1
             ? _otBold
@@ -257,12 +257,12 @@ class ReportPdf {
     _text(Fmt.plural(cans.length, 'sea can', 'sea cans'), _small, _m, w, 10);
   }
 
-  /// The sea can table's header row: Moves, Can #, From location, Current location. Repeats on each page.
+  /// The sea can table's header row: Moves, Can #, From location, Current location, Weight. Repeats on each page.
   void _seaCanHeader() {
     const w = _w - 2 * _m, rowH = _canRowH;
     _fillRect(_m, _y, w, rowH, _barTrack);
     var x = _m;
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < _canHeads.length; i++) {
       final cw = w * _canCols[i];
       final s = _canHeads[i];
       _drawString(s, _otBold, x + (i == 1 ? 6.0 : (cw - _measure(s, _otBold)) / 2), _y + 13.5);

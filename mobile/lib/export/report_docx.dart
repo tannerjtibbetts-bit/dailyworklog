@@ -146,13 +146,13 @@ class ReportDocx {
     _seaCanTable(cans);
   }
 
-  /// Moves (number), Can #, From location, Current location. The header repeats on each page.
+  /// Moves (number), Can #, From location, Current location, Weight. The header repeats on each page.
   void _seaCanTable(List<SeaCanMove> cans) {
     const b =
         '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:bottom w:val="single" w:sz="4" w:color="D5D9DE"/><w:right w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
-    const widths = [1200, 3680, 2600, 2600];
+    const widths = [1100, 3180, 2100, 2100, 1600];
     _body.write(
       '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
       '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'
@@ -173,8 +173,8 @@ class ReportDocx {
 
     const head = 'E4E7EC';
     _body.write('<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>');
-    const heads = ['Moves', 'Can #', 'From location', 'Current location'];
-    for (var i = 0; i < 4; i++) {
+    const heads = ['Moves', 'Can #', 'From location', 'Current location', 'Weight'];
+    for (var i = 0; i < heads.length; i++) {
       cell(heads[i], widths[i], bold: true, center: i != 1, shade: head);
     }
     _body.write('</w:tr>');
@@ -183,7 +183,7 @@ class ReportDocx {
       _body.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
       cell('$n', widths[0]);
       cell(m.can.trim(), widths[1], bold: true, center: false);
-      for (final (i, v) in [m.fromLocation(), m.toLocation()].indexed) {
+      for (final (i, v) in [m.fromLocation(), m.toLocation(), m.weight.trim()].indexed) {
         cell(v.isEmpty ? '–' : v, widths[2 + i]);
       }
       _body.write('</w:tr>');

@@ -1,6 +1,6 @@
 // The Sea Can Movements tab as an Excel (.xlsx) file laid out like Tanner's master sheet, so the
 // rows paste straight in: a peach title and heading row (Sea Can Movements / Blue Bin Movements),
-// a black divider row, then one numbered light blue row per sea can and 5 spare rows to fill by hand.
+// a black divider row, then one numbered light blue row per sea can (with its weight) and 5 spare rows to fill by hand.
 //   Moves | Can # | From Location | To Location | Weight | Bin # | From Location | To Location
 import 'dart:typed_data';
 
@@ -85,9 +85,15 @@ class SeaCanXlsx {
       final m = n <= cans.length ? cans[n - 1] : null;
       row(r, null, () {
         rows.write('<c r="A$r" s="$_number"><v>$n</v></c>');
-        final v = m == null ? const <String>[] : [m.can.trim(), m.fromLocation(), m.toLocation()];
+        final v = m == null ? const <String>[] : [m.can.trim(), m.fromLocation(), m.toLocation(), m.weight.trim()];
         for (var i = 1; i < 8; i++) {
-          text('${cols[i]}$r', i <= v.length ? v[i - 1] : '', _cell);
+          final s = i <= v.length ? v[i - 1] : '';
+          final number = i == 4 ? _numberText(s) : null;
+          if (number != null) {
+            rows.write('<c r="${cols[i]}$r" s="$_cell"><v>$number</v></c>');
+          } else {
+            text('${cols[i]}$r', s, _cell);
+          }
         }
       });
     }
@@ -170,6 +176,12 @@ class SeaCanXlsx {
       )
       ..addFile(ArchiveFile.string('xl/worksheets/sheet1.xml', sheet));
     return ZipEncoder().encodeBytes(zip);
+  }
+
+  /// A weight that reads as a number ("2", "2.5", ".5", "3.") as Excel number text, else null (kept as text).
+  static String? _numberText(String s) {
+    if (!RegExp(r'^-?(\d+\.?\d*|\.\d+)$').hasMatch(s)) return null;
+    return s.contains('.') ? double.parse(s).toString() : s;
   }
 
   static String _esc(String s) => s

@@ -133,7 +133,7 @@ class Export {
     for (var i = 0; i < cans.length; i++) {
       final m = cans[i];
       b.write(
-        '${['${i + 1}', m.can.trim(), m.fromLocation(), m.toLocation(), '', '', '', ''].map(field).join(',')}\r\n',
+        '${['${i + 1}', m.can.trim(), m.fromLocation(), m.toLocation(), m.weight.trim(), '', '', ''].map(field).join(',')}\r\n',
       );
     }
     return Uint8List.fromList(utf8.encode(b.toString()));

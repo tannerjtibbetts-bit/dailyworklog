@@ -19,7 +19,8 @@ void main() {
           ..fromLevel = '2'
           ..toLetter = 'Z'
           ..toRow = '40'
-          ..toLevel = '1',
+          ..toLevel = '1'
+          ..weight = '2.5',
         SeaCanMove(),
       ];
     final json = jsonEncode(p.toJson());
@@ -27,7 +28,7 @@ void main() {
       json,
       contains(
         '"seaCans":[{"can":"TCLU 317503","fromLetter":"D","fromRow":"12","fromLevel":"2",'
-        '"toLetter":"Z","toRow":"40","toLevel":"1"}',
+        '"toLetter":"Z","toRow":"40","toLevel":"1","weight":"2.5"}',
       ),
     );
     final q = Project.fromJson(jsonDecode(json) as Map<String, dynamic>);
@@ -45,6 +46,10 @@ void main() {
     // Only a letter picked still counts as something on the line.
     expect((SeaCanMove()..fromLetter = 'A').isEmpty, isFalse);
     expect((SeaCanMove()..toLetter = 'B').isEmpty, isFalse);
+    expect((SeaCanMove()..weight = '12').isEmpty, isFalse);
+    expect((SeaCanMove()..weight = '  ').isEmpty, isTrue);
+    expect(q.seaCans.first.weight, '2.5');
+    expect(old.weight, '');
     expect(Project.fromJson({'name': 'old'}).seaCans, isEmpty);
     prepareSeaCans(q);
     expect(q.seaCans.length, seaCanStartLines);
@@ -126,12 +131,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(p.seaCans.first.fromRow, '5');
     // Current letter: the fourth dropdown
+    await tester.ensureVisible(boxes.at(3)); // Current location is off to the right: scrolls sideways
+    await tester.pumpAndSettle();
     await tester.tap(boxes.at(3));
     await tester.pumpAndSettle();
     await tester.tap(find.text('E').last);
     await tester.pumpAndSettle();
     expect(p.seaCans.first.toLetter, 'E');
     // Current level: the sixth dropdown on the line, levels only go to 3
+    await tester.ensureVisible(boxes.at(5));
+    await tester.pumpAndSettle();
     await tester.tap(boxes.at(5));
     await tester.pumpAndSettle();
     expect(find.text('4'), findsNothing);
@@ -142,6 +151,56 @@ void main() {
     expect(p.seaCans.first.toLocation(), 'E L3');
     expect(tester.takeException(), isNull);
 
+    // Drag the table sideways from the middle of its heading row (the heading itself may be off screen).
+    Future<void> sideways(double dx) async {
+      // The list back at the top, so the heading row is on screen.
+      tester
+          .state<ScrollableState>(find.descendant(of: find.byType(SeaCanPane), matching: find.byType(Scrollable)).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
+      final y = tester.getCenter(find.text('Identifier')).dy;
+      await tester.dragFrom(
+        Offset(tester.view.physicalSize.width / tester.view.devicePixelRatio / 2, y),
+        Offset(dx, 0),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    // Weight: the box at the end of the line, a decimal number keypad; letters can't be typed.
+    final weight = find.byType(TextField).at(1);
+    final wf = tester.widget<TextField>(weight);
+    expect(wf.keyboardType, const TextInputType.numberWithOptions(decimal: true));
+    expect(wf.textAlign, TextAlign.center);
+    expect(wf.decoration!.hintText, '–');
+    expect(tester.getRect(weight).left, greaterThan(tester.getRect(boxes.at(5)).right));
+    await tester.ensureVisible(weight);
+    await tester.pumpAndSettle();
+    await tester.enterText(weight, '12.5t');
+    await tester.pump();
+    expect(p.seaCans.first.weight, '12.5');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await sideways(2000); // back to the start
+    await tester.pumpAndSettle();
+
+    // The table is wider than the phone: the headings and every line scroll sideways together,
+    // the title and actions stay put.
+    final screenW = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    expect(tester.getRect(find.text('Weight')).right, greaterThan(screenW));
+    final title = tester.getRect(find.text('Sea can movements'));
+    final headBefore = tester.getRect(find.text('Identifier'));
+    final lineBefore = tester.getRect(find.byType(TextField).first);
+    await sideways(-400);
+    await tester.pumpAndSettle();
+    final moved = headBefore.left - tester.getRect(find.text('Identifier')).left;
+    expect(moved, greaterThan(100));
+    expect(lineBefore.left - tester.getRect(find.byType(TextField).first).left, moreOrLessEquals(moved));
+    expect(tester.getRect(find.text('Sea can movements')), title);
+    expect(tester.getRect(find.text('Weight')).right, lessThanOrEqualTo(screenW));
+    expect(tester.getRect(find.byType(TextField).at(1)).right, lessThanOrEqualTo(screenW));
+    await sideways(400);
+    await tester.pumpAndSettle();
+
     // Add rows at the bottom; then empty ones can be removed again
     await tester.scrollUntilVisible(
       find.text('+  Add 10 rows'),
@@ -151,6 +210,8 @@ void main() {
     await tester.tap(find.text('+  Add 10 rows'));
     await tester.pumpAndSettle();
     expect(p.seaCans.length, seaCanStartLines + 10);
+    final sc = tester.state<ScrollableState>(find.descendant(of: find.byType(SeaCanPane), matching: find.byType(Scrollable)).first).position;
+    debugPrint("DBG ${sc.pixels} ${sc.maxScrollExtent} ${find.text("+  Add 10 rows").evaluate().length} ${tester.getRect(find.byType(TextField).last)}");
     await tester.tap(find.text('Remove empty rows'));
     await tester.pumpAndSettle();
     // One line is kept, then topped back up to the starting number of lines
@@ -158,7 +219,12 @@ void main() {
     expect(p.seaCans.length, seaCanStartLines);
   });
 
-  for (final (w, h, ratio) in [(1080.0, 2340.0, 2.75), (1080.0, 2220.0, 3.0), (1236.0, 2676.0, 3.0)]) {
+  for (final (w, h, ratio) in [
+    (1080.0, 2340.0, 2.75),
+    (1080.0, 2220.0, 3.0),
+    (1236.0, 2676.0, 3.0),
+    (2048.0, 2732.0, 2.0),
+  ]) {
     testWidgets('Sea Can tab fits at ${(w / ratio).round()} dp wide with the widest picks', (tester) async {
       tester.view.physicalSize = Size(w, h);
       tester.view.devicePixelRatio = ratio;
@@ -171,13 +237,14 @@ void main() {
         ..seaCans = [
           for (var i = 0; i < 3; i++)
             SeaCanMove()
-              ..can = i == 0 ? 'BPPU 201006-1' : 'BPPU 211028-7 LONG NUMBER $i'
+              ..can = i == 0 ? 'MSCU 123456' : 'BPPU 211028-7 LONG NUMBER $i'
               ..fromLetter = 'W'
               ..fromRow = '40'
               ..fromLevel = '3'
               ..toLetter = 'M'
               ..toRow = '38'
-              ..toLevel = '2',
+              ..toLevel = '2'
+              ..weight = '24.75',
         ];
       store.projects.add(p);
       await tester.pumpWidget(
@@ -191,12 +258,27 @@ void main() {
       expect(find.text('40'), findsWidgets);
       // The From / Current headings sit over their three dropdowns.
       final boxes = find.byType(DropdownButton<String>);
-      // A long number wraps onto a second line (all of it shown); the dropdowns stay centred beside it.
+      // The identifier box has room for a number like this on one line; very long ones wrap to two.
       final canBox = tester.getRect(find.byType(TextField).first);
       final box = tester.getRect(boxes.first);
-      expect(find.text('BPPU 201006-1'), findsOneWidget);
+      expect(find.text('MSCU 123456'), findsOneWidget);
       expect(tester.widget<TextField>(find.byType(TextField).first).maxLines, 2);
-      if (w / ratio < 400) expect(canBox.height, greaterThan(box.height + 10));
+      expect(canBox.height, moreOrLessEquals(box.height, epsilon: 4));
+      final longBox = tester.getRect(find.byType(TextField).at(2)); // line 2's identifier
+      expect(longBox.height, greaterThan(box.height + 10));
+      expect(tester.getRect(boxes.at(6)).center.dy, moreOrLessEquals(longBox.center.dy, epsilon: 2));
+      // The table is at least 560 wide (wider screens fill the width).
+      final screenW = w / ratio;
+      final tableW = tester
+          .getSize(find.descendant(of: find.byKey(const Key('seaCanTable')), matching: find.byType(Column)).first)
+          .width;
+      expect(
+        tableW,
+        screenW - 46 < seaCanTableMinWidth ? seaCanTableMinWidth : screenW - 46,
+      ); // less the gutters and card borders
+      // Weight over the weight boxes.
+      final weightBox = tester.getRect(find.byType(TextField).at(1));
+      expect(tester.getCenter(find.text('Weight')).dx, moreOrLessEquals(weightBox.center.dx, epsilon: 3));
       expect(box.center.dy, moreOrLessEquals(canBox.center.dy, epsilon: 2));
       final from = tester.getCenter(find.text('From location'));
       final cur = tester.getCenter(find.text('Current location'));
