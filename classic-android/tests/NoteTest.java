@@ -218,3 +218,6 @@ class ManualTest { public static void main(String[] a) throws Exception {
   NoteTest.check(ManualActivity.search(list, "zzzz").isEmpty(), "no match");
   NoteTest.check(ManualActivity.search(list, "backup restore").isEmpty() || !((org.json.JSONObject) ManualActivity.search(list, "backup restore").get(0)[0]).optBoolean("newAppOnly"), "no new-app topics");
   System.out.println("MANUAL PASS"); } }
+class HiddenTabsTest { public static void main(String[] a) throws Exception {
+  NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
+  System.out.println("TABS PASS"); } }

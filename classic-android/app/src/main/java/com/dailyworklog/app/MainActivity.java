@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         List<Ui.SheetItem> items = new ArrayList<>();
         items.add(new Ui.SheetItem(R.drawable.ic_person_add, Access.isOwner(this) ? "Approvals / hand over" : "App owner / Approvals",
                 () -> startActivity(new Intent(this, ApprovalsActivity.class))));
+        items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> LogsActivity.chooseTabs(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "User manual", () -> ManualActivity.open(this)));
         if (Access.hasPin(this)) {
             items.add(new Ui.SheetItem(R.drawable.ic_back, "Sign out", () -> {

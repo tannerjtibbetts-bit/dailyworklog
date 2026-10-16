@@ -206,6 +206,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               .push(MaterialPageRoute(builder: (_) => const ApprovalsScreen()));
         },
       ),
+      SheetItem(Icons.tab_outlined, 'Show or hide tabs', () => chooseTabs(context)),
       SheetItem(Icons.menu_book_outlined, 'User manual', () => openSupport(context)),
       SheetItem(Icons.save_alt, 'Back up all my work', _backup),
       SheetItem(Icons.restore, 'Restore from a backup', _restore),

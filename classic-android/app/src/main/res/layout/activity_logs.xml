@@ -61,8 +61,9 @@
             android:textColor="@color/grey"
             android:textSize="15sp" />
 
-        <!-- Six tabs in two rows of three; they split the width and shrink their text if the screen is narrow -->
+        <!-- Six tabs in two rows of three (tabs you hide are left out); they split the width and shrink their text if the screen is narrow -->
         <LinearLayout
+            android:id="@+id/tabRow1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
@@ -119,6 +120,7 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/tabRow2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"

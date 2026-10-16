@@ -516,6 +516,7 @@
           "type": "bullets",
           "items": [
             "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). See the App owner section.",
+            "\"Show or hide tabs\": choose which project tabs you see.",
             "\"User manual\": opens this manual.",
             "\"Back up all my work\" and \"Restore from a backup\" (new app only).",
             "\"Sign out\". It only shows when you have a PIN."
@@ -652,7 +653,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "When you open a project, you see its name at the top and six tab buttons in two rows."
+          "text": "When you open a project, you see its name at the top and the tab buttons, three to a row."
         },
         {
           "type": "image",
@@ -675,8 +676,17 @@
           "text": "Tap a tab to switch. On Checklists, Notify, Links and Notes there is a search box. Type a word to find a checklist, field, note or link."
         },
         {
+          "type": "tip",
+          "text": "Don't use a tab? Hide it with \"Show or hide tabs\" in the project's ⋯ menu. It stays hidden in every project until you tick it again."
+        },
+        {
           "type": "text",
           "text": "The big \"+\" at the bottom adds something new to the tab you are on."
+        },
+        {
+          "type": "see",
+          "id": "show-hide-tabs",
+          "text": "Related: Showing or hiding tabs"
         },
         {
           "type": "see",
@@ -718,6 +728,7 @@
             "\"Set location\"",
             "\"Report email list\": who gets the emailed report.",
             "\"Manage crew\": your crew list, phone numbers and who gets texts.",
+            "\"Show or hide tabs\": choose which tabs you see in every project.",
             "\"My form details\": your usual answers for forms (new app; in the classic app it is in a form link's menu).",
             "\"Delete project\" (new app; in the classic app press and hold the project on the project list)."
           ]
@@ -731,6 +742,68 @@
           "type": "see",
           "id": "manage-crew",
           "text": "Related: Managing your crew"
+        },
+        {
+          "type": "see",
+          "id": "show-hide-tabs",
+          "text": "Related: Showing or hiding tabs"
+        }
+      ]
+    },
+    {
+      "id": "show-hide-tabs",
+      "title": "Showing or hiding tabs",
+      "group": "Projects & checklists",
+      "summary": "Hide the tabs you don't use, like Links or Sea Can Movements, and bring them back any time.",
+      "keywords": [
+        "hide",
+        "show",
+        "unhide",
+        "tabs",
+        "remove tab",
+        "sea can",
+        "links",
+        "notify",
+        "overtime",
+        "notes",
+        "customize"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If you don't use a tab, you can hide it so it no longer appears in your projects. Hidden tabs come back as soon as you tick them again. Nothing on a hidden tab is deleted."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open any project and tap the three dots (⋯) at the top right. Or, on the \"Projects\" screen, tap the person icon, then \"More…\".",
+            "Tap \"Show or hide tabs\".",
+            "Untick the tabs you don't want to see, for example \"Links\" or \"Sea Can Movements\".",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The tabs you kept move up to fill the rows. \"Checklists\" is always shown, so it isn't in the list."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To bring a tab back, open \"Show or hide tabs\" again.",
+            "Tick the tab.",
+            "Tap \"Save\". It's back, with everything on it."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "This choice is saved on your phone, so each person can pick their own tabs. It applies to all your projects."
+        },
+        {
+          "type": "see",
+          "id": "project-screen",
+          "text": "Related: Inside a project: the tabs"
         }
       ]
     },

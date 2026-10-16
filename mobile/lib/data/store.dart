@@ -27,6 +27,9 @@ class Store extends ChangeNotifier {
   /// Your usual answers for the Observation & Coaching form (Formstack links), by question id.
   final Map<String, String> formAnswers = {};
 
+  /// Project tabs this person has hidden ("notify", "links", "overtime", "notes", "seacans").
+  final Set<String> hiddenTabs = {};
+
   File get dataFile => File('${dir.path}/worklog.json');
   Directory get photoDir => Directory('${dir.path}/photos');
 
@@ -114,6 +117,9 @@ class Store extends ChangeNotifier {
         ..clear()
         ..addAll(mc.map((e) => e.toString()));
     }
+    hiddenTabs
+      ..clear()
+      ..addAll([for (final t in (o['hiddenTabs'] as List? ?? const [])) t.toString()]);
     formAnswers.clear();
     final fd = o['formDetails'];
     if (fd is Map) fd.forEach((k, v) => formAnswers[k.toString()] = (v ?? '').toString());
@@ -137,6 +143,7 @@ class Store extends ChangeNotifier {
         'contactPhone': contactPhone,
         'myColours': myColours.toList(),
         'formDetails': formAnswers,
+        'hiddenTabs': hiddenTabs.toList(),
         'projects': [for (final p in projects) p.toJson()],
         'links': [for (final l in links) l.toJson()],
       };

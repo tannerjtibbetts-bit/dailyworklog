@@ -33,6 +33,8 @@ public final class Store {
     public final java.util.Set<String> myColours = new java.util.LinkedHashSet<>(java.util.Collections.singletonList(ZoneSheet.BLUE));
     /** Your usual answers for the Observation & Coaching form (Formstack links). */
     public final FormPrefill.Details formDetails = new FormPrefill.Details();
+    /** Project tabs this person has hidden ("notify", "links", "overtime", "notes", "seacans"). */
+    public final java.util.Set<String> hiddenTabs = new java.util.LinkedHashSet<>();
 
     private final File dataFile;
     private final File photoDir;
@@ -110,6 +112,8 @@ public final class Store {
                 myColours.clear();
                 for (int i = 0; i < mc.length(); i++) myColours.add(mc.optString(i));
             }
+            JSONArray ht = o.optJSONArray("hiddenTabs");
+            for (int i = 0; ht != null && i < ht.length(); i++) hiddenTabs.add(ht.optString(i));
             JSONObject fd = o.optJSONObject("formDetails");
             if (fd != null) {
                 java.util.Iterator<String> keys = fd.keys();
@@ -160,6 +164,9 @@ public final class Store {
             JSONArray mc = new JSONArray();
             for (String c : myColours) mc.put(c);
             o.put("myColours", mc);
+            JSONArray ht = new JSONArray();
+            for (String t : hiddenTabs) ht.put(t);
+            o.put("hiddenTabs", ht);
             JSONObject fd = new JSONObject();
             for (java.util.Map.Entry<String, String> e : formDetails.answers.entrySet()) fd.put(e.getKey(), e.getValue());
             o.put("formDetails", fd);

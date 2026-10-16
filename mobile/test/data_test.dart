@@ -81,10 +81,12 @@ void main() {
     expect(s1.formAnswers['project'], 'FCFR');
     await s1.photoFile('a.jpg').writeAsBytes([1, 2, 3]);
     s1.contactPhone = '555';
+    s1.hiddenTabs.addAll(['links', 'seacans']);
     s1.save();
     await s1.flush();
     final reread = await Store.open(dir1);
     expect(reread.contactPhone, '555');
+    expect(reread.hiddenTabs, {'links', 'seacans'});
 
     final zip = await Backup.create(reread, into: dir2.parent);
     final info = await Backup.inspect(zip);

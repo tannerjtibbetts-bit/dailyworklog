@@ -122,6 +122,52 @@ public class LogsActivity extends AppCompatActivity {
         out.putInt("mode", mode);
     }
 
+    /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
+    static final String[] TAB_IDS = {"notify", "links", "overtime", "notes", "seacans"};
+    static final String[] TAB_NAMES = {"Notify", "Links", "Overtime", "Notes", "Sea Can Movements"};
+    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_OVERTIME, MODE_NOTES, MODE_SEACANS};
+
+    /** Puts the tabs that aren't hidden into rows of three, in their usual order. */
+    private void layoutTabs() {
+        LinearLayout row1 = findViewById(R.id.tabRow1), row2 = findViewById(R.id.tabRow2);
+        TextView[] pills = {pillNotify, pillLinks, pillOvertime, pillNotes, pillSeaCans};
+        row1.removeAllViews();
+        row2.removeAllViews();
+        List<TextView> shown = new ArrayList<>();
+        shown.add(pillLogs);
+        for (int i = 0; i < TAB_IDS.length; i++) {
+            boolean hidden = store.hiddenTabs.contains(TAB_IDS[i]);
+            if (!hidden) shown.add(pills[i]);
+            if (hidden && mode == TAB_MODES[i]) mode = MODE_LOGS;
+        }
+        for (int i = 0; i < shown.size(); i++) {
+            TextView pill = shown.get(i);
+            LinearLayout row = i < 3 ? row1 : row2;
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 46), pill == pillSeaCans ? 1.6f : 1f);
+            if (row.getChildCount() > 0) lp.setMarginStart(Ui.dp(this, 4));
+            row.addView(pill, lp);
+        }
+        row2.setVisibility(row2.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+    }
+
+    /** Tick the tabs to show; unticked ones disappear from every project until ticked again. */
+    static void chooseTabs(android.app.Activity a, Runnable after) {
+        Store store = Store.get(a);
+        boolean[] on = new boolean[TAB_IDS.length];
+        for (int i = 0; i < TAB_IDS.length; i++) on[i] = !store.hiddenTabs.contains(TAB_IDS[i]);
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(a)
+                .setTitle("Show or hide tabs")
+                .setMultiChoiceItems(TAB_NAMES, on, (d, which, checked) -> on[which] = checked)
+                .setPositiveButton("Save", (d, w) -> {
+                    store.hiddenTabs.clear();
+                    for (int i = 0; i < TAB_IDS.length; i++) if (!on[i]) store.hiddenTabs.add(TAB_IDS[i]);
+                    store.save();
+                    if (after != null) after.run();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void setMode(int m) {
         if (mode == m) return;
         mode = m;
@@ -134,6 +180,7 @@ public class LogsActivity extends AppCompatActivity {
     }
 
     private void rebuild() {
+        layoutTabs();
         title.setText(project.name);
         location.setText(project.location);
         location.setVisibility(project.location.isEmpty() ? View.GONE : View.VISIBLE);
@@ -322,6 +369,7 @@ public class LogsActivity extends AppCompatActivity {
                 ExportHelper.editEmailList(this, project, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_person_add, "Manage crew", () ->
                 AssignSheet.manage(this, project)));
+        items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> chooseTabs(this, this::rebuild)));
         Ui.menu(this, project.name, items);
     }
 
