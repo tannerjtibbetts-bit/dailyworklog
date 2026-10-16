@@ -1,4 +1,4 @@
-// A project's screen: Checklists, Notify, Links, Overtime and Notes tabs.
+// A project's screen: Checklists, Notify, Links, Overtime, Notes and Sea Can Movements tabs.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -18,9 +18,10 @@ import 'log_screen.dart';
 import 'note_screen.dart';
 import 'notify_screen.dart';
 import 'overtime_pane.dart';
+import 'seacan_pane.dart';
 import 'projects_screen.dart' show AddPill;
 
-enum ProjectTab { checklists, notify, links, overtime, notes }
+enum ProjectTab { checklists, notify, links, overtime, notes, seaCans }
 
 const _tabLabels = {
   ProjectTab.checklists: 'Checklists',
@@ -28,6 +29,7 @@ const _tabLabels = {
   ProjectTab.links: 'Links',
   ProjectTab.overtime: 'Overtime',
   ProjectTab.notes: 'Notes',
+  ProjectTab.seaCans: 'Sea Can Movements',
 };
 
 /// Adds https:// when no scheme is typed; spaces are dropped.
@@ -798,39 +800,48 @@ class _ProjectScreenState extends State<ProjectScreen> {
     }
   }
 
-  Widget _pills() => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
-        child: Row(children: [
-          for (final t in ProjectTab.values)
-            Expanded(
+  Widget _pill(ProjectTab t, {required bool first}) => Padding(
+        padding: EdgeInsets.only(left: first ? 0 : 4),
+        child: Material(
+          color: mode == t ? C.darkPill : Colors.white,
+          shape: StadiumBorder(side: BorderSide(color: mode == t ? C.darkPill : C.cardStroke)),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: () {
+              if (mode != t) setState(() => mode = t);
+            },
+            child: SizedBox(
+              height: 46,
               child: Padding(
-                padding: EdgeInsets.only(left: t == ProjectTab.checklists ? 0 : 4),
-                child: Material(
-                  color: mode == t ? C.darkPill : Colors.white,
-                  shape: StadiumBorder(side: BorderSide(color: mode == t ? C.darkPill : C.cardStroke)),
-                  child: InkWell(
-                    customBorder: const StadiumBorder(),
-                    onTap: () {
-                      if (mode != t) setState(() => mode = t);
-                    },
-                    child: SizedBox(
-                      height: 46,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(_tabLabels[t]!,
-                                maxLines: 1,
-                                style: TextStyle(fontSize: 14, color: mode == t ? Colors.white : C.text)),
-                          ),
-                        ),
-                      ),
-                    ),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(_tabLabels[t]!,
+                        maxLines: 1, style: TextStyle(fontSize: 14, color: mode == t ? Colors.white : C.text)),
                   ),
                 ),
               ),
             ),
+          ),
+        ),
+      );
+
+  /// Six tabs in two rows of three; Sea Can Movements gets a wider pill for its longer name.
+  Widget _pills() => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+        child: Column(children: [
+          Row(children: [
+            Expanded(child: _pill(ProjectTab.checklists, first: true)),
+            Expanded(child: _pill(ProjectTab.notify, first: false)),
+            Expanded(child: _pill(ProjectTab.links, first: false)),
+          ]),
+          const SizedBox(height: 6),
+          Row(children: [
+            Expanded(flex: 10, child: _pill(ProjectTab.overtime, first: true)),
+            Expanded(flex: 10, child: _pill(ProjectTab.notes, first: false)),
+            Expanded(flex: 16, child: _pill(ProjectTab.seaCans, first: false)),
+          ]),
         ]),
       );
 
@@ -877,7 +888,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
             }
             return const Scaffold();
           }
-          final ot = mode == ProjectTab.overtime;
+          // Overtime and Sea Can Movements are full pages, not lists.
+          final ot = mode == ProjectTab.overtime || mode == ProjectTab.seaCans;
           final rows = ot ? const <Widget>[] : _rows(p);
           return Scaffold(
             body: SafeArea(
@@ -935,7 +947,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       ),
                     ),
                   Expanded(
-                    child: ot
+                    child: mode == ProjectTab.seaCans
+                        ? SeaCanPane(project: p)
+                        : ot
                         ? OvertimePane(project: p, onExport: _exportOvertime)
                         : rows.isEmpty
                             ? Center(

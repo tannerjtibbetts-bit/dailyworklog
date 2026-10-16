@@ -450,6 +450,24 @@ class Overtime {
   }
 }
 
+/// One sea can on the Sea Can Movements tab: where it was (row and level) and where it is now.
+class SeaCanMove {
+  String can = '', fromRow = '', fromLevel = '', toRow = '', toLevel = '';
+
+  bool get isEmpty =>
+      can.trim().isEmpty && fromRow.isEmpty && fromLevel.isEmpty && toRow.isEmpty && toLevel.isEmpty;
+
+  Map<String, dynamic> toJson() =>
+      {'can': can, 'fromRow': fromRow, 'fromLevel': fromLevel, 'toRow': toRow, 'toLevel': toLevel};
+
+  static SeaCanMove fromJson(Map<String, dynamic> o) => SeaCanMove()
+    ..can = _s(o, 'can')
+    ..fromRow = _s(o, 'fromRow')
+    ..fromLevel = _s(o, 'fromLevel')
+    ..toRow = _s(o, 'toRow')
+    ..toLevel = _s(o, 'toLevel');
+}
+
 class Project {
   static const crewRole = 'crew', techRole = 'tech', mgmtRole = 'mgmt';
   static const allRoles = [crewRole, techRole, mgmtRole];
@@ -478,6 +496,9 @@ class Project {
 
   /// People who get a text when assigned to a field. Nobody does unless ticked.
   Set<String> assignTexts = {};
+
+  /// Sea Can Movements tab, one line per sea can.
+  List<SeaCanMove> seaCans = [];
 
   static String roleLabel(String role) =>
       role == techRole ? 'Techs' : role == mgmtRole ? 'Supervision' : 'Crew';
@@ -630,6 +651,7 @@ class Project {
         'roles': roles,
         'assignTexts': assignTexts.toList(),
         'notes': [for (final n in notes) n.toJson()],
+        'seaCans': [for (final m in seaCans) m.toJson()],
       };
 
   static Project fromJson(Map<String, dynamic> o) => Project()
@@ -646,5 +668,6 @@ class Project {
     ..roles = _stringMap(o['roles'])
     ..assignTexts = _strings(o['assignTexts']).toSet()
     ..notes = _objects(o['notes'], Note.fromJson)
-    ..notices = _objects(o['notices'], Notice.fromJson);
+    ..notices = _objects(o['notices'], Notice.fromJson)
+    ..seaCans = _objects(o['seaCans'], SeaCanMove.fromJson);
 }
