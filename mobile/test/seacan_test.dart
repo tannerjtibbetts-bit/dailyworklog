@@ -210,8 +210,6 @@ void main() {
     await tester.tap(find.text('+  Add 10 rows'));
     await tester.pumpAndSettle();
     expect(p.seaCans.length, seaCanStartLines + 10);
-    final sc = tester.state<ScrollableState>(find.descendant(of: find.byType(SeaCanPane), matching: find.byType(Scrollable)).first).position;
-    debugPrint("DBG ${sc.pixels} ${sc.maxScrollExtent} ${find.text("+  Add 10 rows").evaluate().length} ${tester.getRect(find.byType(TextField).last)}");
     await tester.tap(find.text('Remove empty rows'));
     await tester.pumpAndSettle();
     // One line is kept, then topped back up to the starting number of lines

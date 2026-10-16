@@ -287,157 +287,162 @@ class _SeaCanPaneState extends State<SeaCanPane> {
     final lines = p.seaCans;
     const side = BorderSide(color: C.cardStroke);
     // The card's top (title, Export, tick, count), then the table that scrolls sideways, then the actions.
-    return ListView(
+    // One scroll view (not a lazy list): the table is a single tall piece, so this keeps the
+    // scroll length exact for "+ Add 10 rows" scrolling to the end.
+    return SingleChildScrollView(
       controller: _scroll,
       padding: const EdgeInsets.fromLTRB(12, 18, 12, 120),
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            border: Border(top: side, left: side, right: side),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 16, 8, 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Title, with an Export button for sending just this list
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Sea can movements',
-                      style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+              border: Border(top: side, left: side, right: side),
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 16, 8, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Title, with an Export button for sending just this list
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Sea can movements',
+                        style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                  Semantics(
-                    label: 'Export sea cans to PDF, Excel, CSV or Word',
-                    button: true,
-                    child: Material(
-                      color: C.sky,
-                      borderRadius: BorderRadius.circular(100),
-                      child: InkWell(
+                    Semantics(
+                      label: 'Export sea cans to PDF, Excel, CSV or Word',
+                      button: true,
+                      child: Material(
+                        color: C.sky,
                         borderRadius: BorderRadius.circular(100),
-                        onTap: widget.onExport,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                          child: Text(
-                            'Export',
-                            style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(100),
+                          onTap: widget.onExport,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                            child: Text(
+                              'Export',
+                              style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: InkWell(
-                  onTap: () {
-                    p.seaCanInclude = !p.seaCanInclude;
-                    store.save();
-                  },
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: p.seaCanInclude,
-                        onChanged: (v) {
-                          p.seaCanInclude = v ?? false;
-                          store.save();
-                        },
-                      ),
-                      const Expanded(
-                        child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 10),
-                child: Text(
-                  n == 0
-                      ? 'Type a sea can number, then pick where it came from and where it is now.'
-                      : '${Fmt.plural(n, 'sea can', 'sea cans')} entered',
-                  style: const TextStyle(fontSize: 15, color: C.grey),
-                ),
-              ),
-            ],
-          ),
-        ),
-        // The table: headings and every line scroll sideways together.
-        Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
-            border: Border(left: side, right: side, bottom: side),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 0, 8, 12),
-          child: LayoutBuilder(
-            builder: (c, box) {
-              final width = box.maxWidth < seaCanTableMinWidth ? seaCanTableMinWidth : box.maxWidth;
-              return Scrollbar(
-                controller: _across,
-                thumbVisibility: width > box.maxWidth,
-                child: SingleChildScrollView(
-                  key: const Key('seaCanTable'),
-                  controller: _across,
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.only(bottom: width > box.maxWidth ? 10 : 0),
-                  child: SizedBox(
-                    width: width,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: InkWell(
+                    onTap: () {
+                      p.seaCanInclude = !p.seaCanInclude;
+                      store.save();
+                    },
+                    child: Row(
                       children: [
-                        // The columns, then Letter / Row / Level under each location
-                        Row(
-                          children: [
-                            Expanded(flex: _canFlex, child: _label('Sea can')),
-                            Expanded(flex: _locFlex, child: _label('From location')),
-                            const SizedBox(width: _arrowW),
-                            Expanded(flex: _locFlex, child: _label('Current location')),
-                            Expanded(flex: _weightFlex, child: _label('Weight')),
-                          ],
+                        Checkbox(
+                          value: p.seaCanInclude,
+                          onChanged: (v) {
+                            p.seaCanInclude = v ?? false;
+                            store.save();
+                          },
                         ),
-                        const SizedBox(height: 4),
-                        _row([
-                          _label('Identifier'),
-                          for (var k = 0; k < 2; k++) ...[_label('Letter'), _label('Row'), _label('Level')],
-                          const SizedBox(),
-                        ]),
-                        for (final m in lines) _line(m),
+                        const Expanded(
+                          child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                        ),
                       ],
                     ),
                   ),
                 ),
-              );
-            },
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 10),
+                  child: Text(
+                    n == 0
+                        ? 'Type a sea can number, then pick where it came from and where it is now.'
+                        : '${Fmt.plural(n, 'sea can', 'sea cans')} entered',
+                    style: const TextStyle(fontSize: 15, color: C.grey),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        _action('+  Add 10 rows', C.blue, () => _addRows(10)),
-        _action('Remove empty rows', C.deepBlue, () {
-          final before = p.seaCans.length;
-          p.seaCans.removeWhere((m) => m.isEmpty);
-          if (p.seaCans.length == before) {
-            toast(context, 'No empty rows to remove');
-            return;
-          }
-          store.save();
-        }),
-        _action('Clear all', C.red, () {
-          confirm(
-            context,
-            'Clear all sea cans?',
-            'Every sea can number and location on this tab is cleared. This can’t be undone.',
-            'Clear all',
-            () {
-              p.seaCans.clear();
-              store.save();
-            },
-          );
-        }),
-      ],
+          // The table: headings and every line scroll sideways together.
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+              border: Border(left: side, right: side, bottom: side),
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 0, 8, 12),
+            child: LayoutBuilder(
+              builder: (c, box) {
+                final width = box.maxWidth < seaCanTableMinWidth ? seaCanTableMinWidth : box.maxWidth;
+                return Scrollbar(
+                  controller: _across,
+                  thumbVisibility: width > box.maxWidth,
+                  child: SingleChildScrollView(
+                    key: const Key('seaCanTable'),
+                    controller: _across,
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.only(bottom: width > box.maxWidth ? 10 : 0),
+                    child: SizedBox(
+                      width: width,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // The columns, then Letter / Row / Level under each location
+                          Row(
+                            children: [
+                              Expanded(flex: _canFlex, child: _label('Sea can')),
+                              Expanded(flex: _locFlex, child: _label('From location')),
+                              const SizedBox(width: _arrowW),
+                              Expanded(flex: _locFlex, child: _label('Current location')),
+                              Expanded(flex: _weightFlex, child: _label('Weight')),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          _row([
+                            _label('Identifier'),
+                            for (var k = 0; k < 2; k++) ...[_label('Letter'), _label('Row'), _label('Level')],
+                            const SizedBox(),
+                          ]),
+                          for (final m in lines) _line(m),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          _action('+  Add 10 rows', C.blue, () => _addRows(10)),
+          _action('Remove empty rows', C.deepBlue, () {
+            final before = p.seaCans.length;
+            p.seaCans.removeWhere((m) => m.isEmpty);
+            if (p.seaCans.length == before) {
+              toast(context, 'No empty rows to remove');
+              return;
+            }
+            store.save();
+          }),
+          _action('Clear all', C.red, () {
+            confirm(
+              context,
+              'Clear all sea cans?',
+              'Every sea can number and location on this tab is cleared. This can’t be undone.',
+              'Clear all',
+              () {
+                p.seaCans.clear();
+                store.save();
+              },
+            );
+          }),
+        ],
+      ),
     );
   }
 }

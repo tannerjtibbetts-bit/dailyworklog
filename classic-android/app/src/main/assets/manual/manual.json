@@ -2431,7 +2431,7 @@
       "id": "sea-can-movements",
       "title": "Sea Can Movements",
       "group": "Tabs",
-      "summary": "Log each sea can's identifier, where it came from and where it is now; export it or add it to your report.",
+      "summary": "Log each sea can's identifier, where it came from and where it is now (letter, row, level); export it in the site sheet's layout or add it to your report.",
       "keywords": [
         "sea can",
         "seacan",
@@ -2448,14 +2448,21 @@
         "csv",
         "word",
         "include in my reports",
-        "arrow"
+        "arrow",
+        "letter",
+        "alphabet",
+        "D33",
+        "blue bin",
+        "weight",
+        "copy and paste",
+        "moves"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project, one per line."
+          "text": "The \"Sea Can Movements\" tab is a list of sea cans for the project, one per line: the sea can's identifier, where it came from, where it is now, and its weight."
         },
         {
           "type": "image",
@@ -2466,14 +2473,15 @@
           "type": "steps",
           "items": [
             "Open the project and tap \"Sea Can Movements\".",
-            "In \"Sea can #\", type the sea can identifier.",
-            "Under \"From location\", pick the \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from.",
-            "Under \"Current location\", pick the row and level where it is now."
+            "In \"Sea can #\", type the sea can identifier, for example BPPU 201006-1.",
+            "Under \"From location\", pick the \"Letter\" (A to Z), \"Row\" (1 to 40) and \"Level\" (1 to 3) it came from. For D33 L3, pick D, 33 and 3.",
+            "Under \"Current location\", pick the letter, row and level where it is now.",
+            "At the end of the line, type the sea can's weight in \"Weight\"."
           ]
         },
         {
           "type": "text",
-          "text": "The blue arrow on each line points from where the sea can came from to where it is now, so each line reads: sea can, from here, to here."
+          "text": "The blue arrow on each line points from where the sea can came from to where it is now, so each line reads: sea can, from here, to here. On a narrow screen, slide the list left or right to see the Weight box."
         },
         {
           "type": "text",
@@ -2502,6 +2510,14 @@
         },
         {
           "type": "text",
+          "text": "The Excel file is laid out like the site's movement sheet, so rows can be copied straight into it: the columns are \"Moves\", \"Can #\", \"From Location\", \"To Location\", \"Weight\", then \"Bin #\", \"From Location\", \"To Location\" under \"Blue Bin Movements\". Locations read like \"D33 L3\" and the weight fills the Weight column. The Blue Bin columns are left empty for you to fill in, and there are 5 spare numbered rows at the bottom."
+        },
+        {
+          "type": "tip",
+          "text": "To paste into another sheet, open the Excel file, select the rows under the dark bar (from \"Moves\" across to \"To Location\") and copy them. The CSV file has the same columns."
+        },
+        {
+          "type": "text",
           "text": "Putting it in your daily report:"
         },
         {
@@ -2513,7 +2529,7 @@
         },
         {
           "type": "text",
-          "text": "The report lists only sea cans that have a number, with the columns Sea can, From row, From level, Current row and Current level."
+          "text": "The report lists only sea cans that have a number, with the columns Moves, Can #, From location, Current location (for example D33 L3) and Weight."
         },
         {
           "type": "tip",
