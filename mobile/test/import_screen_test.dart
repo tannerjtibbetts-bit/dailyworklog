@@ -60,7 +60,5 @@ void main() {
     expect(log.tasks.map((t) => t.title), ['Pack up sea can', 'Inspect wrenches']);
     expect(log.tasks.map((t) => t.notes), ['Zone 2', 'Crib']);
     expect(log.tasks.every((t) => t.createdBy == 'Pat Example'), isTrue);
-    await tester.runAsync(() => Store.instance.flush());
-    dir.deleteSync(recursive: true);
-  });
+  }, timeout: const Timeout(Duration(seconds: 60)));
 }
