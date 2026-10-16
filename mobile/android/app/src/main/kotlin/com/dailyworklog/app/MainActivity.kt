@@ -9,6 +9,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Sign-in state and owner key from the earlier Android app, moved over on first run.
+        LegacyAccess.register(flutterEngine, applicationContext)
         // Sends a plain text straight from this phone (needs SEND_SMS). Replies false if it couldn't.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dailyworklog/sms").setMethodCallHandler { call, result ->
             if (call.method != "send") {
