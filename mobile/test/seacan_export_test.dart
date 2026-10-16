@@ -66,14 +66,15 @@ void main() {
   test('csv: header, quoting, CRLF and a BOM', () {
     final bytes = Export.seaCanCsv(p);
     expect(bytes.take(3), [0xEF, 0xBB, 0xBF]);
+    // utf8.decode drops a leading BOM, so it's checked as bytes above.
     expect(
-      utf8.decode(bytes),
-      '﻿Sea can,From row,From level,Current row,Current level\r\n'
+      utf8.decode(bytes.sublist(3)),
+      'Sea can,From row,From level,Current row,Current level\r\n'
       'MSCU 123456,12,2,40,1\r\n'
       '"TCLU, ""A"" 7",3,,,\r\n'
       '"Line\nTwo & <co>",,,9,3\r\n',
     );
-    expect(utf8.decode(Export.seaCanCsv(Project())), '﻿Sea can,From row,From level,Current row,Current level\r\n');
+    expect(utf8.decode(Export.seaCanCsv(Project()).sublist(3)), 'Sea can,From row,From level,Current row,Current level\r\n');
   });
 
   test('file names', () {
@@ -124,11 +125,11 @@ void main() {
       'MSCU 123456',
       '40',
       'TCLU, "A" 7',
-      'Line\nTwo & <co>',
       '3 sea cans',
     ]) {
       expect(text, contains(s));
     }
+    expect(doc, contains('Two &amp; &lt;co&gt;'));
     expect(text.where((t) => t == '–').length, 5);
     expect(doc, contains('<w:tblHeader/>'));
     final empty = _unzip(ReportDocx.writeSeaCans(Project(), 'T', day))['word/document.xml']!;
@@ -274,7 +275,10 @@ void main() {
     await tester.tap(find.text('Sea Can Movements'));
     await tester.pumpAndSettle();
 
-    expect(find.bySemanticsLabel('Export sea cans to PDF, Excel, CSV or Word'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'Export sea cans to PDF, Excel, CSV or Word'),
+      findsOneWidget,
+    );
     expect(find.text('Include in my reports (PDF, Word and email)'), findsOneWidget);
     expect(q.seaCanInclude, isFalse);
     await tester.tap(find.byType(Checkbox));

@@ -5,7 +5,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -81,7 +80,7 @@ class Sms {
   static Future<bool> canSendDirect() async {
     if (!Platform.isAndroid) return false;
     try {
-      return await Permission.sms.isGranted;
+      return await _channel.invokeMethod<bool>('hasPermission') ?? false;
     } catch (_) {
       return false;
     }
@@ -91,7 +90,7 @@ class Sms {
   static Future<bool> requestDirect() async {
     if (!Platform.isAndroid) return false;
     try {
-      return await Permission.sms.request().isGranted;
+      return await _channel.invokeMethod<bool>('requestPermission') ?? false;
     } catch (_) {
       return false;
     }
