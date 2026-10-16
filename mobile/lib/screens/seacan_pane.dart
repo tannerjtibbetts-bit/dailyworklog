@@ -1,5 +1,6 @@
-// Sea Can Movements tab: one line per sea can. Type its identifier, then pick the row (1 to 40)
-// and level (1 to 3) it's coming from and the row and level it's at now.
+// Sea Can Movements tab: two lines per sea can. Type its identifier on the first line, then on the
+// second pick the letter (A to Z), row (1 to 40) and level (1 to 3) it's coming from and the
+// letter, row and level it's at now, with a blue arrow between the two.
 import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
@@ -10,10 +11,15 @@ import '../ui/theme.dart';
 
 const seaCanRows = 40, seaCanLevels = 3;
 
+/// Letters A to Z for the Letter dropdowns.
+final seaCanLetters = [for (var c = 0x41; c <= 0x5A; c++) String.fromCharCode(c)];
+
 /// Lines shown to start with; more can be added (there's no limit).
 const seaCanStartLines = 20;
 const _blank = '–';
-const _canFlex = 24, _cellFlex = 10;
+
+/// Gap after each dropdown.
+const _cellGap = 3.0;
 
 /// Width of the arrow between From and Current location.
 const _arrowW = 24.0;
@@ -80,27 +86,27 @@ class _SeaCanPaneState extends State<SeaCanPane> {
     borderRadius: BorderRadius.circular(10),
   );
 
-  /// Dropdown of 1 to [max], with a dash for not picked yet.
-  Widget _dropdown(int max, String current, ValueChanged<String> onPick) {
-    final items = [_blank, for (var i = 1; i <= max; i++) '$i'];
+  /// Dropdown of [choices], with a dash first for not picked yet.
+  Widget _dropdown(List<String> choices, String current, ValueChanged<String> onPick) {
+    final items = [_blank, ...choices];
     final value = items.contains(current) ? current : _blank;
     TextStyle style(String v) => TextStyle(
-      fontSize: 16,
+      fontSize: 15,
       color: v == _blank ? C.greyLight : C.deepBlue,
       fontWeight: v == _blank ? FontWeight.normal : FontWeight.bold,
     );
     return Container(
       constraints: const BoxConstraints(minHeight: 44),
       decoration: _cellDecoration,
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 2),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
           isDense: true,
-          iconSize: 16,
+          iconSize: 14,
           menuMaxHeight: 360,
-          icon: const Icon(Icons.arrow_drop_down, color: C.grey),
+          icon: const Icon(Icons.arrow_drop_down, color: C.grey, size: 14),
           items: [
             for (final v in items)
               DropdownMenuItem(
@@ -156,38 +162,63 @@ class _SeaCanPaneState extends State<SeaCanPane> {
     },
   );
 
-  /// Sea can box, then four cells; [cells] has five widgets. With [arrow], a blue arrow sits
-  /// between From and Current location ("came from here, went to here"); without, just the gap.
-  Widget _row(List<Widget> cells, {bool arrow = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      children: [
-        for (var i = 0; i < cells.length; i++) ...[
-          if (i == 3) arrow ? const _MoveArrow() : const SizedBox(width: _arrowW),
-          Expanded(
-            flex: i == 0 ? _canFlex : _cellFlex,
-            child: Padding(padding: const EdgeInsets.only(right: 4), child: cells[i]),
+  static List<String> _numbers(int max) => [for (var i = 1; i <= max; i++) '$i'];
+
+  /// Six equal cells, Letter / Row / Level for From then Current location. With [arrow], a blue arrow
+  /// sits between the two ("came from here, went to here"); without, just the gap.
+  Widget _cells(List<Widget> cells, {bool arrow = false}) => Row(
+    children: [
+      for (var i = 0; i < cells.length; i++) ...[
+        if (i == 3) arrow ? const _MoveArrow() : const SizedBox(width: _arrowW),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: _cellGap),
+            child: cells[i],
           ),
-        ],
+        ),
       ],
-    ),
+    ],
   );
 
-  static Widget _label(String s) => Text(
+  static Widget _label(String s, {TextAlign align = TextAlign.center}) => Text(
     s,
-    textAlign: TextAlign.center,
-    style: const TextStyle(fontSize: 13, color: C.grey, fontWeight: FontWeight.bold),
+    textAlign: align,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: const TextStyle(fontSize: 12.5, color: C.grey, fontWeight: FontWeight.bold),
   );
 
-  Widget _line(SeaCanMove m) => KeyedSubtree(
+  /// One sea can: the identifier box, then its six dropdowns, then a thin line (except after the last).
+  Widget _line(SeaCanMove m, {required bool last}) => KeyedSubtree(
     key: ObjectKey(m),
-    child: _row([
-      _canBox(m),
-      _dropdown(seaCanRows, m.fromRow, (v) => m.fromRow = v),
-      _dropdown(seaCanLevels, m.fromLevel, (v) => m.fromLevel = v),
-      _dropdown(seaCanRows, m.toRow, (v) => m.toRow = v),
-      _dropdown(seaCanLevels, m.toLevel, (v) => m.toLevel = v),
-    ], arrow: true),
+    child: Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: _cellGap),
+            child: _canBox(m),
+          ),
+          const SizedBox(height: 6),
+          _cells([
+            _dropdown(seaCanLetters, m.fromLetter, (v) => m.fromLetter = v),
+            _dropdown(_numbers(seaCanRows), m.fromRow, (v) => m.fromRow = v),
+            _dropdown(_numbers(seaCanLevels), m.fromLevel, (v) => m.fromLevel = v),
+            _dropdown(seaCanLetters, m.toLetter, (v) => m.toLetter = v),
+            _dropdown(_numbers(seaCanRows), m.toRow, (v) => m.toRow = v),
+            _dropdown(_numbers(seaCanLevels), m.toLevel, (v) => m.toLevel = v),
+          ], arrow: true),
+          if (last)
+            const SizedBox(height: 4)
+          else
+            const Padding(
+              padding: EdgeInsets.only(top: 8, right: _cellGap),
+              child: Divider(height: 1, thickness: 1, color: C.cardStroke),
+            ),
+        ],
+      ),
+    ),
   );
 
   Widget _action(String s, Color color, VoidCallback onTap) => Align(
@@ -295,17 +326,21 @@ class _SeaCanPaneState extends State<SeaCanPane> {
                     style: const TextStyle(fontSize: 15, color: C.grey),
                   ),
                 ),
-                // The three columns, then Row / Level under each location
+                // Matches the two lines of each sea can: the identifier, then From and Current
+                // location over their Letter / Row / Level dropdowns.
+                _label('Sea can identifier', align: TextAlign.left),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    Expanded(flex: _canFlex, child: _label('Sea can')),
-                    Expanded(flex: _cellFlex * 2, child: _label('From location')),
+                    Expanded(flex: 3, child: _label('From location')),
                     const SizedBox(width: _arrowW),
-                    Expanded(flex: _cellFlex * 2, child: _label('Current location')),
+                    Expanded(flex: 3, child: _label('Current location')),
                   ],
                 ),
-                const SizedBox(height: 4),
-                _row([_label('Identifier'), _label('Row'), _label('Level'), _label('Row'), _label('Level')]),
+                const SizedBox(height: 2),
+                _cells([
+                  for (var k = 0; k < 2; k++) ...[_label('Letter'), _label('Row'), _label('Level')],
+                ]),
               ],
             ),
           );
@@ -323,7 +358,7 @@ class _SeaCanPaneState extends State<SeaCanPane> {
               ),
             ),
             padding: EdgeInsets.fromLTRB(12, 0, 8, last ? 12 : 0),
-            child: _line(lines[i - 1]),
+            child: _line(lines[i - 1], last: last),
           );
         }
         return Column(

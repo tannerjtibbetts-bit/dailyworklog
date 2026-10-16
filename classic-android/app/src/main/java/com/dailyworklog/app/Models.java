@@ -567,19 +567,37 @@ public final class Models {
         }
     }
 
-    /** One sea can on the Sea Can Movements tab: where it was (row and level) and where it is now. */
+    /** One sea can on the Sea Can Movements tab: where it was (letter, row, level) and where it is now. */
     public static class SeaCanMove {
-        public String can = "", fromRow = "", fromLevel = "", toRow = "", toLevel = "";
+        public String can = "", fromLetter = "", fromRow = "", fromLevel = "", toLetter = "", toRow = "", toLevel = "";
 
         public boolean isEmpty() {
-            return can.trim().isEmpty() && fromRow.isEmpty() && fromLevel.isEmpty() && toRow.isEmpty() && toLevel.isEmpty();
+            return can.trim().isEmpty() && fromLetter.isEmpty() && fromRow.isEmpty() && fromLevel.isEmpty()
+                    && toLetter.isEmpty() && toRow.isEmpty() && toLevel.isEmpty();
+        }
+
+        /** "D33 L3": letter and row, then the level. */
+        public static String location(String letter, String row, String level) {
+            String place = letter + row;
+            if (level.isEmpty()) return place;
+            return place.isEmpty() ? "L" + level : place + " L" + level;
+        }
+
+        public String fromLocation() {
+            return location(fromLetter, fromRow, fromLevel);
+        }
+
+        public String toLocation() {
+            return location(toLetter, toRow, toLevel);
         }
 
         JSONObject toJson() throws JSONException {
             JSONObject o = new JSONObject();
             o.put("can", can);
+            o.put("fromLetter", fromLetter);
             o.put("fromRow", fromRow);
             o.put("fromLevel", fromLevel);
+            o.put("toLetter", toLetter);
             o.put("toRow", toRow);
             o.put("toLevel", toLevel);
             return o;
@@ -588,8 +606,10 @@ public final class Models {
         static SeaCanMove fromJson(JSONObject o) {
             SeaCanMove m = new SeaCanMove();
             m.can = o.optString("can", "");
+            m.fromLetter = o.optString("fromLetter", "");
             m.fromRow = o.optString("fromRow", "");
             m.fromLevel = o.optString("fromLevel", "");
+            m.toLetter = o.optString("toLetter", "");
             m.toRow = o.optString("toRow", "");
             m.toLevel = o.optString("toLevel", "");
             return m;

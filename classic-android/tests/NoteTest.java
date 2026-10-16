@@ -193,16 +193,19 @@ class SeaCanTest { public static void main(String[] a) throws Exception {
   System.out.println("SEACAN PASS"); } }
 class SeaCanExportTest { public static void main(String[] a) throws Exception {
   Models.Project p = new Models.Project(); p.name = "B44";
-  Models.SeaCanMove m = new Models.SeaCanMove(); m.can = "TCLU 317503"; m.fromRow = "12"; m.fromLevel = "2"; m.toRow = "38"; m.toLevel = "1";
+  Models.SeaCanMove m = new Models.SeaCanMove(); m.can = "BPPU 201006-1"; m.fromLetter = "D"; m.fromRow = "33"; m.fromLevel = "3"; m.toLetter = "E"; m.toRow = "34"; m.toLevel = "2";
   Models.SeaCanMove q = new Models.SeaCanMove(); q.can = "Odd, \"one\""; q.fromRow = "3";
   p.seaCans.add(m); p.seaCans.add(new Models.SeaCanMove()); p.seaCans.add(q);
   p.seaCanInclude = true;
   NoteTest.check(Models.Project.fromJson(p.toJson()).seaCanInclude, "include tick saved");
+  NoteTest.check(Models.Project.fromJson(p.toJson()).seaCans.get(0).fromLetter.equals("D"), "letters saved");
+  NoteTest.check(m.fromLocation().equals("D33 L3") && m.toLocation().equals("E34 L2") && q.fromLocation().equals("3") && q.toLocation().isEmpty(), "locations");
+  NoteTest.check(Models.SeaCanMove.location("", "12", "2").equals("12 L2") && Models.SeaCanMove.location("", "", "3").equals("L3") && Models.SeaCanMove.location("E", "", "").equals("E"), "location text");
   NoteTest.check(p.filledSeaCans().size() == 2, "only numbered sea cans exported");
   java.io.ByteArrayOutputStream csv = new java.io.ByteArrayOutputStream();
   SeaCanExport.writeCsv(p, csv);
   String c = csv.toString("UTF-8");
-  NoteTest.check(c.equals("﻿Sea can,From row,From level,Current row,Current level\r\nTCLU 317503,12,2,38,1\r\n\"Odd, \"\"one\"\"\",3,,,\r\n"), "csv " + c);
+  NoteTest.check(c.equals("\uFEFFMoves,Can #,From Location,To Location,Weight,Bin #,From Location,To Location\r\n1,BPPU 201006-1,D33 L3,E34 L2,,,,\r\n2,\"Odd, \"\"one\"\"\",3,,,,,\r\n"), "csv " + c);
   try (java.io.FileOutputStream f = new java.io.FileOutputStream(a[0] + "/seacans.xlsx")) { SeaCanExport.writeXlsx(p, "Tanner", 0L, f); }
   try (java.io.FileOutputStream f = new java.io.FileOutputStream(a[0] + "/seacans.docx")) { ReportDocx.writeSeaCans(p, "Tanner", 0L, f); }
   System.out.println("SEACANEXPORT PASS"); } }

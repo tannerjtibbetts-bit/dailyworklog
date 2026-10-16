@@ -460,20 +460,49 @@ class Overtime {
   }
 }
 
-/// One sea can on the Sea Can Movements tab: where it was (row and level) and where it is now.
+/// One sea can on the Sea Can Movements tab: where it was (letter, row and level) and where it is now.
 class SeaCanMove {
-  String can = '', fromRow = '', fromLevel = '', toRow = '', toLevel = '';
+  String can = '', fromLetter = '', fromRow = '', fromLevel = '', toLetter = '', toRow = '', toLevel = '';
 
   bool get isEmpty =>
-      can.trim().isEmpty && fromRow.isEmpty && fromLevel.isEmpty && toRow.isEmpty && toLevel.isEmpty;
+      can.trim().isEmpty &&
+      fromLetter.isEmpty &&
+      fromRow.isEmpty &&
+      fromLevel.isEmpty &&
+      toLetter.isEmpty &&
+      toRow.isEmpty &&
+      toLevel.isEmpty;
 
-  Map<String, dynamic> toJson() =>
-      {'can': can, 'fromRow': fromRow, 'fromLevel': fromLevel, 'toRow': toRow, 'toLevel': toLevel};
+  /// A location as one piece of text: letter and row, then " L" and the level,
+  /// e.g. ("D", "33", "3") -> "D33 L3", ("", "12", "2") -> "12 L2", ("", "", "3") -> "L3".
+  static String location(String letter, String row, String level) {
+    final place = '$letter$row';
+    if (level.isEmpty) return place;
+    return place.isEmpty ? 'L$level' : '$place L$level';
+  }
+
+  /// Where it came from, e.g. "D33 L3" ("" when nothing is picked).
+  String fromLocation() => location(fromLetter, fromRow, fromLevel);
+
+  /// Where it is now, e.g. "E12 L1" ("" when nothing is picked).
+  String toLocation() => location(toLetter, toRow, toLevel);
+
+  Map<String, dynamic> toJson() => {
+    'can': can,
+    'fromLetter': fromLetter,
+    'fromRow': fromRow,
+    'fromLevel': fromLevel,
+    'toLetter': toLetter,
+    'toRow': toRow,
+    'toLevel': toLevel,
+  };
 
   static SeaCanMove fromJson(Map<String, dynamic> o) => SeaCanMove()
     ..can = _s(o, 'can')
+    ..fromLetter = _s(o, 'fromLetter')
     ..fromRow = _s(o, 'fromRow')
     ..fromLevel = _s(o, 'fromLevel')
+    ..toLetter = _s(o, 'toLetter')
     ..toRow = _s(o, 'toRow')
     ..toLevel = _s(o, 'toLevel');
 }

@@ -1,73 +1,104 @@
-// The Sea Can Movements tab as a small Excel (.xlsx) file: Sea can / From row / From level /
-// Current row / Current level.
+// The Sea Can Movements tab as an Excel (.xlsx) file laid out like Tanner's master sheet, so the
+// rows paste straight in: a peach title and heading row (Sea Can Movements / Blue Bin Movements),
+// a black divider row, then one numbered light blue row per sea can and 5 spare rows to fill by hand.
+//   Moves | Can # | From Location | To Location | Weight | Bin # | From Location | To Location
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
-import '../data/fmt.dart';
 import '../data/models.dart';
 
 class SeaCanXlsx {
   SeaCanXlsx._();
 
-  /// Cell styles in styles.xml: 0 normal, 1 bold, 2 bold heading row (grey fill), 3 grey dash (right-aligned like the numbers).
-  static const _normal = 0, _bold = 1, _head = 2, _dash = 3;
+  /// Column headings, A to H.
+  static const headings = [
+    'Moves',
+    'Can #',
+    'From Location',
+    'To Location',
+    'Weight',
+    'Bin #',
+    'From Location',
+    'To Location',
+  ];
 
+  /// Column widths, A to H.
+  static const widths = [16, 20, 20, 18, 11, 12, 20, 18];
+
+  /// Empty numbered rows after the sea cans, for adding more by hand.
+  static const spareRows = 5;
+
+  /// Cell styles in styles.xml: 1 title / heading (bold Times New Roman 14, peach), 2 divider (near black),
+  /// 3 move number (Times New Roman 12, right-aligned, light blue), 4 move cell (bold, centred, light blue).
+  static const _head = 1, _divider = 2, _number = 3, _cell = 4;
+
+  /// [by] and [at] aren't written: the sheet has no "exported by" lines so its rows paste straight in.
   static Uint8List write(Project p, String by, int at) {
     final cans = p.filledSeaCans();
     final rows = StringBuffer();
-    var r = 0;
+    const cols = 'ABCDEFGH';
 
-    void cell(String col, int row, String text, int style) {
-      rows.write('<c r="$col$row" t="inlineStr"');
-      if (style != _normal) rows.write(' s="$style"');
-      rows.write('><is><t xml:space="preserve">${_esc(text)}</t></is></c>');
+    void text(String ref, String s, int style) {
+      if (s.isEmpty) {
+        rows.write('<c r="$ref" s="$style"/>');
+      } else {
+        rows.write('<c r="$ref" s="$style" t="inlineStr"><is><t xml:space="preserve">${_esc(s)}</t></is></c>');
+      }
     }
 
-    // A row of text cells starting at column A.
-    void row(List<String> cells, int style) {
-      r++;
-      rows.write('<row r="$r">');
-      for (var i = 0; i < cells.length; i++) {
-        cell(String.fromCharCode(0x41 + i), r, cells[i], style);
-      }
+    void row(int r, double? height, void Function() cells) {
+      rows.write('<row r="$r"${height == null ? '' : ' ht="$height" customHeight="1"'}>');
+      cells();
       rows.write('</row>');
     }
 
-    row(['Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'}'], _bold);
-    if (p.location.isNotEmpty) row([p.location], _normal);
-    row(['Exported ${Fmt.longStamp(at)} by $by'], _normal);
-    r++;
-    row(['Sea can', 'From row', 'From level', 'Current row', 'Current level'], _head);
-    if (cans.isEmpty) row(['No sea cans entered yet.'], _normal);
-    for (final m in cans) {
-      r++;
-      rows.write('<row r="$r">');
-      cell('A', r, m.can.trim(), _bold);
-      final v = [m.fromRow, m.fromLevel, m.toRow, m.toLevel];
-      for (var i = 0; i < 4; i++) {
-        final col = String.fromCharCode(0x42 + i);
-        if (RegExp(r'^\d+$').hasMatch(v[i])) {
-          rows.write('<c r="$col$r"><v>${v[i]}</v></c>');
-        } else if (v[i].isEmpty) {
-          cell(col, r, '–', _dash);
-        } else {
-          cell(col, r, v[i], _normal);
+    // 1: titles (merged A1:E1 and F1:H1; the covered cells still carry the style so the borders show).
+    row(1, 24, () {
+      for (var i = 0; i < 8; i++) {
+        text(
+          '${cols[i]}1',
+          i == 0
+              ? 'Sea Can Movements'
+              : i == 5
+              ? 'Blue Bin Movements'
+              : '',
+          _head,
+        );
+      }
+    });
+    // 2: headings.
+    row(2, 42, () {
+      for (var i = 0; i < 8; i++) {
+        text('${cols[i]}2', headings[i], _head);
+      }
+    });
+    // 3: the black divider.
+    row(3, 12, () {
+      for (var i = 0; i < 8; i++) {
+        text('${cols[i]}3', '', _divider);
+      }
+    });
+    // 4 on: one numbered row per sea can, then the spare rows.
+    for (var n = 1; n <= cans.length + spareRows; n++) {
+      final r = n + 3;
+      final m = n <= cans.length ? cans[n - 1] : null;
+      row(r, null, () {
+        rows.write('<c r="A$r" s="$_number"><v>$n</v></c>');
+        final v = m == null ? const <String>[] : [m.can.trim(), m.fromLocation(), m.toLocation()];
+        for (var i = 1; i < 8; i++) {
+          text('${cols[i]}$r', i <= v.length ? v[i - 1] : '', _cell);
         }
-      }
-      rows.write('</row>');
-    }
-    if (cans.isNotEmpty) {
-      r++;
-      row([Fmt.plural(cans.length, 'sea can', 'sea cans')], _normal);
+      });
     }
 
     const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
     final sheet =
         '$head<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        '<cols><col min="1" max="1" width="24" customWidth="1"/>'
-        '<col min="2" max="5" width="14" customWidth="1"/></cols>'
-        '<sheetData>$rows</sheetData></worksheet>';
+        '<cols>${[for (var i = 0; i < 8; i++) '<col min="${i + 1}" max="${i + 1}" width="${widths[i]}" customWidth="1"/>'].join()}</cols>'
+        '<sheetData>$rows</sheetData>'
+        '<mergeCells count="2"><mergeCell ref="A1:E1"/><mergeCell ref="F1:H1"/></mergeCells>'
+        '</worksheet>';
 
     final zip = Archive()
       ..addFile(
@@ -95,7 +126,7 @@ class SeaCanXlsx {
           'xl/workbook.xml',
           '$head<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
               'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-              '<sheets><sheet name="Sea cans" sheetId="1" r:id="rId1"/></sheets></workbook>',
+              '<sheets><sheet name="Sea Can Movements" sheetId="1" r:id="rId1"/></sheets></workbook>',
         ),
       )
       ..addFile(
@@ -111,19 +142,28 @@ class SeaCanXlsx {
         ArchiveFile.string(
           'xl/styles.xml',
           '$head<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-              '<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font>'
-              '<font><b/><sz val="11"/><name val="Calibri"/></font>'
-              '<font><sz val="11"/><color rgb="FF8A94A1"/><name val="Calibri"/></font></fonts>'
-              '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
-              '<fill><patternFill patternType="solid"><fgColor rgb="FFE4E7EC"/><bgColor indexed="64"/></patternFill></fill></fills>'
-              '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+              '<fonts count="4"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font>'
+              '<font><b/><sz val="14"/><color rgb="FF000000"/><name val="Times New Roman"/><family val="1"/></font>'
+              '<font><b/><sz val="12"/><color rgb="FF000000"/><name val="Times New Roman"/><family val="1"/></font>'
+              '<font><sz val="12"/><color rgb="FF000000"/><name val="Times New Roman"/><family val="1"/></font></fonts>'
+              '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFF8CBAD"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FF262626"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/><bgColor indexed="64"/></patternFill></fill></fills>'
+              '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
+              '<border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right>'
+              '<top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>'
+              '</borders>'
               '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-              '<cellXfs count="4">'
+              '<cellXfs count="5">'
               '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-              '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
-              '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
-              '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">'
-              '<alignment horizontal="right"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" '
+              'applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+              '<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>'
+              '<xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" '
+              'applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" '
+              'applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
               '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
               '</styleSheet>',
         ),

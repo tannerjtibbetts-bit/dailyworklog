@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Sea Can Movements tab: one line per sea can. Type its identifier, then pick the row (1 to 40)
- * and level (1 to 3) it's coming from and the row and level it's at now.
+ * Sea Can Movements tab: two lines per sea can. Type its identifier, then pick the letter (A to Z),
+ * row (1 to 40) and level (1 to 3) it's coming from and the ones it's at now.
  */
 final class SeaCanPane {
     private SeaCanPane() {}
@@ -30,7 +30,6 @@ final class SeaCanPane {
     /** Lines shown to start with; more can be added (there's no limit). */
     static final int START_LINES = 20;
     private static final String BLANK = "–";
-    private static final float CAN_W = 2.4f;
 
     static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
@@ -80,17 +79,19 @@ final class SeaCanPane {
         };
         refreshCount.run();
 
-        // Two header lines: the three columns, then Row / Level under each location
+        // Headings: the identifier on its own line, then From / Current location over Letter, Row, Level
+        TextView idHead = cellLabel(a, "Sea can identifier");
+        idHead.setGravity(Gravity.START);
+        card.addView(idHead);
         LinearLayout head = row(a);
-        head.addView(cellLabel(a, "Sea can"), weight(a, CAN_W));
-        head.addView(cellLabel(a, "From location"), weight(a, 2f));
+        head.addView(cellLabel(a, "From location"), weight(a, 3f));
         head.addView(new View(a), arrowLp(a));
-        head.addView(cellLabel(a, "Current location"), weight(a, 2f));
+        head.addView(cellLabel(a, "Current location"), weight(a, 3f));
         card.addView(head);
         LinearLayout sub = row(a);
-        sub.addView(cellLabel(a, "Identifier"), weight(a, CAN_W));
         for (int i = 0; i < 2; i++) {
             if (i == 1) sub.addView(new View(a), arrowLp(a));
+            sub.addView(cellLabel(a, "Letter"), weight(a, 1f));
             sub.addView(cellLabel(a, "Row"), weight(a, 1f));
             sub.addView(cellLabel(a, "Level"), weight(a, 1f));
         }
@@ -138,8 +139,11 @@ final class SeaCanPane {
         box.addView(clear);
     }
 
-    /** One sea can: identifier box, then From row/level and Current row/level dropdowns. */
+    /** One sea can: the identifier box, then From and Current letter / row / level dropdowns under it. */
     private static LinearLayout line(Activity a, Store store, Models.SeaCanMove m, Runnable refreshCount) {
+        LinearLayout block = new LinearLayout(a);
+        block.setOrientation(LinearLayout.VERTICAL);
+        block.setPadding(0, Ui.dp(a, 6), 0, Ui.dp(a, 6));
         LinearLayout line = row(a);
         EditText can = new EditText(a);
         can.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
@@ -162,13 +166,35 @@ final class SeaCanPane {
                 refreshCount.run();
             }
         });
-        line.addView(can, weight(a, CAN_W));
-        line.addView(dropdown(a, ROWS, m.fromRow, v -> { m.fromRow = v; store.save(); }), weight(a, 1f));
-        line.addView(dropdown(a, LEVELS, m.fromLevel, v -> { m.fromLevel = v; store.save(); }), weight(a, 1f));
-        line.addView(arrow(a), arrowLp(a));
-        line.addView(dropdown(a, ROWS, m.toRow, v -> { m.toRow = v; store.save(); }), weight(a, 1f));
-        line.addView(dropdown(a, LEVELS, m.toLevel, v -> { m.toLevel = v; store.save(); }), weight(a, 1f));
-        return line;
+        line.addView(can, weight(a, 1f));
+        block.addView(line);
+        LinearLayout places = row(a);
+        places.addView(dropdown(a, letters(), m.fromLetter, v -> { m.fromLetter = v; store.save(); }), weight(a, 1f));
+        places.addView(dropdown(a, numbers(ROWS), m.fromRow, v -> { m.fromRow = v; store.save(); }), weight(a, 1f));
+        places.addView(dropdown(a, numbers(LEVELS), m.fromLevel, v -> { m.fromLevel = v; store.save(); }), weight(a, 1f));
+        places.addView(arrow(a), arrowLp(a));
+        places.addView(dropdown(a, letters(), m.toLetter, v -> { m.toLetter = v; store.save(); }), weight(a, 1f));
+        places.addView(dropdown(a, numbers(ROWS), m.toRow, v -> { m.toRow = v; store.save(); }), weight(a, 1f));
+        places.addView(dropdown(a, numbers(LEVELS), m.toLevel, v -> { m.toLevel = v; store.save(); }), weight(a, 1f));
+        block.addView(places);
+        View divider = new View(a);
+        divider.setBackgroundColor(a.getColor(R.color.divider));
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(a, 1));
+        dlp.topMargin = Ui.dp(a, 6);
+        block.addView(divider, dlp);
+        return block;
+    }
+
+    private static List<String> numbers(int max) {
+        List<String> items = new ArrayList<>();
+        for (int i = 1; i <= max; i++) items.add(String.valueOf(i));
+        return items;
+    }
+
+    private static List<String> letters() {
+        List<String> items = new ArrayList<>();
+        for (char c = 'A'; c <= 'Z'; c++) items.add(String.valueOf(c));
+        return items;
     }
 
     /** The little arrow between From and Current location: "came from here, went to here". */
@@ -202,11 +228,11 @@ final class SeaCanPane {
         void onPick(String value);
     }
 
-    /** Dropdown of 1 to max, with a dash for not picked yet. */
-    private static Spinner dropdown(Activity a, int max, String current, Pick pick) {
+    /** Dropdown of the given choices, with a dash first for not picked yet. */
+    private static Spinner dropdown(Activity a, List<String> choices, String current, Pick pick) {
         List<String> items = new ArrayList<>();
         items.add(BLANK);
-        for (int i = 1; i <= max; i++) items.add(String.valueOf(i));
+        items.addAll(choices);
         Spinner sp = new Spinner(a, Spinner.MODE_DROPDOWN);
         ArrayAdapter<String> ad = new ArrayAdapter<String>(a, android.R.layout.simple_spinner_item, items) {
             @Override

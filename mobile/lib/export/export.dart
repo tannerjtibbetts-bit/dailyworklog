@@ -124,12 +124,17 @@ class Export {
     return '${Fmt.fileSafe('Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'} - $date')}.$format';
   }
 
-  /// The sea can list as CSV: quoted where needed, CRLF line ends, UTF-8 with a BOM so Excel reads it right.
+  /// The sea can list as CSV in the master sheet's columns: quoted where needed, CRLF line ends, UTF-8 with a BOM so Excel reads it right.
   static Uint8List seaCanCsv(Project p) {
     String field(String s) => s.contains(RegExp('[",\r\n]')) ? '"${s.replaceAll('"', '""')}"' : s;
-    final b = StringBuffer('\uFEFFSea can,From row,From level,Current row,Current level\r\n');
-    for (final m in p.filledSeaCans()) {
-      b.write('${[m.can.trim(), m.fromRow, m.fromLevel, m.toRow, m.toLevel].map(field).join(',')}\r\n');
+    // The same columns as the master sheet (sea cans, then blue bins), so lines paste straight in.
+    final b = StringBuffer('\uFEFFMoves,Can #,From Location,To Location,Weight,Bin #,From Location,To Location\r\n');
+    final cans = p.filledSeaCans();
+    for (var i = 0; i < cans.length; i++) {
+      final m = cans[i];
+      b.write(
+        '${['${i + 1}', m.can.trim(), m.fromLocation(), m.toLocation(), '', '', '', ''].map(field).join(',')}\r\n',
+      );
     }
     return Uint8List.fromList(utf8.encode(b.toString()));
   }

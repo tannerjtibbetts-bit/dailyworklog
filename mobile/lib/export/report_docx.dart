@@ -146,21 +146,22 @@ class ReportDocx {
     _seaCanTable(cans);
   }
 
-  /// Sea can, then From and Current location, each split into Row and Level. The header repeats on each page.
+  /// Moves (number), Can #, From location, Current location. The header repeats on each page.
   void _seaCanTable(List<SeaCanMove> cans) {
     const b =
         '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:bottom w:val="single" w:sz="4" w:color="D5D9DE"/><w:right w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
+    const widths = [1200, 3680, 2600, 2600];
     _body.write(
       '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
-      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="3680"/>'
-      '<w:gridCol w:w="1600"/><w:gridCol w:w="1600"/><w:gridCol w:w="1600"/><w:gridCol w:w="1600"/></w:tblGrid>',
+      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'
+      '${widths.map((x) => '<w:gridCol w:w="$x"/>').join()}</w:tblGrid>',
     );
-    // Only the header rows keep with the next row, so a long list still breaks across pages.
-    void cell(String text, int width, {bool bold = false, bool center = true, String? shade, String extra = ''}) {
+    // Only the header row keeps with the next row, so a long list still breaks across pages.
+    void cell(String text, int width, {bool bold = false, bool center = true, String? shade}) {
       final keep = shade != null;
-      _body.write('<w:tc><w:tcPr><w:tcW w:w="$width" w:type="dxa"/>$extra');
+      _body.write('<w:tc><w:tcPr><w:tcW w:w="$width" w:type="dxa"/>');
       if (shade != null) _body.write('<w:shd w:val="clear" w:color="auto" w:fill="$shade"/>');
       _body.write(
         '<w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr>${keep ? '<w:keepNext/>' : ''}<w:spacing w:before="40" w:after="40"/>'
@@ -172,20 +173,18 @@ class ReportDocx {
 
     const head = 'E4E7EC';
     _body.write('<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>');
-    cell('Sea can', 3680, bold: true, center: false, shade: head, extra: '<w:vMerge w:val="restart"/>');
-    cell('From location', 3200, bold: true, shade: head, extra: '<w:gridSpan w:val="2"/>');
-    cell('Current location', 3200, bold: true, shade: head, extra: '<w:gridSpan w:val="2"/>');
-    _body.write('</w:tr><w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>');
-    cell('', 3680, shade: head, extra: '<w:vMerge/>');
-    for (final s in const ['Row', 'Level', 'Row', 'Level']) {
-      cell(s, 1600, bold: true, shade: head);
+    const heads = ['Moves', 'Can #', 'From location', 'Current location'];
+    for (var i = 0; i < 4; i++) {
+      cell(heads[i], widths[i], bold: true, center: i != 1, shade: head);
     }
     _body.write('</w:tr>');
-    for (final m in cans) {
+    for (var n = 1; n <= cans.length; n++) {
+      final m = cans[n - 1];
       _body.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
-      cell(m.can.trim(), 3680, bold: true, center: false);
-      for (final v in [m.fromRow, m.fromLevel, m.toRow, m.toLevel]) {
-        cell(v.isEmpty ? '–' : v, 1600);
+      cell('$n', widths[0]);
+      cell(m.can.trim(), widths[1], bold: true, center: false);
+      for (final (i, v) in [m.fromLocation(), m.toLocation()].indexed) {
+        cell(v.isEmpty ? '–' : v, widths[2 + i]);
       }
       _body.write('</w:tr>');
     }

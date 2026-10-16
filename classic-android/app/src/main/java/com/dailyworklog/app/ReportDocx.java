@@ -157,25 +157,26 @@ final class ReportDocx {
                 + "<w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>"
                 + "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>";
         body.append("<w:tbl><w:tblPr><w:tblW w:w=\"10080\" w:type=\"dxa\"/><w:tblBorders>").append(b)
-                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"3280\"/>")
-                .append("<w:gridCol w:w=\"1700\"/><w:gridCol w:w=\"1700\"/><w:gridCol w:w=\"1700\"/><w:gridCol w:w=\"1700\"/></w:tblGrid>");
+                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"1200\"/>")
+                .append("<w:gridCol w:w=\"3280\"/><w:gridCol w:w=\"2800\"/><w:gridCol w:w=\"2800\"/></w:tblGrid>");
         // The heading row repeats at the top of each page.
-        seaCanRow(new String[]{"Sea can", "From row", "From level", "Current row", "Current level"}, true);
-        for (Models.SeaCanMove m : rows) {
-            seaCanRow(new String[]{m.can, dash(m.fromRow), dash(m.fromLevel), dash(m.toRow), dash(m.toLevel)}, false);
+        seaCanRow(new String[]{"Moves", "Can #", "From location", "Current location"}, true);
+        for (int i = 0; i < rows.size(); i++) {
+            Models.SeaCanMove m = rows.get(i);
+            seaCanRow(new String[]{String.valueOf(i + 1), m.can, dash(m.fromLocation()), dash(m.toLocation())}, false);
         }
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
     }
 
     private void seaCanRow(String[] cells, boolean head) {
-        int[] widths = {3280, 1700, 1700, 1700, 1700};
+        int[] widths = {1200, 3280, 2800, 2800};
         body.append("<w:tr><w:trPr><w:cantSplit/>").append(head ? "<w:tblHeader/>" : "").append("</w:trPr>");
         for (int i = 0; i < cells.length; i++) {
             body.append("<w:tc><w:tcPr><w:tcW w:w=\"").append(widths[i]).append("\" w:type=\"dxa\"/>");
             if (head) body.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E4E7EC\"/>");
             body.append("</w:tcPr><w:p><w:pPr><w:spacing w:before=\"40\" w:after=\"40\"/>")
-                    .append(i == 0 ? "" : "<w:jc w:val=\"center\"/>").append("</w:pPr>");
-            run(cells[i], head || i == 0, 10, TEXT, null);
+                    .append(i == 1 ? "" : "<w:jc w:val=\"center\"/>").append("</w:pPr>");
+            run(cells[i], head || i == 1, 10, TEXT, null);
             body.append("</w:p></w:tc>");
         }
         body.append("</w:tr>");
