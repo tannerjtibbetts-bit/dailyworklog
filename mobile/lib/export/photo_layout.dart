@@ -41,8 +41,8 @@ class Encoded {
 class PhotoLayout {
   PhotoLayout._();
 
-  /// Height of report photos in points (about 0.9 inch). Half the old 130 so they take less room.
-  static const double reportH = 65;
+  /// Height of report photos in points (about 1.1 inches). Smaller than the old 130 so they take less room.
+  static const double reportH = 80;
 
   /// Narrowest room each report photo gets in its row, so its caption ("TT 7:32 AM") fits.
   static const double reportSlot = 40;

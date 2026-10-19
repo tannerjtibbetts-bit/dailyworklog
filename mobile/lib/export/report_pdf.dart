@@ -31,7 +31,7 @@ class _Style {
 class ReportPdf {
   static const double _w = 612, _h = 792, _m = 44, _indent = 24;
 
-  /// Photos sit side by side at this height (about 0.9 inch, half the old size) and wrap to a new row.
+  /// Photos sit side by side at this height (about 1.1 inches) and wrap to a new row.
   static const double photoH = PhotoLayout.reportH, photoGap = 8, captionH = 12;
 
   /// Print sharpness for report photos: 220 dpi is crisp on paper and screen, and keeps files emailable.

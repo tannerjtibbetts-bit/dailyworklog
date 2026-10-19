@@ -341,7 +341,7 @@ final class ReportPdf {
         y += 16;
     }
 
-    /** Photos sit side by side at this height (about 0.9 inch, half the old size) and wrap to a new row. */
+    /** Photos sit side by side at this height (about 1.1 inches) and wrap to a new row. */
     private static final float PHOTO_H = PhotoLayout.REPORT_H, PHOTO_GAP = 8f, CAPTION_H = 12f;
     /** Print sharpness for report photos: 220 dpi is crisp on paper and screen, and keeps files emailable. */
     private static final float PHOTO_DPI = 220f;

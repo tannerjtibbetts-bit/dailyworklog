@@ -14,8 +14,8 @@ import java.util.Locale;
 final class PhotoLayout {
     private PhotoLayout() {}
 
-    /** Height of report photos in points (about 0.9 inch). Half the old 130 so they take less room. */
-    static final float REPORT_H = 65f;
+    /** Height of report photos in points (about 1.1 inches). Smaller than the old 130 so they take less room. */
+    static final float REPORT_H = 80f;
     /** Narrowest room each report photo gets in its row, so its caption ("TT 7:32 AM") fits. */
     static final float REPORT_SLOT = 40f;
 
