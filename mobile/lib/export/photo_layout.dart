@@ -41,15 +41,23 @@ class Encoded {
 class PhotoLayout {
   PhotoLayout._();
 
+  /// Height of report photos in points (about 0.9 inch). Half the old 130 so they take less room.
+  static const double reportH = 65;
+
+  /// Narrowest room each report photo gets in its row, so its caption ("TT 7:32 AM") fits.
+  static const double reportSlot = 40;
+
   /// sizes: each photo's pixel size, or null if missing (drawn as a small placeholder).
   /// Every photo is scaled to [rowHeight], or narrower if it would overflow the width.
+  /// Each photo takes at least [minSlot] of the row, so a narrow photo still has room for its caption.
   static List<List<Cell>> rows(
     List<PhotoSize?> sizes,
     double width,
     double rowHeight,
     double gap,
-    double missingWidth,
-  ) {
+    double missingWidth, {
+    double minSlot = 0,
+  }) {
     final rows = <List<Cell>>[];
     var row = <Cell>[];
     double used = 0;
@@ -68,14 +76,15 @@ class PhotoLayout {
           h = s.height * (width / s.width);
         }
       }
+      final slot = math.min(width, math.max(w, minSlot));
       var x = row.isEmpty ? 0.0 : used + gap;
-      if (row.isNotEmpty && x + w > width) {
+      if (row.isNotEmpty && x + slot > width) {
         rows.add(row);
         row = <Cell>[];
         x = 0;
       }
       row.add(Cell(i, x, w, h));
-      used = x + w;
+      used = x + slot;
     }
     if (row.isNotEmpty) rows.add(row);
     return rows;

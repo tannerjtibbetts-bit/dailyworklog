@@ -94,6 +94,9 @@ class LayoutTest { public static void main(String[] a) throws Exception {
   for (java.util.List<PhotoLayout.Cell> r : rows) { StringBuilder b = new StringBuilder(); for (PhotoLayout.Cell c : r) b.append(String.format("#%d@%.0f(%.0fx%.0f) ", c.index, c.x, c.w, c.h)); System.out.println(b); }
   for (java.util.List<PhotoLayout.Cell> r : rows) { PhotoLayout.Cell last = r.get(r.size()-1); NoteTest.check(last.x + last.w <= 500.01, "row fits width"); }
   NoteTest.check(rows.get(0).size() >= 6, "tall photos pack 6+ per row");
+  NoteTest.check(PhotoLayout.REPORT_H == 65f, "report photos half size");
+  java.util.List<PhotoLayout.Cell> small = PhotoLayout.rows(s.subList(0,3), 500, PhotoLayout.REPORT_H, 8, 90, PhotoLayout.REPORT_SLOT).get(0);
+  NoteTest.check(small.get(1).x - small.get(0).x == 48f, "narrow photo keeps caption room: " + (small.get(1).x - small.get(0).x));
   Models.Photo p = new Models.Photo(); p.addedBy="Jim McLaren"; java.util.Calendar c = java.util.Calendar.getInstance(); c.set(2026,9,5,7,32); p.addedAt=c.getTimeInMillis();
   NoteTest.check(PhotoLayout.caption(p, "2026-10-05").equals("JM 7:32 AM"), "caption same day: " + PhotoLayout.caption(p, "2026-10-05"));
   NoteTest.check(PhotoLayout.caption(p, "2026-10-06").equals("JM 10/05 7:32 AM"), "caption other day");

@@ -341,8 +341,8 @@ final class ReportPdf {
         y += 16;
     }
 
-    /** Photos sit side by side at this height (about 1.8 inches) and wrap to a new row. */
-    private static final float PHOTO_H = 130f, PHOTO_GAP = 8f, CAPTION_H = 12f;
+    /** Photos sit side by side at this height (about 0.9 inch, half the old size) and wrap to a new row. */
+    private static final float PHOTO_H = PhotoLayout.REPORT_H, PHOTO_GAP = 8f, CAPTION_H = 12f;
     /** Print sharpness for report photos: 220 dpi is crisp on paper and screen, and keeps files emailable. */
     private static final float PHOTO_DPI = 220f;
     /** The log's date, so photo captions only show a date when it's a different day. */
@@ -351,7 +351,7 @@ final class ReportPdf {
     private List<List<PhotoLayout.Cell>> photoRows(List<Models.Photo> photos, File photoDir, float width) {
         List<float[]> sizes = new java.util.ArrayList<>();
         for (Models.Photo p : photos) sizes.add(photoSize(new File(photoDir, p.file)));
-        return PhotoLayout.rows(sizes, width, PHOTO_H, PHOTO_GAP, 90f);
+        return PhotoLayout.rows(sizes, width, PHOTO_H, PHOTO_GAP, 90f, PhotoLayout.REPORT_SLOT);
     }
 
     /** Draws photos in rows that are only as tall as they need to be. */
@@ -396,7 +396,7 @@ final class ReportPdf {
         if (sized != bm) sized.recycle();
         bm.recycle();
         String cap = PhotoLayout.caption(p, logIso);
-        float room = Math.max(dw + PHOTO_GAP - 2, 40f);
+        float room = Math.max(dw, PhotoLayout.REPORT_SLOT) + PHOTO_GAP - 2;
         c.drawText(TextUtils.ellipsize(cap, tiny, room, TextUtils.TruncateAt.END).toString(), left, y + dh + 9, tiny);
     }
 

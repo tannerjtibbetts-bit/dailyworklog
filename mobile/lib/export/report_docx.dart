@@ -1,6 +1,7 @@
 // Builds a Word (.docx) report by hand: plain OOXML zipped up.
 // Layout: header, progress summary, then each field with its photos in rows like the PDF.
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -256,11 +257,12 @@ class ReportDocx {
     final enc = [for (final p in photos) _encoder(File('$photoDir/${p.file}'))];
     final sizes = [for (final e in enc) e == null ? null : PhotoSize(e.width, e.height)];
     const gapPt = 8.0, widthPt = 9640 / 20; // 9640 twips of room after the indent
-    for (final row in PhotoLayout.rows(sizes, widthPt, 130, gapPt, 90)) {
+    for (final row in PhotoLayout.rows(sizes, widthPt, PhotoLayout.reportH, gapPt, 90, minSlot: PhotoLayout.reportSlot)) {
       final grid = StringBuffer();
       final colTw = <int>[];
       for (var k = 0; k < row.length; k++) {
-        final w = row[k].w + (k < row.length - 1 ? gapPt : 0);
+        // Each column runs to the next photo's start, so narrow photos keep room for captions.
+        final w = k < row.length - 1 ? row[k + 1].x - row[k].x : math.max(row[k].w, PhotoLayout.reportSlot);
         colTw.add((w * 20).round());
         grid.write('<w:gridCol w:w="${colTw[k]}"/>');
       }

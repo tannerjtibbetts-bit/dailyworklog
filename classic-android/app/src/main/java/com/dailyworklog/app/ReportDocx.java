@@ -250,11 +250,13 @@ final class ReportDocx {
             sizes.add(e == null ? null : new float[]{e.width, e.height});
         }
         final float gapPt = 8f, widthPt = 9640 / 20f;  // 9640 twips of room after the indent
-        for (List<PhotoLayout.Cell> row : PhotoLayout.rows(sizes, widthPt, 130f, gapPt, 90f)) {
+        for (List<PhotoLayout.Cell> row : PhotoLayout.rows(sizes, widthPt, PhotoLayout.REPORT_H, gapPt, 90f, PhotoLayout.REPORT_SLOT)) {
             StringBuilder grid = new StringBuilder();
             int[] colTw = new int[row.size()];
             for (int k = 0; k < row.size(); k++) {
-                float w = row.get(k).w + (k < row.size() - 1 ? gapPt : 0);
+                // Each column runs to the next photo's start, so narrow photos keep room for captions.
+                float w = k < row.size() - 1 ? row.get(k + 1).x - row.get(k).x
+                        : Math.max(row.get(k).w, PhotoLayout.REPORT_SLOT);
                 colTw[k] = Math.round(w * 20);
                 grid.append("<w:gridCol w:w=\"").append(colTw[k]).append("\"/>");
             }

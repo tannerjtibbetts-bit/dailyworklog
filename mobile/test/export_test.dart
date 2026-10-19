@@ -164,6 +164,15 @@ void main() {
       expect(PhotoLayout.height(rows.first), 130);
     });
 
+    test('report photos are half the old size and narrow ones keep room for a caption', () {
+      expect(ReportPdf.photoH, 65);
+      final s = [for (var i = 0; i < 3; i++) const PhotoSize(612, 1320)];
+      final rows = PhotoLayout.rows(s, 500, PhotoLayout.reportH, 8, 90, minSlot: PhotoLayout.reportSlot);
+      final r = rows.single;
+      expect(r.first.w, closeTo(30.1, 0.1));
+      expect(r[1].x - r[0].x, 48); // 40 slot + 8 gap
+    });
+
     test('very wide photo fits the width', () {
       final rows = PhotoLayout.rows(const [PhotoSize(100, 10), PhotoSize(10, 10)], 500, 130, 8, 90);
       expect(rows.length, 2);

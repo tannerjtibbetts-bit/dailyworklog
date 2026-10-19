@@ -14,6 +14,11 @@ import java.util.Locale;
 final class PhotoLayout {
     private PhotoLayout() {}
 
+    /** Height of report photos in points (about 0.9 inch). Half the old 130 so they take less room. */
+    static final float REPORT_H = 65f;
+    /** Narrowest room each report photo gets in its row, so its caption ("TT 7:32 AM") fits. */
+    static final float REPORT_SLOT = 40f;
+
     /** One photo's place in a row: which photo, its left offset in the row, and drawn size. */
     static final class Cell {
         final int index;
@@ -32,6 +37,11 @@ final class PhotoLayout {
      * placeholder). Every photo is scaled to rowHeight, or narrower if it would overflow the width.
      */
     static List<List<Cell>> rows(List<float[]> sizes, float width, float rowHeight, float gap, float missingWidth) {
+        return rows(sizes, width, rowHeight, gap, missingWidth, 0f);
+    }
+
+    /** As above, but each photo takes at least minSlot of the row so a narrow photo has room for its caption. */
+    static List<List<Cell>> rows(List<float[]> sizes, float width, float rowHeight, float gap, float missingWidth, float minSlot) {
         List<List<Cell>> rows = new ArrayList<>();
         List<Cell> row = new ArrayList<>();
         float used = 0;
@@ -49,14 +59,15 @@ final class PhotoLayout {
                     h = s[1] * (width / s[0]);
                 }
             }
+            float slot = Math.min(width, Math.max(w, minSlot));
             float x = row.isEmpty() ? 0 : used + gap;
-            if (!row.isEmpty() && x + w > width) {
+            if (!row.isEmpty() && x + slot > width) {
                 rows.add(row);
                 row = new ArrayList<>();
                 x = 0;
             }
             row.add(new Cell(i, x, w, h));
-            used = x + w;
+            used = x + slot;
         }
         if (!row.isEmpty()) rows.add(row);
         return rows;

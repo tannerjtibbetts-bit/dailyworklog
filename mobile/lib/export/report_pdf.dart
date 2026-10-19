@@ -31,8 +31,8 @@ class _Style {
 class ReportPdf {
   static const double _w = 612, _h = 792, _m = 44, _indent = 24;
 
-  /// Photos sit side by side at this height (about 1.8 inches) and wrap to a new row.
-  static const double photoH = 130, photoGap = 8, captionH = 12;
+  /// Photos sit side by side at this height (about 0.9 inch, half the old size) and wrap to a new row.
+  static const double photoH = PhotoLayout.reportH, photoGap = 8, captionH = 12;
 
   /// Print sharpness for report photos: 220 dpi is crisp on paper and screen, and keeps files emailable.
   static const double photoDpi = 220;
@@ -389,7 +389,7 @@ class ReportPdf {
 
   List<List<Cell>> _photoRows(List<Photo> photos, double width) {
     final sizes = [for (final p in photos) PhotoLayout.size(File('$_photoDir/${p.file}'))];
-    return PhotoLayout.rows(sizes, width, photoH, photoGap, 90);
+    return PhotoLayout.rows(sizes, width, photoH, photoGap, 90, minSlot: PhotoLayout.reportSlot);
   }
 
   /// Draws photos in rows that are only as tall as they need to be.
@@ -420,7 +420,7 @@ class ReportPdf {
     }
     _g!.drawImage(im, left, _h - (_y + dh), dw, dh);
     final cap = PhotoLayout.caption(p, _logIso);
-    final room = math.max(dw + photoGap - 2, 40.0);
+    final room = math.max(dw, PhotoLayout.reportSlot) + photoGap - 2;
     _drawString(_ellipsize(cap, _tiny, room), _tiny, left, _y + dh + 9);
   }
 
