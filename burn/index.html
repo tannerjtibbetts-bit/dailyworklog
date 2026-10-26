@@ -90,7 +90,10 @@ main{padding-block:14px calc(96px + env(safe-area-inset-bottom,0px));display:gri
 .gi .t small{display:block;font-weight:400;font-size:13.5px;color:var(--muted)}
 .gi.on .t{text-decoration:line-through;color:var(--muted)}
 .gtext{width:100%;min-height:200px;font-family:ui-monospace,monospace;font-size:13px;background:var(--card);color:var(--ink);border:2px solid var(--ink);padding:8px}
-.seg button{border:0;background:var(--card);padding:9px 0;font-family:var(--label);font-weight:700;font-size:17px;text-transform:uppercase;letter-spacing:.08em}
+.seg button{border:0;background:var(--card);padding:9px 2px;font-family:var(--label);font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:.05em}
+.prep{margin-top:4px;border:1px solid var(--line);background:var(--bg)}
+.prep summary{cursor:pointer;padding:7px 10px;font-family:var(--label);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--c)}
+.prep ol{margin:0;padding:0 12px 10px 30px;font-size:14.5px;display:grid;gap:4px}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .card{background:var(--card);border:2px solid var(--ink);padding:14px;display:grid;gap:10px;min-width:0}
 .card.flat{border-width:1px;border-color:var(--line)}
@@ -626,18 +629,75 @@ function diet(w,d){
       var f=F[row[0]],q=roundQ(row[2]?row[1]*fac:row[1],f.u);
       ["p","k","f","s","c","fb"].forEach(function(k){T[k]+=f[k]*q;if(M[k]!=null)M[k]+=f[k]*q;});
       raw.push({f:row[0],q:q,note:row[3]});
-      lines.push(qtyText(q,f.u)+" "+f.n.toLowerCase()+(row[3]?" ("+row[3]+")":""));
+      var vn=f.u==="oz"?volNote(row[0],q):"";
+      lines.push(qtyText(q,f.u)+" "+f.n.toLowerCase()+(row[3]?" ("+row[3]+")":"")+(vn?" — "+vn:""));
     });
-    meals.push({when:slot[0],name:m.n,lines:lines,p:M.p,k:M.k,c:M.c,fb:M.fb});
+    meals.push({when:slot[0],name:m.n,lines:lines,p:M.p,k:M.k,c:M.c,fb:M.fb,prep:PREP[m.n]});
   });
   var food=T.p,target=protein(wk),cal=calories(wk,A),scoops=Math.round(Math.max(0,target-food)/SCOOP.p),shakes=[];
   var slots=["Mid-morning shake","Mid-afternoon shake","Evening shake","After-workout shake","Late-evening shake","Extra shake","Extra shake","Extra shake"];
   var left=scoops,i=0;
-  while(left>0&&i<8){var sc=Math.min(2,left);shakes.push({when:slots[i],name:sc+" scoop"+(sc>1?"s":"")+" unflavored or low-sugar whey isolate",lines:["Mix in "+(sc>1?"12":"8")+" oz water or unsweetened almond milk","Sip over 20–30 min, at least 30 min away from meals"],p:sc*SCOOP.p,k:sc*SCOOP.k,c:sc*SCOOP.c,fb:0});left-=sc;i++;}
+  while(left>0&&i<8){var sc=Math.min(2,left);shakes.push({when:slots[i],name:sc+" scoop"+(sc>1?"s":"")+" unflavored or low-sugar whey isolate",lines:["Mix in "+(sc>1?"12 oz (1½ cups)":"8 oz (1 cup)")+" water or unsweetened almond milk"],prep:SHAKEPREP,p:sc*SCOOP.p,k:sc*SCOOP.k,c:sc*SCOOP.c,fb:0});left-=sc;i++;}
   ["p","k","f","s","c","fb"].forEach(function(k){T[k]+=scoops*SCOOP[k];});
   var order=[meals[0]];if(shakes[0])order.push(shakes[0]);order.push(meals[1]);if(shakes[1])order.push(shakes[1]);order.push(meals[2],meals[3]);
   for(var j=2;j<shakes.length;j++)order.push(shakes[j]);
   return {target:target,cal:cal,items:order,T:T,scoops:scoops,food:food,style:style,carbCap:STYLES[style].carb,raw:raw};
+}
+
+/* ---------- meal prep steps: [minutes, steps] ---------- */
+var PREP={
+ "Greek yogurt, berries & walnuts":[2,["Spoon the yogurt into a small bowl.","Top with the berries. If frozen, thaw them in the fridge overnight.","Sprinkle on the walnuts and a pinch of cinnamon."]],
+ "Veggie egg-white scramble with feta":[8,["Chop the spinach and peppers into small pieces.","Coat a nonstick pan with cooking spray and set it over medium heat. Cook the vegetables 2–3 minutes until soft.","Pour in the egg whites. Stir gently for 2–3 minutes until no liquid is left.","Top with the feta and serve."]],
+ "Cinnamon cottage cheese with almonds":[2,["Spoon the cottage cheese into a small bowl.","Sprinkle with cinnamon and the chopped almonds."]],
+ "Savory oats with egg whites":[8,["Microwave the oats with ¼ cup water for 60–90 seconds and stir.","Coat a small pan with spray over medium heat. Wilt the spinach for 1 minute.","Add the egg whites and scramble until set, about 2 minutes.","Spoon the eggs over the oats. Season with pepper and garlic powder."]],
+ "Tofu veggie scramble":[10,["Press the tofu between paper towels for a few minutes, then crumble it.","Cook the chopped peppers and onion in a sprayed pan over medium heat for 3 minutes.","Add the tofu with a pinch of turmeric, garlic powder and pepper. Cook 5 minutes until hot.","Top with the salsa."]],
+ "Egg & egg-white omelet":[8,["Whisk the egg and egg whites in a bowl.","Cook the spinach and mushrooms in a sprayed pan for 2 minutes, then move them to a plate.","Pour the eggs into the pan over medium-low heat. When the edges set, add the vegetables to one half.","Fold the omelet over and cook 1 more minute."]],
+ "Peanut-butter protein yogurt":[2,["Stir the powdered peanut butter into the yogurt until smooth.","Add 1 tsp of water if it's too thick."]],
+ "Salmon & cottage cheese plate":[3,["Use leftover baked salmon or drained canned salmon. Remove any skin and flake it.","Plate it with the cottage cheese and cucumber slices.","Finish with a squeeze of lemon and a pinch of dill."]],
+ "Cottage cheese & berries":[2,["Spoon the cottage cheese into a small bowl.","Top with the berries."]],
+ "Turkey egg-white omelet":[8,["Chop the deli turkey and spinach.","Cook them in a sprayed pan over medium heat for 1 minute.","Pour in the egg whites. When the edges set, fold the omelet and cook 1 more minute."]],
+ "Greek-yogurt tuna salad lettuce cups":[5,["Drain the tuna well.","Mix it with the Greek yogurt, diced celery, a squeeze of lemon and pepper.","Spoon it into lettuce leaves."]],
+ "Lentil soup with chicken":[25,["Cook the diced carrot and celery in a sprayed pot over medium heat for 3 minutes.","Add the rinsed lentils, diced tomato, 1 cup low-sodium broth and ½ tsp cumin. Simmer 15 minutes.","Stir in the diced cooked chicken for the last 3 minutes.","Batch tip: make 4 servings at once. It keeps 4 days in the fridge."]],
+ "Chicken & hummus plate":[3,["Slice cooked chicken (see Grilled chicken & green beans for how to cook a batch).","Plate it with the hummus and sliced cucumber and tomato for dipping."]],
+ "Shrimp & white-bean salad":[10,["Cook the shrimp in a sprayed pan over medium-high heat, 1–2 minutes per side, until pink and opaque. Thawed precooked shrimp also works.","Rinse and drain the beans.","Toss the shrimp, beans, greens and tomato with the olive oil, a squeeze of lemon, salt and pepper."]],
+ "Deli turkey & cheese plate":[2,["Roll the turkey slices around the string cheese.","Serve with the cucumber slices."]],
+ "Tofu & edamame bowl":[15,["Press the tofu dry and cut it into cubes. Sear in a sprayed pan for 8 minutes, turning, or bake at 400°F for 20 minutes.","Microwave the edamame for 1–2 minutes.","Layer the quinoa, cabbage, tofu and edamame. Drizzle with 1 tsp low-sodium soy sauce and 1 tsp rice vinegar."]],
+ "Turkey chili":[25,["Brown the ground turkey in a pot over medium heat, breaking it up, until no pink remains (165°F).","Add the rinsed beans, marinara, 1 tsp chili powder and ½ tsp cumin.","Simmer 15 minutes.","Batch tip: make 4 servings at once. It keeps 4 days in the fridge."]],
+ "Salmon salad lettuce cups":[5,["Drain the canned salmon and flake it.","Mix with the Greek yogurt, dill, lemon juice and pepper.","Spoon into lettuce leaves."]],
+ "Chicken salad lettuce cups":[5,["Dice cooked chicken (see Grilled chicken & green beans).","Mix with the Greek yogurt, diced celery, 1 tsp mustard and pepper.","Spoon into lettuce leaves."]],
+ "Black-bean & egg bowl":[8,["Rinse the beans and microwave them for 1 minute.","Scramble the egg and egg whites in a sprayed pan until set.","Spoon the eggs over the beans and top with salsa."]],
+ "Tuna & chickpea salad":[5,["Drain the tuna. Rinse and drain the chickpeas.","Toss with the diced cucumber, chopped parsley, feta, a squeeze of lemon and pepper."]],
+ "Cottage cheese cup":[1,["Spoon into a small bowl. Add cinnamon if you like."]],
+ "Turkey jerky":[0,["Eat slowly and chew each bite well."]],
+ "String cheese & almonds":[0,["Unwrap and eat slowly. Chew the almonds well."]],
+ "Edamame":[3,["Microwave the frozen shelled edamame for 1–2 minutes.","Add a pinch of salt."]],
+ "Greek yogurt cup":[1,["Spoon into a small bowl. Add cinnamon if you like."]],
+ "Egg & hummus":[1,["Use a hard-boiled egg. To batch-cook: cover eggs with water, bring to a boil, turn off the heat, cover for 11 minutes, then move them to ice water. Unpeeled, they keep 1 week.","Slice the egg and dip it and the cucumber in the hummus."]],
+ "Turkey & cheese roll-up":[1,["Roll the turkey slice around the string cheese."]],
+ "Baked salmon, green beans & quinoa":[20,["Heat the oven to 400°F. Put the salmon on a foil-lined pan with lemon slices, dill and pepper.","Bake 12–15 minutes until it flakes easily (145°F).","Steam the green beans 5–6 minutes until soft.","Quinoa batch: simmer 1 part quinoa to 2 parts water, covered, for 15 minutes. It keeps 5 days in the fridge."]],
+ "Grilled chicken & green beans":[25,["Pound the chicken to an even ½ inch. Season with garlic powder, paprika and pepper.","Grill, or bake at 425°F for 18–22 minutes, until it reaches 165°F inside.","Rest 5 minutes, then slice thin.","Steam the green beans 5–6 minutes until soft.","Batch tip: cook the week's chicken on Sunday and again on Wednesday. Cooked chicken keeps 3–4 days."]],
+ "Shrimp & zucchini noodles":[12,["Spiralize the zucchini, or buy it pre-cut.","Cook the shrimp in a sprayed pan over medium-high heat, 1–2 minutes per side, until pink and opaque. Move them to a plate.","Cook the zucchini noodles in the same pan for 2 minutes.","Stir in the marinara until warm, then top with the shrimp."]],
+ "Lemon cod with olive oil & broccoli":[18,["Heat the oven to 400°F. Put the cod on a pan, drizzle with the olive oil, and add lemon slices and garlic powder.","Bake 12–15 minutes until it flakes (145°F).","Steam the broccoli about 6 minutes until fork-tender. Soft vegetables sit better after a sleeve."]],
+ "Turkey meatballs & spaghetti squash":[40,["Mix the ground turkey with 1 tbsp egg whites, garlic powder and dried oregano. Roll into 1-inch balls.","Bake on a sprayed pan at 400°F for 15–18 minutes, until 165°F inside.","Halve the spaghetti squash and scoop out the seeds. Microwave it cut-side down in a dish with 2 tbsp water for 10–12 minutes, then scrape out the strands.","Warm the marinara and spoon it over the squash and meatballs.","Batch tip: freeze extra meatballs for up to 3 months."]],
+ "Pork tenderloin & cauliflower mash":[30,["Season the pork with garlic powder, rosemary and pepper.","Roast at 425°F for 20–25 minutes until it reaches 145°F inside. Rest 3 minutes, then slice thin.","Steam the cauliflower about 10 minutes until very soft. Mash it with a splash of broth, salt and pepper."]],
+ "Turkey & lentil stuffed pepper":[35,["Brown the ground turkey in a pan until no pink remains (165°F).","Stir in the lentils, marinara and ½ tsp cumin.","Halve the bell pepper, remove the seeds, and fill both halves.","Cover with foil and bake at 375°F for 25 minutes until the pepper is soft."]],
+ "Tofu stir-fry with brown rice":[15,["Press the tofu dry and cut it into cubes. Sear in a sprayed pan for 6–8 minutes, turning.","Add the broccoli and snap peas with 2 tbsp water. Cover and steam 3 minutes.","Season with 1 tsp low-sodium soy sauce, ground ginger and garlic powder.","Serve over the brown rice."]],
+ "Taco bowl, no shell":[15,["Brown the ground beef until no pink remains (160°F). Drain the fat.","Season with chili powder, cumin and garlic powder.","Layer the lettuce and peppers, then the beef, cheese and salsa."]],
+ "Baked tilapia & broccoli":[18,["Heat the oven to 400°F. Season the tilapia with lemon pepper and paprika.","Bake 10–12 minutes until it flakes (145°F).","Steam the broccoli about 6 minutes until fork-tender."]],
+ "Chicken & chickpea tagine":[30,["Cook the diced carrot in a sprayed pot for 3 minutes.","Add the diced raw chicken and brown it for 5 minutes.","Add the rinsed chickpeas, diced tomato, marinara, ½ tsp cumin, a pinch of cinnamon and ½ cup low-sodium broth.","Cover and simmer 15 minutes, until the chicken reaches 165°F."]],
+ "Black-bean & tofu burrito bowl":[15,["Press and crumble the tofu. Cook it in a sprayed pan with chili powder and cumin for 6 minutes.","Rinse the beans and microwave them for 1 minute.","Layer the beans and tofu, then top with the salsa and cheese."]]
+};
+var SHAKEPREP=[3,["Pour the liquid into a shaker bottle first, then add the powder.","Shake or blend for 20 seconds.","Sip slowly over 20–30 minutes. Keep it at least 30 minutes away from meals."]];
+/* rough volume for foods measured by weight: [oz per cup, how it's cut] */
+var VOL={chik:[5,"diced"],turk:[4.5,"cooked crumbles"],tuna:[5.5,"flaked"],salmon:[5,"flaked"],tilapia:[5,"flaked"],cod:[5,"flaked"],beef:[4.5,"cooked crumbles"],pork:[5,"diced"],tofu:[9,"cubed"]};
+function volNote(k,q){
+  if(k==="shrimp")return "about "+Math.round(q*3)+" medium shrimp";
+  if(k==="deli")return "about "+Math.max(1,Math.round(q*1.5))+" thin slice"+(Math.round(q*1.5)>1?"s":"");
+  if(k==="jerky")return "about "+cupsTxt(q/3)+" of pieces";
+  var v=VOL[k];if(!v)return "";
+  var s="about "+cupsTxt(q/v[0])+" "+v[1];
+  if(k!=="tofu"&&q>=2.5&&q<=4.5)s+=q<=3.25?", the size of a deck of cards":", a bit bigger than a deck of cards";
+  return s;
 }
 
 /* ---------- grocery list ---------- */
@@ -702,7 +762,9 @@ function groceries(w){
   if(scoops>0){sec[5].push({id:"whey",name:"Whey protein isolate, unflavored or low-sugar",amt:n(scoops/30)+" × 2-lb tub ("+scoops+" scoops this week; a tub has about 30)"});
     sec[5].push({id:"almond",name:"Unsweetened almond milk (optional, for shakes)",amt:"up to "+pl(n(shakes*10/64),"half-gallon","half-gallons")+" if every shake uses it; water works too"});}
   sec[6].push({id:"lemon",name:"Lemons",amt:"2–3"});
-  sec[6].push({id:"spice",name:"Cinnamon, garlic powder, cumin, chili powder, dried oregano, dill",amt:"as needed"});
+  sec[6].push({id:"spice",name:"Spices: cinnamon, garlic powder, cumin, chili powder, paprika, oregano, dill, rosemary, turmeric, ground ginger, lemon pepper",amt:"as needed"});
+  sec[6].push({id:"broth",name:"Low-sodium chicken or vegetable broth",amt:"1 × 32-oz carton"});
+  sec[6].push({id:"sauces",name:"Low-sodium soy sauce, rice vinegar, mustard",amt:"1 each, lasts weeks"});
   if(usesOil)sec[6].push({id:"oil",name:"Extra-virgin olive oil",amt:"1 bottle"});
   sec[6].push({id:"spray",name:"Cooking spray",amt:"1 can"});
   sec.forEach(function(list){list.sort(function(a,b){return a.name<b.name?-1:1;});});
@@ -716,6 +778,7 @@ function groceriesHTML(w,p){
   h+='<p style="font-size:14.5px;color:var(--muted)">Everything for this week\'s 7 days of meals, snacks and shakes. Meat amounts are raw weight to buy. The list changes if you switch eating style or meal size, or when a weigh-in changes your protein.</p>';
   h+='<div class="gbar"><span class="num"><b>'+got+'</b> of '+total+' in the cart</span><button type="button" class="ghost" data-act="gcopy">Copy list</button><button type="button" class="ghost" data-act="gclear">Uncheck all</button></div>';
   if(UI.gmsg)h+='<p class="banner good"><span>'+esc(UI.gmsg)+'</span></p>';
+  h+='<div class="banner"><b>Prep day</b><span>On Sunday, bake the chicken, cook a pot of quinoa and hard-boil eggs for the first half of the week. Cooked meat and fish keep 3–4 days in the fridge, so cook the rest on Wednesday. Each meal\'s steps are under "How to make it" on the Diet tab.</span></div>';
   sec.forEach(function(list,i){if(!list.length)return;
     h+='<div class="card gsec"><span class="lab">'+SECT[i]+'</span>';
     list.forEach(function(it){var on=!!chk[it.id];
@@ -765,7 +828,7 @@ function planHTML(){
   var w=UI.w,d=UI.d,p=ph(w),dt=dateOf(w,d),h='',ti=todayIdx();
   if(ti<0)h+='<div class="banner"><b>Starts '+short(parse(S.profile.start))+'</b><span>Look around now. Day 1 is in '+(-ti)+' day'+(-ti===1?"":"s")+'.</span></div>';
   if(ti>83)h+='<div class="banner good"><b>12 weeks done</b><span>Do the retest, then set a new start date in Profile to begin the next cycle.</span></div>';
-  h+='<div class="seg" role="group" aria-label="View"><button type="button" data-seg="workout" aria-pressed="'+(UI.seg==="workout")+'">Workout</button><button type="button" data-seg="diet" aria-pressed="'+(UI.seg==="diet")+'">Diet</button><button type="button" data-seg="groc" aria-pressed="'+(UI.seg==="groc")+'">Groceries</button></div>';
+  h+='<div class="seg" role="group" aria-label="View"><button type="button" data-seg="workout" aria-pressed="'+(UI.seg==="workout")+'">Workout</button><button type="button" data-seg="diet" aria-pressed="'+(UI.seg==="diet")+'">Diet</button><button type="button" data-seg="groc" aria-pressed="'+(UI.seg==="groc")+'">Grocery list</button></div>';
   h+=UI.seg==="workout"?workoutHTML(w,d,p,dt):UI.seg==="groc"?groceriesHTML(w,p):dietHTML(w,d,p,dt);
   return h;
 }
@@ -809,7 +872,7 @@ function dietHTML(w,d,p,dt){
   h+='<div class="card p'+(p+1)+'">';
   D.items.forEach(function(m){
     var isShake=/shake/i.test(m.when);
-    h+='<div class="meal'+(isShake?" shake":"")+'"><div class="mh"><span class="lab">'+esc(m.when)+'</span><span class="mt num">'+Math.round(m.p)+' g protein · '+Math.round(m.c)+' g carbs · '+Math.round(m.k)+' cal</span></div><h4>'+esc(m.name)+'</h4><ul>'+m.lines.map(function(l){return "<li>"+esc(l)+"</li>";}).join("")+'</ul></div>';
+    h+='<div class="meal'+(isShake?" shake":"")+'"><div class="mh"><span class="lab">'+esc(m.when)+'</span><span class="mt num">'+Math.round(m.p)+' g protein · '+Math.round(m.c)+' g carbs · '+Math.round(m.k)+' cal</span></div><h4>'+esc(m.name)+'</h4><ul>'+m.lines.map(function(l){return "<li>"+esc(l)+"</li>";}).join("")+'</ul>'+(m.prep?'<details class="prep"><summary>How to make it'+(m.prep[0]?' · '+m.prep[0]+' min':'')+'</summary><ol>'+m.prep[1].map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ol></details>':'')+'</div>';
   });
   var T=D.T;
   h+='<div class="tot num"><span><b>'+Math.round(T.p)+'</b>g protein</span><span><b>'+fmt(Math.round(T.k))+'</b>cal</span><span><b>'+Math.round(T.c)+'</b>g carbs</span><span><b>'+Math.round(T.fb)+'</b>g fiber</span><span><b>'+Math.round(T.f)+'</b>g fat</span><span><b>'+Math.round(T.s)+'</b>g sugar</span></div>';
