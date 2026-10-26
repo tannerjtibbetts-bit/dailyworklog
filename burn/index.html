@@ -65,6 +65,8 @@ main{max-width:720px;margin:0 auto;padding-block:6px calc(100px + env(safe-area-
 
 /* large titles */
 .lt{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:10px}
+.back{display:flex;align-items:center;gap:1px;height:30px;margin-left:-7px;color:var(--accent);font-size:17px;font-weight:400}
+.back svg{width:24px;height:24px;stroke-width:2.4}
 .lt h1{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .lt .sub{font-size:15px;color:var(--muted);margin-top:2px}
 .pill{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);font-weight:600;font-size:15px}
@@ -98,6 +100,9 @@ main{max-width:720px;margin:0 auto;padding-block:6px calc(100px + env(safe-area-
 .sbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding-block:6px 8px;display:grid;gap:10px;border-bottom:1px solid var(--line)}
 @supports (backdrop-filter:blur(10px)) or (-webkit-backdrop-filter:blur(10px)){.sbar{background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}}
 .sbar .lt{padding-top:4px}
+.sbar{margin-left:calc(-1*max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1*max(16px,env(safe-area-inset-right,0px)))}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .weeks{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
 .weeks::-webkit-scrollbar{display:none}
 .wk{flex:0 0 auto;height:34px;padding:0 13px;border-radius:17px;background:var(--fill);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -646,10 +651,26 @@ function calories(wk,A){
   var c=tdee-paceFor(wt)*500+A.cal, lo=p.sleeve?1200:(p.sex==="female"?1200:1500), hi=p.sleeve?1800:tdee-300;
   return Math.round(Math.max(lo,Math.min(hi,c))/10)*10;
 }
+function pMode(){var p=S.profile;return p.proteinMode||(+p.proteinOverride>0?"custom":"rule");}
+function ruleProtein(wk){return Math.max(60,Math.round(expectedWeight(wk))-20);}
 function protein(wk){
-  var o=+S.profile.proteinOverride;
-  if(o>0)return Math.round(o);
-  return Math.max(60,Math.round(expectedWeight(wk))-20);
+  var m=pMode();
+  if(m==="g15")return Math.round(ibwKg()*1.5);
+  if(m==="g21")return Math.round(ibwKg()*2.1);
+  if(m==="custom"&&+S.profile.proteinOverride>0)return Math.round(+S.profile.proteinOverride);
+  return ruleProtein(wk);
+}
+function pLabel(wk){var m=pMode();return m==="rule"?round1(expectedWeight(wk))+" lb − 20":m==="custom"?"Your number":"Guideline";}
+function proteinChooser(wk){
+  var m=pMode(),ib=ibwKg(),o=[["rule","My rule",ruleProtein(wk)+" g","1 g per lb of planned weight − 20 g. Updates with every weigh-in."],
+    ["g15","Bariatric guideline",Math.round(ib*1.5)+" g","1.5 g per kg of ideal body weight (ASMBS/AACE/TOS)."],
+    ["g21","Guideline upper limit",Math.round(ib*2.1)+" g","2.1 g per kg of ideal weight, for special cases."],
+    ["custom","My own number",(+S.profile.proteinOverride>0?Math.round(+S.profile.proteinOverride)+" g":"Set it"),"For a number your surgeon or dietitian gave you."]];
+  var h='<p class="sh">Daily protein target</p><div class="list">';
+  o.forEach(function(x){var on=x[0]===m;h+='<button type="button" class="lrow" data-pmode="'+x[0]+'" role="radio" aria-checked="'+on+'" style="width:100%;text-align:left"><span class="ck'+(on?" on":"")+'">'+IC.check+'</span><span class="t">'+x[1]+'<small>'+x[3]+'</small></span><span class="v num">'+x[2]+'</span></button>';});
+  h+='</div>';
+  if(m==="custom")h+='<div class="card"><div class="weighin"><label class="bign" for="pCustom"><input id="pCustom" type="number" inputmode="numeric" min="40" max="400" value="'+(+S.profile.proteinOverride>0?Math.round(+S.profile.proteinOverride):ruleProtein(wk))+'" aria-label="Daily protein in grams"><span>g</span></label><button type="button" class="btn sm" data-act="pcustom" style="height:44px">Save</button></div></div>';
+  return h+'<p class="fnote">Switch any time. "My rule" goes back to your weekly number from your weight.</p>';
 }
 function weeksToGoal(){var x=currentWeight(),g=+S.profile.goalWeight,n=0;while(x>g&&n<400){x-=paceFor(x);n++;}return n;}
 
@@ -1036,7 +1057,7 @@ function rerender(){var y=window.scrollY;render();window.scrollTo(0,y);}
 /* ---------- Today ---------- */
 function todayHTML(){
   var pr=S.profile,ti=todayIdx(),now=new Date(),wd=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][now.getDay()];
-  var st=streak(),h='<div class="lt"><div><h1>Today</h1><p class="sub">'+wd+', '+short(now)+'</p></div><span class="pill num"><span class="flame">'+IC.flame+'</span>'+st+'</span></div>';
+  var st=streak(),h='<div class="lt"><div>'+backHTML()+'<h1>Today</h1><p class="sub">'+wd+', '+short(now)+'</p></div><span class="pill num"><span class="flame">'+IC.flame+'</span>'+st+'</span></div>';
   if(ti<0){
     h+=note("acc","Your plan starts "+short(parse(pr.start)),"Day 1 is in "+(-ti)+" day"+(-ti===1?"":"s")+". Look around, set up your equipment in Profile, and shop with Week 1's grocery list.",'<div class="row2"><button type="button" class="btn sm sec" data-act="go-groc">Week 1 groceries</button></div>');
     var W0=workout(0,0);
@@ -1069,7 +1090,7 @@ function todayHTML(){
 /* ---------- Plan ---------- */
 function planHTML(){
   var w=UI.w,d=UI.d,p=ph(w),dt=dateOf(w,d),ti=todayIdx(),tw=Math.floor(ti/7),td=ti%7;
-  var h='<div class="sbar g"><div class="lt"><div><h1>Plan</h1><p class="sub">Week '+(w+1)+' · '+PHASE[p]+'</p></div><button type="button" class="pill" data-act="today">Today</button></div><div class="weeks" role="group" aria-label="Weeks">';
+  var h='<div class="sbar g"><div class="lt"><div>'+backHTML()+'<h1>Plan</h1><p class="sub">Week '+(w+1)+' · '+PHASE[p]+'</p></div><button type="button" class="pill" data-act="today">Today</button></div><div class="weeks" role="group" aria-label="Weeks">';
   for(var i=0;i<12;i++)h+='<button type="button" class="wk p'+(ph(i)+1)+(i===tw?" now":"")+'" aria-pressed="'+(i===w)+'" data-wk="'+i+'"><i></i>Week '+(i+1)+'</button>';
   h+='</div><div class="daystrip" role="group" aria-label="Days">';
   for(var j=0;j<7;j++){var x=dateOf(w,j);h+='<button type="button" class="dc'+(w===tw&&j===td?" now":"")+(S.done[w+"-"+j]?" fin":"")+'" aria-pressed="'+(j===d)+'" data-day="'+j+'" aria-label="'+DAYS[j]+' '+short(x)+'"><small>'+DAYS[j].charAt(0)+'</small><b class="num">'+x.getDate()+'</b><i></i></button>';}
@@ -1106,15 +1127,14 @@ function dietHTML(w,d,p,dt){
   var D=diet(w,d),pr=S.profile,st=STYLES[D.style],pre=!!pr.prediabetes,L=LG(w,d),pl=proteinLogged(w,d,D),h='';
   h+='<div class="chips" role="group" aria-label="Eating style">'+Object.keys(STYLES).map(function(k){return '<button type="button" class="chip" data-style="'+k+'" aria-pressed="'+(k===D.style)+'">'+STYLES[k].n+'</button>';}).join("")+'</div>';
   h+='<div class="tiles num">'+
-    '<div class="tile"><span>Protein</span><b style="color:var(--r2)">'+D.target+' g</b><small>'+(+pr.proteinOverride>0?"Locked":round1(expectedWeight(w+1))+" lb − 20")+'</small></div>'+
+    '<div class="tile"><span>Protein</span><b style="color:var(--r2)">'+D.target+' g</b><small>'+pLabel(w+1)+'</small></div>'+
     '<div class="tile"><span>Calories</span><b>'+fmt(D.cal)+'</b><small>Daily target</small></div>'+
     (pre?'<div class="tile"><span>Carbs</span><b>≤'+D.carbCap+' g</b><small>≤30 g a meal</small></div>':'<div class="tile"><span>Fluids</span><b>64 oz</b><small>Between meals</small></div>')+'</div>';
   h+='<div class="card" style="--c:var(--r2)"><div class="prog"><div class="top"><span class="muted small">Protein logged · '+DAYS[d]+'</span><span class="num"><b>'+pl+'</b> <span class="muted">/ '+D.target+' g</span></span></div><div class="bar"><i style="width:'+Math.min(100,Math.round(pl/D.target*100))+'%"></i></div></div></div>';
   h+=adjBanner();
-  if(+pr.proteinOverride>0)h+=note("info","Protein is locked at "+Math.round(+pr.proteinOverride)+" g","It won't change when you weigh in. Switch back to have it follow your weight every week.",'<div class="row2"><button type="button" class="btn sm sec" data-act="unlock">Follow my weight again</button></div>');
-  if(!(+pr.proteinOverride>0)&&pr.sleeve){var ib=ibwKg(),m15=Math.round(ib*1.5),m21=Math.round(ib*2.1);
-    if(D.target>m21)h+=note("warn","Check this protein number with your surgeon","Bariatric guidelines (ASMBS/AACE/TOS) set at least 60 g a day, up to about "+m15+" g for your height (about "+m21+" g in special cases). Your rule gives "+D.target+" g, so "+D.scoops+" scoops of protein powder fill the gap. It updates every week from your weigh-ins; the buttons lock it instead.",
-      '<div class="row2"><button type="button" class="btn sm sec" data-act="asmbs" data-g="'+m15+'">Lock at '+m15+' g</button><button type="button" class="btn sm gray" data-act="asmbs" data-g="'+m21+'">Lock at '+m21+' g</button></div>');}
+  if(pMode()==="rule"&&pr.sleeve){var ib=ibwKg(),m21=Math.round(ib*2.1);
+    if(D.target>m21)h+=note("warn","Check this protein number with your surgeon","Bariatric guidelines set at least 60 g a day, up to about "+Math.round(ib*1.5)+" g for your height ("+m21+" g in special cases). Your rule gives "+D.target+" g, so "+D.scoops+" scoops of protein powder fill the gap. You can switch targets below at any time.");}
+  h+=proteinChooser(w+1);
   D.items.forEach(function(m,i){
     var on=!!(L.m&&L.m[i]),sh=/shake/i.test(m.when);
     h+='<div class="meal p'+(p+1)+(sh?" shake":"")+(on?" eaten":"")+'"><div class="mtop"><div><span class="when">'+esc(m.when)+'</span><h3>'+esc(m.name)+'</h3></div><button type="button" class="logbtn'+(on?" on":"")+'" data-meal="'+i+'" data-mw="'+w+'" data-md="'+d+'" aria-pressed="'+on+'">'+(on?IC.check+"Logged":IC.plus+"Log")+'</button></div>'+macroChips(m)+
@@ -1165,7 +1185,7 @@ function groceriesHTML(w,p){
 
 /* ---------- Progress ---------- */
 function weighHTML(){
-  var A=assess(),cw=currentWeight(),pr=S.profile,list=sortedW(),h='<div class="lt"><div><h1>Progress</h1><p class="sub">'+round1(+pr.startWeight-cw)+' lb down since '+short(parse(pr.start))+'</p></div></div>';
+  var A=assess(),cw=currentWeight(),pr=S.profile,list=sortedW(),h='<div class="lt"><div>'+backHTML()+'<h1>Progress</h1><p class="sub">'+round1(+pr.startWeight-cw)+' lb down since '+short(parse(pr.start))+'</p></div></div>';
   h+='<div class="card"><span class="cap">Weekly weigh-in</span><div class="weighin"><label class="bign" for="wiW"><input id="wiW" type="number" inputmode="decimal" step="0.1" min="80" max="700" value="'+cw+'" aria-label="Weight in pounds"><span>lb</span></label><button type="button" class="btn sm" data-act="weigh" style="height:44px">Save</button></div>'+
     '<div class="grp" style="box-shadow:none;background:var(--card2)"><div class="fr"><label for="wiD">Date</label><input id="wiD" type="date" value="'+iso(new Date())+'"></div></div>'+
     '<p class="small muted">Sunday morning, same scale, after the bathroom.</p></div>';
@@ -1185,11 +1205,11 @@ function weighHTML(){
   return h+'</div>';
 }
 function proteinTable(){
-  var pr=S.profile,locked=+pr.proteinOverride>0,anch={},cw=Math.max(0,Math.min(11,Math.floor(todayIdx()/7)));
+  var pr=S.profile,locked=pMode()!=="rule",anch={},cw=Math.max(0,Math.min(11,Math.floor(todayIdx()/7)));
   sortedW().forEach(function(x){anch[anchorWeek(x.date)]=1;});
   var h='<p class="sh">Protein by week</p><div class="list"><table class="ptab num"><thead><tr><th>Week</th><th>Planned weight</th><th>Protein</th></tr></thead><tbody>';
   for(var wk=1;wk<=12;wk++){h+='<tr'+(wk-1===cw?' class="cur"':'')+'><td>'+wk+(anch[wk]?'<span class="tag">weigh-in</span>':'')+'</td><td>'+round1(expectedWeight(wk))+' lb</td><td>'+protein(wk)+' g</td></tr>';}
-  return h+'</tbody></table></div><p class="small muted" style="padding:0 16px">'+(locked?"Locked at "+Math.round(+pr.proteinOverride)+" g.":"1 g per lb of each week's planned weight, minus 20 g. Weeks after a weigh-in restart from your real weight.")+'</p>';
+  return h+'</tbody></table></div><p class="small muted" style="padding:0 16px">'+(locked?"Fixed at "+protein(1)+" g. Choose \"My rule\" on the Meals tab or in Profile to follow your weight again.":"1 g per lb of each week's planned weight, minus 20 g. Weeks after a weigh-in restart from your real weight.")+'</p>';
 }
 
 /* ---------- Profile ---------- */
@@ -1199,11 +1219,12 @@ function profileHTML(){
     return '<div class="welcome"><span class="logo">'+IC.flame+'</span><h1>Your 12-week plan</h1><p>Calisthenics, walking and a sleeve-friendly meal plan that re-tunes itself every time you weigh in. Takes about a minute to set up.</p></div>'+aboutForm(null);
   }
   var ti=todayIdx(),cw=currentWeight();
-  var h='<div class="lt"><div><h1>Profile</h1></div></div>';
+  var h='<div class="lt"><div>'+backHTML()+'<h1>Profile</h1></div></div>';
   h+='<div class="card"><div class="prof"><span class="avatar">'+esc((p.name||"You").trim().charAt(0).toUpperCase()||"Y")+'</span><div><b>'+esc(p.name||"You")+'</b><p class="small muted num">'+cw+' lb → '+p.goalWeight+' lb · '+(ti<0?"starts "+short(parse(p.start)):"Week "+Math.min(12,Math.floor(ti/7)+1)+" of 12")+'</p></div></div></div>';
   h+='<div class="segc" role="group" aria-label="Profile section"><button type="button" data-ptab="me" aria-pressed="'+(UI.ptab!=="equip")+'">About me</button><button type="button" data-ptab="equip" aria-pressed="'+(UI.ptab==="equip")+'">My equipment</button></div>';
   if(UI.ptab==="equip")return h+equipHTML();
   h+=aboutForm(p);
+  h+=proteinChooser(Math.max(1,Math.min(12,Math.floor(Math.max(0,ti)/7)+1)));
   var standalone=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
   if(!standalone)h+=note("info","Add it to your home screen","iPhone (Safari): tap Share, then Add to Home Screen. Android (Chrome): tap ⋮, then Install app.");
   h+='<p class="sh">Data</p><div class="card">'+(UI.confirmReset?'<p class="small">Delete your profile, weigh-ins, logs and check-marks?</p><div class="row2"><button type="button" class="btn sm danger" data-act="reset-yes">Delete everything</button><button type="button" class="btn sm gray" data-act="reset-no">Keep</button></div>':'<button type="button" class="btn danger" data-act="reset">Reset everything</button>')+'</div>';
@@ -1231,8 +1252,7 @@ function aboutForm(p){
      swRow("fSleeve","Gastric sleeve",d.sleeve)+swRow("fPre","Prediabetic",d.prediabetes)+
      '<div class="fr"><label for="fCups">Meal size I can handle</label><select id="fCups">'+opt("0.5","½ cup",d.mealCups)+opt("0.75","¾ cup",d.mealCups)+opt("1","1 cup",d.mealCups)+'</select></div>'+
      '<div class="fr"><label for="fStyle">Eating style</label><select id="fStyle">'+Object.keys(STYLES).map(function(k){return opt(k,STYLES[k].n,d.dietStyle||"med");}).join("")+'</select></div>'+
-     '<div class="fr"><label for="fProt">Surgeon\'s protein (g)</label><input id="fProt" type="number" inputmode="numeric" min="40" max="400" placeholder="Optional" value="'+esc(d.proteinOverride||"")+'"></div></div>'+
-   '<p class="fnote">Leave the surgeon\'s number blank to use 1 g per lb of planned weight minus 20 g, updated every week.</p>'+
+     '</div>'+(p?'':'<p class="fnote">Protein starts at 1 g per lb of planned weight minus 20 g, updated every week. You can change the target later.</p>')+
    '<button type="submit" class="btn">'+(p?"Save changes":"Build my plan")+'</button>'+
    (UI.msg&&p?note("good","Saved",esc(UI.msg)):'')+'</form>';
 }
@@ -1249,14 +1269,29 @@ function equipHTML(){
   return h;
 }
 
+/* ---------- screen history (Back button) ---------- */
+UI.hist=[];var pushed=0;
+function snap(){return {tab:UI.tab,seg:UI.seg,ptab:UI.ptab,w:UI.w,d:UI.d};}
+function screenName(x){if(!x)return "";if(x.tab==="today")return "Today";if(x.tab==="weigh")return "Progress";if(x.tab==="profile")return x.ptab==="equip"?"Equipment":"Profile";
+  return x.seg==="diet"?"Meals":x.seg==="groc"?"Groceries":"Workout";}
+function nav(ch){var cur=snap();var same=Object.keys(ch).every(function(k){return cur[k]===ch[k];});if(same){window.scrollTo(0,0);return;}
+  UI.hist.push(cur);if(UI.hist.length>40)UI.hist.shift();
+  Object.assign(UI,ch);if(ch.seg)saveUI();UI.msg="";UI.confirmReset=false;
+  try{history.pushState({bp:1},"");pushed++;}catch(e){}
+  render();window.scrollTo(0,0);}
+function goBack(){var x=UI.hist.pop();if(!x)return;Object.assign(UI,x);UI.msg="";UI.confirmReset=false;render();window.scrollTo(0,0);}
+function backTap(){if(pushed>0){try{history.back();return;}catch(e){}}goBack();}
+window.addEventListener("popstate",function(){if(pushed>0)pushed--;goBack();});
+function backHTML(){var x=UI.hist[UI.hist.length-1];if(!x)return "";return '<button type="button" class="back" data-act="back" aria-label="Back to '+screenName(x)+'">'+sv('<path d="M15 5l-7 7 7 7"/>')+screenName(x)+'</button>';}
+
 /* ---------- events ---------- */
-function goToday(seg){var t=todayWD()||{w:0,d:0};UI.w=t.w;UI.d=t.d;UI.tab="plan";if(seg){UI.seg=seg;saveUI();}render();window.scrollTo(0,0);}
+function goToday(seg){var t=todayWD()||{w:0,d:0};nav({tab:"plan",seg:seg||UI.seg,w:t.w,d:t.d});}
 document.addEventListener("click",function(e){
   var t=e.target.closest("button");if(!t||t.disabled)return;
-  if(t.dataset.tab){if(!S.profile)return;UI.tab=t.dataset.tab;UI.msg="";UI.confirmReset=false;render();window.scrollTo(0,0);return;}
+  if(t.dataset.tab){if(!S.profile)return;nav({tab:t.dataset.tab});return;}
   if(t.dataset.wk!=null){UI.w=+t.dataset.wk;UI.gmsg="";rerender();return;}
   if(t.dataset.day!=null){UI.d=+t.dataset.day;rerender();return;}
-  if(t.dataset.seg){UI.seg=t.dataset.seg;saveUI();rerender();return;}
+  if(t.dataset.seg){nav({seg:t.dataset.seg});return;}
   if(t.dataset.sel!=null){UI.sel.i=+t.dataset.sel;[].forEach.call(document.querySelectorAll(".lrow"),function(r){r.classList.toggle("sel",r.contains(t));});showSelected();var vw=$("viewer");if(vw&&vw.getBoundingClientRect().top<120)vw.scrollIntoView({behavior:"smooth",block:"start"});return;}
   if(t.dataset.mv!=null){var L=LG(UI.w,UI.d,true),i=+t.dataset.mv,k=UI.w+"-"+UI.d,all=flat(workout(UI.w,UI.d));
     if(S.done[k]){all.forEach(function(_,j){L.mv[j]=1;});delete S.done[k];}
@@ -1265,36 +1300,37 @@ document.addEventListener("click",function(e){
     save();rerender();return;}
   if(t.dataset.meal!=null){var w=+t.dataset.mw,d=+t.dataset.md,LM=LG(w,d,true),mi=+t.dataset.meal;if(LM.m[mi])delete LM.m[mi];else LM.m[mi]=1;save();rerender();return;}
   if(t.dataset.g&&t.classList.contains("gi")){S.groc=S.groc||{};var gk="g"+UI.w;S.groc[gk]=S.groc[gk]||{};if(S.groc[gk][t.dataset.g])delete S.groc[gk][t.dataset.g];else S.groc[gk][t.dataset.g]=1;save();UI.gmsg="";rerender();return;}
-  if(t.dataset.ptab){UI.ptab=t.dataset.ptab;UI.msg="";render();return;}
+  if(t.dataset.ptab){nav({ptab:t.dataset.ptab});return;}
   if(t.dataset.eq){S.profile.equip=S.profile.equip||{};var ek=t.dataset.eq;if(S.profile.equip[ek])delete S.profile.equip[ek];else S.profile.equip[ek]=1;UI.sel=null;save();rerender();return;}
   if(t.dataset.swf){var cb=$(t.dataset.swf);cb.checked=!cb.checked;t.setAttribute("aria-checked",cb.checked);return;}
+  if(t.dataset.pmode){var pm=t.dataset.pmode;S.profile.proteinMode=pm;save();rerender();if(pm==="custom"){var pc=$("pCustom");if(pc)pc.focus();}return;}
   if(t.dataset.style){S.profile.dietStyle=t.dataset.style;save();rerender();return;}
   if(t.dataset.pf){UI.pf=t.dataset.pf;UI.pfOpen=true;rerender();return;}
   if(t.dataset.del){S.weighins=S.weighins.filter(function(x){return x.date!==t.dataset.del;});save();UI.msg="";rerender();return;}
   var a=t.dataset.act;if(!a)return;
   if(a==="go-workout")return goToday("workout");
   if(a==="go-meals")return goToday("diet");
-  if(a==="go-groc"){UI.w=0;UI.d=0;UI.tab="plan";UI.seg="groc";saveUI();render();window.scrollTo(0,0);return;}
-  if(a==="preview"){UI.w=0;UI.d=0;UI.tab="plan";UI.seg="workout";render();window.scrollTo(0,0);return;}
-  if(a==="go-weigh"){UI.tab="weigh";UI.msg="";render();window.scrollTo(0,0);return;}
+  if(a==="go-groc"){nav({tab:"plan",seg:"groc",w:0,d:0});return;}
+  if(a==="preview"){nav({tab:"plan",seg:"workout",w:0,d:0});return;}
+  if(a==="go-weigh"){nav({tab:"weigh"});return;}
   if(a==="water+"||a==="water-"){var td=todayWD();if(!td)return;var LW=LG(td.w,td.d,true);LW.wtr=Math.max(0,(LW.wtr||0)+(a==="water+"?8:-8));save();rerender();return;}
   if(a==="gclear"){if(S.groc)delete S.groc["g"+UI.w];save();UI.gmsg="";rerender();return;}
   if(a==="gcopy"){var ta=$("gtext"),txt=ta.value,ok=function(){UI.gmsg="Copied. Paste it into Notes or a text message.";rerender();};
     var fb=function(){ta.hidden=false;ta.focus();ta.select();};
     try{navigator.clipboard.writeText(txt).then(ok,fb);}catch(_){fb();}return;}
-  if(a==="unlock"){S.profile.proteinOverride="";save();rerender();return;}
-  if(a==="asmbs"){S.profile.proteinOverride=+t.dataset.g;save();rerender();return;}
+  if(a==="pcustom"){var pv=parseInt($("pCustom").value,10);if(!(pv>=40&&pv<=400)){$("pCustom").focus();return;}S.profile.proteinOverride=pv;S.profile.proteinMode="custom";save();rerender();return;}
+  if(a==="back"){backTap();return;}
   if(a==="today"){var tt=todayWD()||{w:0,d:0};UI.w=tt.w;UI.d=tt.d;rerender();return;}
   if(a==="done"){var dk=UI.w+"-"+UI.d,DL=LG(UI.w,UI.d,true);if(S.done[dk]){delete S.done[dk];DL.mv={};}else{S.done[dk]=1;flat(workout(UI.w,UI.d)).forEach(function(_,j){DL.mv[j]=1;});}save();rerender();return;}
   if(a==="weigh"){var v=parseFloat($("wiW").value),dt=$("wiD").value||iso(new Date());
     if(!(v>=80&&v<=700)){UI.msg="";$("wiW").focus();return;}
     var aw=Math.min(12,anchorWeek(dt)),before=protein(aw);
     S.weighins=S.weighins.filter(function(x){return x.date!==dt;});S.weighins.push({date:dt,weight:round1(v)});save();
-    var after=protein(aw),locked=+S.profile.proteinOverride>0;
-    UI.msg=round1(v)+" lb on "+short(parse(dt))+". "+(locked?"Protein stays locked at "+after+" g.":"Week "+aw+" protein: "+after+" g"+(after!==before?" (was "+before+" g)":"")+".")+" Calories, steps and walks are updated too.";rerender();return;}
+    var after=protein(aw),locked=pMode()!=="rule";
+    UI.msg=round1(v)+" lb on "+short(parse(dt))+". "+(locked?"Protein stays at your fixed "+after+" g.":"Week "+aw+" protein: "+after+" g"+(after!==before?" (was "+before+" g)":"")+".")+" Calories, steps and walks are updated too.";rerender();return;}
   if(a==="reset"){UI.confirmReset=true;rerender();return;}
   if(a==="reset-no"){UI.confirmReset=false;rerender();return;}
-  if(a==="reset-yes"){S={profile:null,weighins:[],done:{},groc:{},log:{},savedAt:0};save();UI={tab:"profile",w:null,d:null,seg:"workout",sel:null,confirmReset:false,msg:""};render();return;}
+  if(a==="reset-yes"){S={profile:null,weighins:[],done:{},groc:{},log:{},savedAt:0};save();UI={tab:"profile",w:null,d:null,seg:"workout",sel:null,confirmReset:false,msg:"",hist:[]};render();return;}
 });
 document.addEventListener("submit",function(e){
   if(e.target.id!=="pform")return;e.preventDefault();
@@ -1305,7 +1341,7 @@ document.addEventListener("submit",function(e){
   if(bad){var el=$(bad);el.setCustomValidity("Check this value");el.reportValidity&&el.reportValidity();el.focus();setTimeout(function(){el.setCustomValidity("");},2000);return;}
   var startD=g("fStart")?mondayOf(parse(g("fStart"))):mondayOf(new Date());
   var isNew=!S.profile,old=S.profile||{};
-  S.profile={name:g("fName"),age:age,sex:g("fSex"),heightIn:ft*12+(inch||0),startWeight:round1(sw),goalWeight:round1(gw),start:iso(startD),pace:g("fPace"),sleeve:$("fSleeve").checked,prediabetes:$("fPre").checked,dietStyle:g("fStyle"),mealCups:parseFloat(g("fCups")),proteinOverride:parseInt(g("fProt"),10)||"",equip:old.equip||{}};
+  S.profile={name:g("fName"),age:age,sex:g("fSex"),heightIn:ft*12+(inch||0),startWeight:round1(sw),goalWeight:round1(gw),start:iso(startD),pace:g("fPace"),sleeve:$("fSleeve").checked,prediabetes:$("fPre").checked,dietStyle:g("fStyle"),mealCups:parseFloat(g("fCups")),proteinOverride:old.proteinOverride||"",proteinMode:old.proteinMode||(+old.proteinOverride>0?"custom":"rule"),equip:old.equip||{}};
   save();
   if(isNew){UI.tab="today";UI.w=null;UI.msg="";}else UI.msg="Your plan is updated.";
   render();window.scrollTo(0,0);
