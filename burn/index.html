@@ -173,6 +173,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ck svg{width:16px;height:16px;opacity:0}
 .ck.on{background:var(--good);box-shadow:none}
 .ck.on svg{opacity:1}
+.ck.skip{background:var(--warn);box-shadow:none}
+.ck.skip svg{opacity:1}
 .ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--fill);color:var(--muted)}
 .ico svg{width:18px;height:18px}
 .ic3d{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--accent);background:var(--accentSoft);border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:2px}
@@ -180,6 +182,13 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .sel{display:grid;gap:3px;min-width:0}
 .sel span{font-size:12px;font-weight:600;color:var(--muted)}
 .sel select{height:42px;border:0;border-radius:10px;background:var(--fill);padding:0 10px;font-size:15px;font-weight:500;min-width:0;width:100%}
+.exform.wi{grid-template-columns:1fr 1fr}
+.wires{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;background:var(--card2);border-radius:14px;padding:12px}
+.wires div{display:grid;gap:2px}
+.wires span{font-size:12.5px;font-weight:600;color:var(--muted)}
+.wires b{font-family:var(--round);font-size:22px;font-weight:700}
+.wires .arrow{font-size:22px;color:var(--faint)}
+#whatif{scroll-margin-top:calc(16px + env(safe-area-inset-top,0px))}
 .exlist{display:grid}
 .exrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .exrow .t{font-weight:500;line-height:1.25}
@@ -826,16 +835,17 @@ var EXMET={elliptical:[4,5,6.5],treadmill:[3,3.8,5],bike:[3.5,5.5,8],rower:[4,6,
 var EXNAME={walk:"Walking"};EQUIP.forEach(function(e){EXNAME[e[0]]=e[1];});
 var EFFORT=["Easy","Moderate","Hard"];
 function exOptions(){var o=EQUIP.filter(function(e){return has(e[0]);}).map(function(e){return e[0];});return o.length?o:["walk"];}
-function exKcal(eq,min,eff){var m=(EXMET[eq]||EXMET.walk)[eff]||5,kg=currentWeight()/2.2046;return Math.round(m*3.5*kg/200*min);}
+function exKcal(eq,min,eff){var m=(EXMET[eq]||EXMET.walk)[eff]||5,kg=currentWeight()/2.2046;return Math.round((m-1)*3.5*kg/200*min);}
 function exList(w,d){var L=LG(w,d);return L.ex||[];}
 function exTotals(dates){var t={min:0,kcal:0};Object.keys(S.log||{}).forEach(function(k){if(dates(k))(S.log[k].ex||[]).forEach(function(x){t.min+=x.min;t.kcal+=x.kcal;});});return t;}
-function extraLbPerWeek(){var now=new Date(),t=exTotals(function(k){var dd=diffDays(parse(k),now);return dd>=0&&dd<14;});return t.kcal/3500/2;}
+function last14(k){var dd=diffDays(parse(k),new Date());return dd>=0&&dd<14;}
+function extraLbPerWeek(){return (exTotals(last14).kcal-missTotals(last14).kcal)/3500/2;}
 function exHTML(w,d){
   var list=exList(w,d),opts=exOptions(),dayIdx=w*7+d,ti=todayIdx(),future=dayIdx>ti,tot={min:0,kcal:0};
   list.forEach(function(x){tot.min+=x.min;tot.kcal+=x.kcal;});
   var wk=exTotals(function(k){var i=diffDays(parse(S.profile.start),parse(k));return i>=w*7&&i<w*7+7;});
   var h='<p class="sh">Extra activity</p><div class="card">';
-  if(list.length){h+='<div class="exlist">';list.forEach(function(x,i){h+='<div class="exrow"><span class="ico" style="background:var(--accentSoft);color:var(--accent)">'+IC.bolt+'</span><span class="t">'+x.min+' min '+esc((EXNAME[x.eq]||x.eq).toLowerCase())+'<small>'+EFFORT[x.eff]+' effort</small></span><span class="v num">≈'+x.kcal+' cal</span><button type="button" class="del" data-exdel="'+i+'" data-w="'+w+'" data-d="'+d+'" aria-label="Remove this activity">'+IC.x+'</button></div>';});h+='</div>';}
+  if(list.length){h+='<div class="exlist">';list.forEach(function(x,i){h+='<div class="exrow"><span class="ico" style="background:var(--accentSoft);color:var(--accent)">'+IC.bolt+'</span><span class="t">'+x.min+' min '+esc((EXNAME[x.eq]||x.eq).toLowerCase())+'<small>'+EFFORT[x.eff]+' · goal ≈'+soonTxt(kcalSoonDays(x.kcal))+' sooner</small></span><span class="v num">≈'+x.kcal+' cal</span><button type="button" class="del" data-exdel="'+i+'" data-w="'+w+'" data-d="'+d+'" aria-label="Remove this activity">'+IC.x+'</button></div>';});h+='</div>';}
   if(future)h+='<p class="small muted">You can log extra activity on the day itself.</p>';
   else{
     h+='<div class="exform"><label class="sel"><span>Equipment</span><select id="exEq">'+opts.map(function(k){return '<option value="'+k+'"'+(UI.exEq===k?" selected":"")+'>'+esc(EXNAME[k])+'</option>';}).join("")+'</select></label>'+
@@ -844,11 +854,59 @@ function exHTML(w,d){
       '<button type="button" class="btn sec" data-act="exadd" data-w="'+w+'" data-d="'+d+'">'+IC.plus+'Add to '+(dayIdx===ti?"today":DAYS[d])+'</button>';
     if(opts[0]==="walk")h+='<p class="small muted">Only walking shows until you tick equipment you own in Profile → My equipment. Anything you add there appears here.</p>';
   }
-  if(tot.min)h+='<p class="small"><b>'+(dayIdx===ti?"Today":DAYS[d])+':</b> '+tot.min+' extra min · ≈'+fmt(tot.kcal)+' cal · ≈'+(tot.kcal/3500).toFixed(2)+' lb of fat</p>';
+  if(tot.min)h+='<p class="small"><b>'+(dayIdx===ti?"Today":DAYS[d])+':</b> '+tot.min+' extra min · ≈'+fmt(tot.kcal)+' cal · ≈'+(tot.kcal/3500).toFixed(2)+' lb of fat · goal ≈'+soonTxt(kcalSoonDays(tot.kcal))+' sooner</p>';
   if(wk.min)h+='<p class="small muted">Week '+(w+1)+' so far: '+wk.min+' extra min · ≈'+fmt(wk.kcal)+' cal · ≈'+(wk.kcal/3500).toFixed(1)+' lb. Your calorie target stays the same, so the extra burn goes to fat loss. See Progress for your new goal date.</p>';
   else if(!future)h+='<p class="small muted">Logged on top of the plan, not instead of it. Calories are an estimate based on your weight and effort.</p>';
+  var all=exTotals(function(){return true;});
+  if(all.kcal)h+='<p class="small"><b>All extra activity so far:</b> ≈'+(all.kcal/3500).toFixed(1)+' lb of fat, putting you about '+soonTxt(kcalSoonDays(all.kcal))+' ahead of plan.</p>';
+  h+='<button type="button" class="link" data-act="go-whatif" style="justify-self:start;font-size:15px">See what an hour a day, or 10 minutes, does to your goal →</button>';
   return h+'</div>';
 }
+/* ---------- goal impact of extra activity ---------- */
+/* Day-by-day projection. extraWk = extra lb/week at today's weight; it shrinks as you get lighter (you burn less per minute). */
+function daysToGoal(extraWk){var cw=currentWeight(),x=cw,g=+S.profile.goalWeight,n=0;while(x>g&&n<4000){x-=(paceFor(x)+(extraWk||0)*x/cw)/7;n++;}return n;}
+function dateIn(days){var d=new Date();d.setDate(d.getDate()+days);return d;}
+function soonTxt(days){if(days<=0)return "no change";if(days<1)return Math.max(1,Math.round(days*24))+" hour"+(Math.round(days*24)>1?"s":"");if(days<14){var r=Math.round(days*10)/10;return r+" day"+(r===1?"":"s");}var wk=Math.round(days/7*10)/10;return wk+" weeks";}
+function kcalSoonDays(kcal){var pd=paceFor(currentWeight())/7;return pd>0?(kcal/3500)/pd:0;}
+function whatIfHTML(){
+  var o=exOptions(),wi=UI.wi=UI.wi||{},eq=o.indexOf(wi.eq)>=0?wi.eq:o[0],mn=wi.min||60,dw=wi.days||7,ef=wi.eff==null?1:wi.eff;
+  var base=daysToGoal(0),perWk=exKcal(eq,mn,ef)*dw,ext=perWk/3500,withIt=daysToGoal(ext),saved=base-withIt;
+  var sel=function(id,vals,cur,lab){return '<label class="sel"><span>'+lab+'</span><select id="'+id+'" data-wi="'+id+'">'+vals.map(function(v){return '<option value="'+v[0]+'"'+(String(cur)===String(v[0])?" selected":"")+'>'+v[1]+'</option>';}).join("")+'</select></label>';};
+  var h='<p class="sh" id="whatif">What if I add a daily habit?</p><div class="card">'+
+    '<div class="exform wi">'+sel("wiEq",o.map(function(k){return [k,EXNAME[k]];}),eq,"Equipment")+sel("wiEff",EFFORT.map(function(e,i){return [i,e];}),ef,"Effort")+
+      sel("wiMin",[10,15,20,30,45,60,75,90,120].map(function(m){return [m,m+" min"];}),mn,"Each time")+sel("wiDays",[1,2,3,4,5,6,7].map(function(d){return [d,d===7?"Every day":d+" days/wk"];}),dw,"How often")+'</div>'+
+    '<div class="wires num"><div><span>Plan alone</span><b>'+short(dateIn(base))+'</b></div><div class="arrow">→</div><div><span>With this habit</span><b style="color:var(--good)">'+short(dateIn(withIt))+'</b></div></div>'+
+    '<p class="small"><b>'+soonTxt(saved)+' sooner.</b> That habit burns about '+fmt(perWk)+' extra calories a week, roughly '+ext.toFixed(1)+' lb of fat a week on top of the plan.</p>'+
+    '<div class="list" style="box-shadow:none;background:var(--card2)">';
+  [10,20,30,45,60,90].forEach(function(m){var e2=exKcal(eq,m,ef)*7/3500,dd=daysToGoal(e2);
+    h+='<div class="lrow" style="min-height:44px"><span class="ico"'+(m===mn&&dw===7?' style="background:var(--accentSoft);color:var(--accent)"':'')+'>'+IC.clock+'</span><span class="t">'+m+' min every day<small>≈'+fmt(Math.round(e2*3500/7))+' cal a day</small></span><span class="v">'+short(dateIn(dd))+'<small>'+soonTxt(base-dd)+' sooner</small></span></div>';});
+  h+='</div><p class="small muted">Estimates for '+esc(EXNAME[eq].toLowerCase())+' at '+EFFORT[ef].toLowerCase()+' effort, from your current weight. Burn per minute drops as you lose weight, and this projection allows for that. Your calorie target stays the same.</p></div>';
+  return h;
+}
+/* ---------- skipped moves: calories not burned ---------- */
+/* Net METs (MET − 1): skipping a move means sitting instead, which still burns about 1 MET. */
+var ITEMMET={push:3.8,squat:3.8,row:3.8,bridge:3.8,plank:3.8,step:5,bug:3.8,march:4,walk:3.5,
+  bench:3.8,bbbench:3.8,dbrow:3.8,kbrow:3.8,goblet:3.8,kbgoblet:3.8,bbsquat:3.8,thrust:3.8,bbthrust:3.8,dbbridge:3.8,trxrow:3.8,cablerow:3.8,bandrow:3.8,cablepress:3.8,bandpress:3.8,astep:5,
+  tread:3.8,ellip:5,bike:5.5,rower:6,stair:7};
+function itemMin(x,sec,W){
+  var a=String(x.amt).replace(/,/g,""),m;
+  if(/^Circuit/.test(sec.label))return Math.max(1,(W.mins-10)/sec.items.length);
+  if(x.name==="Daily steps")return (+a||0)/100*0.5; /* about half of daily steps happen anyway */
+  if((m=a.match(/(\d+)\s*×\s*(\d+)\s*s/)))return +m[1]*+m[2]/60;
+  if((m=a.match(/^(\d+)(?:–\d+)?\s*min/)))return +m[1];
+  if((m=a.match(/^(\d+)\s*×$/)))return +m[1];
+  if((m=a.match(/^(\d+)\s*s$/)))return +m[1]/60;
+  return 0;
+}
+function itemNetKcal(x,sec,W){var met=x.key?(ITEMMET[x.key]||3.8):x.name==="Daily steps"?3:/drill/i.test(x.name)?3.5:/stretch/i.test(x.name)?2.3:0;
+  if(x.key==="walk"&&x.lvl>=2)met=5;if(met<=1)return 0;return Math.round((met-1)*3.5*(currentWeight()/2.2046)/200*itemMin(x,sec,W));}
+function missedDay(w,d){
+  var L=LG(w,d),k=w+"-"+d,out={n:0,kcal:0,names:[]};if(!S.done[k]||!L.skip)return out;
+  var W=workout(w,d),i=0;
+  W.secs.forEach(function(sec){sec.items.forEach(function(x){if(L.skip[i]){out.n++;out.kcal+=itemNetKcal(x,sec,W);out.names.push(x.name);}i++;});});
+  return out;
+}
+function missTotals(keep){var t={n:0,kcal:0};Object.keys(S.log||{}).forEach(function(k){if(!keep(k))return;var idx=diffDays(parse(S.profile.start),parse(k));if(idx<0||idx>83)return;var m=missedDay(Math.floor(idx/7),idx%7);t.n+=m.n;t.kcal+=m.kcal;});return t;}
 var GATES={3:"Gate 1 check: did you finish every strength day the last 2 weeks, 2 rounds of 10 clean reps, and a 20-min walk without stopping? Yes → Week 4. No → repeat Week 3.",
   6:"Gate 2 check: 3 rounds × 12 reps, a 30-min brisk walk, and soreness gone within 48 hrs? Yes → Week 7. No → repeat Week 6.",
   9:"Gate 3 check: 3 rounds × 15 reps, a 30-s plank, and a 60-min Saturday walk? Yes → Week 10. No → repeat Week 9.",
@@ -1062,7 +1120,7 @@ var EQICON={treadmill:"bolt",elliptical:"bolt",bike:"bolt",stair:"bolt",rower:"b
 function dkey(w,d){return iso(dateOf(w,d));}
 function LG(w,d,make){S.log=S.log||{};var k=dkey(w,d);if(!S.log[k]&&make)S.log[k]={m:{},mv:{},wtr:0};return S.log[k]||{m:{},mv:{},wtr:0};}
 function flat(W){var a=[];W.secs.forEach(function(s){s.items.forEach(function(x){a.push(x);});});return a;}
-function moveStats(w,d){var all=flat(workout(w,d)),L=LG(w,d),n=0;all.forEach(function(x,i){if(L.mv&&L.mv[i])n++;});if(S.done[w+"-"+d])n=all.length;return {done:n,total:all.length};}
+function moveStats(w,d){var all=flat(workout(w,d)),L=LG(w,d),n=0,any=L.mv&&Object.keys(L.mv).length;all.forEach(function(x,i){if(L.mv&&L.mv[i])n++;});if(S.done[w+"-"+d]&&!any&&!L.skip)n=all.length;return {done:n,total:all.length};}
 function proteinLogged(w,d,D){D=D||diet(w,d);var L=LG(w,d),p=0;D.items.forEach(function(m,i){if(L.m&&L.m[i])p+=m.p;});return Math.round(p);}
 function streak(){var i=todayIdx();if(i<0)return 0;i=Math.min(i,83);var k=function(j){return Math.floor(j/7)+"-"+(j%7);};var j=S.done[k(i)]?i:i-1,n=0;while(j>=0&&S.done[k(j)]){n++;j--;}return n;}
 function todayWD(){var i=todayIdx();if(i<0)return null;i=Math.min(i,83);return {w:Math.floor(i/7),d:i%7};}
@@ -1154,18 +1212,23 @@ function workoutHTML(w,d,p,dt){
   var idx=0;
   W.secs.forEach(function(s){
     h+='<p class="sh">'+esc(s.label)+'</p>'+(s.tip?'<p class="wtip">'+esc(s.tip)+'</p>':'')+'<div class="list p'+(p+1)+'">';
-    s.items.forEach(function(x){var i=idx++,on=dn||!!(L.mv&&L.mv[i]),sel=x.key&&i===UI.sel.i;
+    var legacy=dn&&!(L.mv&&Object.keys(L.mv).length)&&!L.skip;
+    s.items.forEach(function(x){var i=idx++,on=legacy||!!(L.mv&&L.mv[i]),sk=dn&&!!(L.skip&&L.skip[i]),sel=x.key&&i===UI.sel.i;
       var sub=x.key&&x.lvl!=null?esc(LV[x.key][x.lvl])+(x.note?" · "+esc(x.note):""):esc(x.note||"");
       h+='<div class="lrow'+(sel?" sel":"")+'">'+(x.key?'<button type="button" class="selbtn" data-sel="'+i+'" aria-label="Show '+esc(x.name)+' in 3D"></button>':'')+
-        '<button type="button" class="ck'+(on?" on":"")+'" data-mv="'+i+'" aria-pressed="'+on+'" aria-label="Done: '+esc(x.name)+'">'+IC.check+'</button>'+
-        '<span class="t">'+esc(x.name)+(x.key?'<span class="ic3d">3D</span>':'')+(sub?'<small>'+sub+'</small>':'')+'</span><span class="v num">'+esc(x.amt)+'</span></div>';});
+        '<button type="button" class="ck'+(on?" on":sk?" skip":"")+'" data-mv="'+i+'" aria-pressed="'+on+'" aria-label="Done: '+esc(x.name)+'">'+(sk?IC.x:IC.check)+'</button>'+
+        '<span class="t">'+esc(x.name)+(x.key?'<span class="ic3d">3D</span>':'')+(sk?'<small style="color:var(--warn)">Skipped · ≈'+itemNetKcal(x,s,W)+' cal not burned</small>':sub?'<small>'+sub+'</small>':'')+'</span><span class="v num">'+esc(x.amt)+'</span></div>';});
     h+='</div>';
   });
   if(d===0&&w===0)h+=note("info","Before Day 1","Weigh in, measure your waist at the belly button, chest and upper arm, and take front and side photos.");
   if(d===0&&(w===3||w===6||w===9))h+=note("acc","New phase","Every exercise moves up one rung. If a new rung is too hard, use the old one this week.");
   if(d===6&&GATES[w+1])h+=note("warn","Checkpoint",esc(GATES[w+1]));
   h+=exHTML(w,d);
-  h+='<button type="button" class="btn'+(dn?" done":"")+'" data-act="done">'+(dn?IC.check+"Day complete":"Mark day complete")+'</button>';
+  var md=missedDay(w,d);
+  if(md.n)h+=note("warn","Finished with "+md.n+" skipped move"+(md.n>1?"s":""),"About "+fmt(md.kcal)+" calories weren't burned, so your goal moves about "+soonTxt(kcalSoonDays(md.kcal))+" later. Tick a move if you go back and do it.");
+  if(UI.confirmDone===k&&!dn){var left=all.length-ms.done;
+    h+=note("acc",left+" move"+(left>1?"s aren't":" isn't")+" ticked off","Did you do "+(left>1?"them":"it")+"? Skipped moves count against your goal date.",'<div class="row2"><button type="button" class="btn sm" data-act="done-all">I did them all</button><button type="button" class="btn sm danger" data-act="done-skip">I skipped '+(left>1?"them":"it")+'</button><button type="button" class="btn sm gray" data-act="done-cancel">Cancel</button></div>');}
+  else h+='<button type="button" class="btn'+(dn?" done":"")+'" data-act="done">'+(dn?IC.check+(md.n?"Day complete · "+md.n+" skipped":"Day complete"):"Mark day complete")+'</button>';
   h+='<p class="small muted" style="text-align:center">Stop for chest pain, dizziness or sharp joint pain. Get your doctor\'s OK first.</p>';
   return h;
 }
@@ -1243,10 +1306,13 @@ function weighHTML(){
   var st={on:["On track","Plan unchanged. Keep going.","good"],slow:["Slower than target","Added steps and walk time, trimmed 100 calories.","acc"],stalled:["No loss this week","Added steps and walk time, trimmed 100 calories.","acc"],
     gained:["Up this week","Water and salt swing weight. Added steps and walk time and trimmed calories. Double-check portions and snacks.","warn"],fast:["Losing very fast","Added 100 calories so you keep muscle.","good"]};
   if(A.last){var s=st[A.last.st];h+=note(s[2],s[0]+": "+(A.last.lost>=0?"−":"+")+Math.abs(round1(A.last.lost))+" lb","Pace "+round1(A.last.rate)+" lb/wk vs target "+A.last.target+" lb/wk. "+s[1]);}
-  var lost=+pr.startWeight-cw,togo=Math.max(0,cw-+pr.goalWeight),wk=weeksToGoal(),gd=new Date();gd.setDate(gd.getDate()+wk*7);
+  var lost=+pr.startWeight-cw,togo=Math.max(0,cw-+pr.goalWeight),dNow=daysToGoal(extraLbPerWeek()),dBase=daysToGoal(0),wk=Math.round(dNow/7),gd=dateIn(dNow);
   h+='<div class="tiles num"><div class="tile"><span>Lost</span><b style="color:var(--good)">'+round1(lost)+'</b><small>lb</small></div><div class="tile"><span>To go</span><b>'+round1(togo)+'</b><small>lb to '+pr.goalWeight+'</small></div><div class="tile"><span>Goal by</span><b style="font-size:19px">'+(togo>0?short(gd):"Done")+'</b><small>'+(togo>0?"~"+wk+" weeks":"Reached")+'</small></div></div>';
-  var ex14=exTotals(function(k){var dd=diffDays(parse(k),new Date());return dd>=0&&dd<14;}),wk0=weeksToGoal(true);
-  if(ex14.min)h+=note("good","Extra activity is speeding you up","Last 14 days: "+ex14.min+" extra min, ≈"+fmt(ex14.kcal)+" cal, about "+(ex14.kcal/3500).toFixed(1)+" lb of fat. At that rate your goal date moves "+(wk0>wk?(wk0-wk)+" week"+(wk0-wk===1?"":"s")+" sooner":"slightly sooner")+".");
+  var ex14=exTotals(function(k){var dd=diffDays(parse(k),new Date());return dd>=0&&dd<14;});
+  var ms14=missTotals(last14),net=ex14.kcal-ms14.kcal;
+  if((ex14.min||ms14.n)&&togo>0){var parts=[];if(ex14.min)parts.push(ex14.min+" extra min (≈"+fmt(ex14.kcal)+" cal burned)");if(ms14.n)parts.push(ms14.n+" skipped move"+(ms14.n>1?"s":"")+" (≈"+fmt(ms14.kcal)+" cal not burned)");
+    h+=note(net>=0?"good":"warn",net>=0?"You're ahead of the plan":"Skipped moves are slowing you down","Last 14 days: "+parts.join(" and ")+". Net "+(net>=0?"+":"−")+fmt(Math.abs(net))+" cal. At this rate you reach "+pr.goalWeight+" lb on "+short(dateIn(dNow))+" instead of "+short(dateIn(dBase))+": "+soonTxt(Math.abs(dBase-dNow))+(dNow<=dBase?" sooner.":" later."));}
+  if(togo>0)h+=whatIfHTML();
   h+='<p class="sh">Weight</p><div class="card">'+chartSVG()+'</div>';
   h+=proteinTable();
   h+='<p class="sh">History</p><div class="list">';
@@ -1346,9 +1412,11 @@ document.addEventListener("click",function(e){
   if(t.dataset.seg){nav({seg:t.dataset.seg});return;}
   if(t.dataset.sel!=null){UI.sel.i=+t.dataset.sel;[].forEach.call(document.querySelectorAll(".lrow"),function(r){r.classList.toggle("sel",r.contains(t));});showSelected();var vw=$("viewer");if(vw&&vw.getBoundingClientRect().top<120)vw.scrollIntoView({behavior:"smooth",block:"start"});return;}
   if(t.dataset.mv!=null){var L=LG(UI.w,UI.d,true),i=+t.dataset.mv,k=UI.w+"-"+UI.d,all=flat(workout(UI.w,UI.d));
-    if(S.done[k]){all.forEach(function(_,j){L.mv[j]=1;});delete S.done[k];}
-    if(L.mv[i])delete L.mv[i];else L.mv[i]=1;
-    if(all.every(function(_,j){return L.mv[j];}))S.done[k]=1;
+    L.mv=L.mv||{};
+    if(S.done[k]&&!Object.keys(L.mv).length&&!L.skip)all.forEach(function(_,j){L.mv[j]=1;});
+    if(L.mv[i]){delete L.mv[i];if(S.done[k]){L.skip=L.skip||{};L.skip[i]=1;}}else{L.mv[i]=1;if(L.skip)delete L.skip[i];}
+    if(all.every(function(_,j){return L.mv[j];})){S.done[k]=1;delete L.skip;}
+    UI.confirmDone=null;
     save();rerender();return;}
   if(t.dataset.meal!=null){var w=+t.dataset.mw,d=+t.dataset.md,LM=LG(w,d,true),mi=+t.dataset.meal;if(LM.m[mi])delete LM.m[mi];else LM.m[mi]=1;save();rerender();return;}
   if(t.dataset.g&&t.classList.contains("gi")){S.groc=S.groc||{};var gk="g"+UI.w;S.groc[gk]=S.groc[gk]||{};if(S.groc[gk][t.dataset.g])delete S.groc[gk][t.dataset.g];else S.groc[gk][t.dataset.g]=1;save();UI.gmsg="";rerender();return;}
@@ -1371,12 +1439,19 @@ document.addEventListener("click",function(e){
   if(a==="gcopy"){var ta=$("gtext"),txt=ta.value,ok=function(){UI.gmsg="Copied. Paste it into Notes or a text message.";rerender();};
     var fb=function(){ta.hidden=false;ta.focus();ta.select();};
     try{navigator.clipboard.writeText(txt).then(ok,fb);}catch(_){fb();}return;}
+  if(a==="go-whatif"){nav({tab:"weigh"});var wf=$("whatif");if(wf)wf.scrollIntoView({block:"start"});return;}
   if(a==="exadd"){var ew=+t.dataset.w,ed=+t.dataset.d,eq=$("exEq").value,mn=+$("exMin").value,ef=+$("exEff").value;UI.exEq=eq;UI.exMin=mn;UI.exEff=ef;
     var XL=LG(ew,ed,true);XL.ex=XL.ex||[];XL.ex.push({eq:eq,min:mn,eff:ef,kcal:exKcal(eq,mn,ef)});save();rerender();return;}
   if(a==="pcustom"){var pv=parseInt($("pCustom").value,10);if(!(pv>=40&&pv<=400)){$("pCustom").focus();return;}S.profile.proteinOverride=pv;S.profile.proteinMode="custom";save();rerender();return;}
   if(a==="back"){backTap();return;}
   if(a==="today"){var tt=todayWD()||{w:0,d:0};UI.w=tt.w;UI.d=tt.d;rerender();return;}
-  if(a==="done"){var dk=UI.w+"-"+UI.d,DL=LG(UI.w,UI.d,true);if(S.done[dk]){delete S.done[dk];DL.mv={};}else{S.done[dk]=1;flat(workout(UI.w,UI.d)).forEach(function(_,j){DL.mv[j]=1;});}save();rerender();return;}
+  if(a==="done"||a==="done-all"||a==="done-skip"||a==="done-cancel"){var dk=UI.w+"-"+UI.d,DL=LG(UI.w,UI.d,true),DA=flat(workout(UI.w,UI.d));DL.mv=DL.mv||{};
+    if(a==="done-cancel"){UI.confirmDone=null;rerender();return;}
+    if(a==="done"&&S.done[dk]){delete S.done[dk];delete DL.skip;save();rerender();return;}
+    var left=DA.filter(function(_,j){return !DL.mv[j];}).length;
+    if(a==="done"&&left){UI.confirmDone=dk;rerender();return;}
+    if(a==="done-skip"){DL.skip={};DA.forEach(function(_,j){if(!DL.mv[j])DL.skip[j]=1;});}else{DA.forEach(function(_,j){DL.mv[j]=1;});delete DL.skip;}
+    S.done[dk]=1;UI.confirmDone=null;save();rerender();return;}
   if(a==="weigh"){var v=parseFloat($("wiW").value),dt=$("wiD").value||iso(new Date());
     if(!(v>=80&&v<=700)){UI.msg="";$("wiW").focus();return;}
     var aw=Math.min(12,anchorWeek(dt)),before=protein(aw);
@@ -1387,6 +1462,7 @@ document.addEventListener("click",function(e){
   if(a==="reset-no"){UI.confirmReset=false;rerender();return;}
   if(a==="reset-yes"){S={profile:null,weighins:[],done:{},groc:{},log:{},savedAt:0};save();UI={tab:"profile",w:null,d:null,seg:"workout",sel:null,confirmReset:false,msg:"",hist:[]};render();return;}
 });
+document.addEventListener("change",function(e){var t=e.target;if(!t.dataset||!t.dataset.wi)return;UI.wi=UI.wi||{};var v=t.value,k={wiEq:"eq",wiEff:"eff",wiMin:"min",wiDays:"days"}[t.dataset.wi];UI.wi[k]=k==="eq"?v:+v;rerender();});
 document.addEventListener("submit",function(e){
   if(e.target.id!=="pform")return;e.preventDefault();
   var g=function(id){return $(id).value.trim();};
