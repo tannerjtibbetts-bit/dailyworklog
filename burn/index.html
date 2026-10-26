@@ -179,6 +179,12 @@ details.card[open] summary::after{content:"–"}
 .hrow .x{border:0;background:none;color:var(--muted);font-size:20px;padding:0 4px}
 .down{color:var(--good)}.upc{color:var(--warn)}
 .chart{width:100%;height:auto;display:block}
+.ptab{width:100%;border-collapse:collapse;font-size:15px}
+.ptab th{text-align:left;font-family:var(--label);font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:4px 0}
+.ptab td{padding:6px 0;border-top:1px solid var(--line)}
+.ptab td b{font-family:var(--display);font-size:19px}
+.ptab tr.cur td{background:var(--tint)}
+.ptab .tag{font-family:var(--label);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--good);border:1.5px solid var(--good);padding:0 4px;margin-left:4px}
 .chart text{fill:var(--muted);font-family:var(--label);font-size:11px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -688,14 +694,15 @@ function dietHTML(w,d,p,dt){
   h+='<div class="styles" role="group" aria-label="Eating style">'+Object.keys(STYLES).map(function(k){return '<button type="button" data-style="'+k+'" aria-pressed="'+(k===D.style)+'">'+STYLES[k].n+'</button>';}).join("")+'</div>';
   h+='<div class="stylebox"><span class="lab">'+esc(st.basis)+'</span><p>'+esc(st.t)+'</p></div>';
   h+='<div class="targets num">'+
-    '<div class="tg"><span class="lab">Protein</span><span class="big">'+D.target+'g</span><small>'+(+pr.proteinOverride>0?"Your set number":"1 g/lb of this week's planned weight, −20 g")+'</small></div>'+
+    '<div class="tg"><span class="lab">Protein · Wk '+(w+1)+'</span><span class="big">'+D.target+'g</span><small>'+(+pr.proteinOverride>0?"Locked at your number":round1(expectedWeight(w+1))+" lb planned weight − 20. Updates with each weigh-in")+'</small></div>'+
     '<div class="tg"><span class="lab">Calories</span><span class="big">'+fmt(D.cal)+'</span><small>Daily target</small></div>'+
     (pre?'<div class="tg"><span class="lab">Carbs</span><span class="big">≤'+D.carbCap+'g</span><small>Low-carb line is 130 g/day; ≤30 g a meal</small></div>':'')+
     '<div class="tg"><span class="lab">Fluids</span><span class="big">64+ oz</span><small>Sipped between meals</small></div></div>';
   h+=adjBanner();
+  if(+pr.proteinOverride>0)h+='<div class="banner"><b>Protein is locked at '+Math.round(+pr.proteinOverride)+' g</b><span>It won\'t change when you weigh in. Switch back to have it follow your weight every week (1 g per lb of planned weight, minus 20 g).</span><div class="confirm"><button type="button" class="ghost" data-act="unlock">Follow my weight again</button></div></div>';
   if(!(+pr.proteinOverride>0)&&pr.sleeve){var ib=ibwKg(),m15=Math.round(ib*1.5),m21=Math.round(ib*2.1);
     if(D.target>m21)h+='<div class="banner warn"><b>Check this protein number with your surgeon</b><span>Bariatric guidelines (ASMBS/AACE/TOS) set at least 60 g a day, up to 1.5 g per kg of ideal body weight: about '+m15+' g for your height, and up to about '+m21+' g in special cases. Your rule gives '+D.target+' g. Food covers about '+Math.round(D.food)+' g at your meal size, so the rest comes from '+D.scoops+' scoops of protein powder.</span>'+
-      '<div class="confirm"><button type="button" class="ghost" data-act="asmbs" data-g="'+m15+'">Use '+m15+' g (guideline)</button><button type="button" class="ghost" data-act="asmbs" data-g="'+m21+'">Use '+m21+' g (upper)</button></div></div>';}
+      '<span>Your number updates every week from your weigh-ins. The buttons below lock it at a guideline number instead.</span><div class="confirm"><button type="button" class="ghost" data-act="asmbs" data-g="'+m15+'">Lock at '+m15+' g</button><button type="button" class="ghost" data-act="asmbs" data-g="'+m21+'">Lock at '+m21+' g</button></div></div>';}
   h+='<div class="card p'+(p+1)+'">';
   D.items.forEach(function(m){
     var isShake=/shake/i.test(m.when);
@@ -749,6 +756,7 @@ function weighHTML(){
   var lost=+pr.startWeight-cw,togo=Math.max(0,cw-+pr.goalWeight),wk=weeksToGoal(),gd=new Date();gd.setDate(gd.getDate()+wk*7);
   h+='<div class="stats num"><div class="tg"><span class="lab">Lost</span><span class="big">'+round1(lost)+'</span><small>lb since start</small></div><div class="tg"><span class="lab">To go</span><span class="big">'+round1(togo)+'</span><small>lb to '+pr.goalWeight+'</small></div><div class="tg"><span class="lab">Goal by</span><span class="big" style="font-size:24px">'+(togo>0?short(gd):"Done")+'</span><small>'+(togo>0?"~"+wk+" weeks at this pace":"Goal reached")+'</small></div></div>';
   h+='<div class="card"><span class="lab">Plan line vs your weigh-ins</span>'+chartSVG()+'</div>';
+  h+=proteinTable();
   h+='<div class="card"><span class="lab">History</span><div class="hist num">';
   if(!list.length)h+='<p style="color:var(--muted);font-size:14.5px">No weigh-ins yet. Your start weight is '+pr.startWeight+' lb.</p>';
   var prev=+pr.startWeight;
@@ -756,6 +764,14 @@ function weighHTML(){
     h+='<div class="hrow"><span>'+short(parse(x.date))+' · Wk '+anchorWeek(x.date)+'</span><span><b>'+x.weight+'</b> lb <span class="chg '+(c<=0?"down":"upc")+'">'+(c<=0?"−":"+")+Math.abs(c)+'</span></span><button type="button" class="x" data-del="'+x.date+'" aria-label="Delete weigh-in '+x.date+'">×</button></div>';});
   h+='</div></div>';
   return h;
+}
+function proteinTable(){
+  var pr=S.profile,locked=+pr.proteinOverride>0,anch={},cw=Math.max(0,Math.min(11,Math.floor(todayIdx()/7)));
+  sortedW().forEach(function(x){anch[anchorWeek(x.date)]=1;});
+  var h='<div class="card"><span class="lab">Protein by week</span><p style="font-size:14px;color:var(--muted)">'+(locked?"Locked at "+Math.round(+pr.proteinOverride)+" g. Unlock it on the Diet tab to follow your weight.":"1 g per lb of each week's planned weight, minus 20 g. Weeks after a weigh-in restart from your real weight.")+'</p><table class="ptab num"><thead><tr><th>Week</th><th>Planned weight</th><th>Protein</th></tr></thead><tbody>';
+  for(var wk=1;wk<=12;wk++){var ew=expectedWeight(wk);
+    h+='<tr'+(wk-1===cw?' class="cur"':'')+'><td>'+wk+(anch[wk]?' <span class="tag">weigh-in</span>':'')+'</td><td>'+round1(ew)+' lb</td><td><b>'+protein(wk)+' g</b></td></tr>';}
+  return h+'</tbody></table></div>';
 }
 function chartSVG(){
   var pr=S.profile,W=340,H=190,l=34,r=10,t=10,b=24,list=sortedW(),start=parse(pr.start);
@@ -819,13 +835,16 @@ document.addEventListener("click",function(e){
   if(t.dataset.pf){UI.pf=t.dataset.pf;UI.pfOpen=true;render();var pe=$("plans");if(pe)pe.scrollIntoView({block:"start"});return;}
   if(t.dataset.del){S.weighins=S.weighins.filter(function(x){return x.date!==t.dataset.del;});save();UI.msg="";render();return;}
   var a=t.dataset.act;
+  if(a==="unlock"){S.profile.proteinOverride="";save();render();return;}
   if(a==="asmbs"){S.profile.proteinOverride=+t.dataset.g;save();render();return;}
   if(a==="today"){UI.w=curWeek();UI.d=curDay();render();}
   else if(a==="done"){var k=UI.w+"-"+UI.d;if(S.done[k])delete S.done[k];else S.done[k]=1;save();render();}
   else if(a==="weigh"){var v=parseFloat($("wiW").value),dt=$("wiD").value||iso(new Date());
     if(!(v>=80&&v<=700)){UI.msg="";$("wiW").focus();return;}
+    var aw=Math.min(12,anchorWeek(dt)),before=protein(aw);
     S.weighins=S.weighins.filter(function(x){return x.date!==dt;});S.weighins.push({date:dt,weight:round1(v)});save();
-    var A=assess();UI.msg="Saved "+round1(v)+" lb. Protein, calories, steps and walks are updated for the coming weeks.";render();}
+    var after=protein(aw),locked=+S.profile.proteinOverride>0;
+    UI.msg="Saved "+round1(v)+" lb. "+(locked?"Protein is locked at "+after+" g.":"Week "+aw+" protein: "+after+" g"+(after!==before?" (was "+before+" g)":"")+".")+" Calories, steps and walks are updated too.";render();}
   else if(a==="reset"){UI.confirmReset=true;render();}
   else if(a==="reset-no"){UI.confirmReset=false;render();}
   else if(a==="reset-yes"){S={profile:null,weighins:[],done:{},savedAt:0};save();UI={tab:"profile",w:null,d:null,seg:"workout",sel:null,confirmReset:false,msg:""};render();}
