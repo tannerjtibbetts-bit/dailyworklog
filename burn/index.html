@@ -176,6 +176,18 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--fill);color:var(--muted)}
 .ico svg{width:18px;height:18px}
 .ic3d{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--accent);background:var(--accentSoft);border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.exform{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}
+.sel{display:grid;gap:3px;min-width:0}
+.sel span{font-size:12px;font-weight:600;color:var(--muted)}
+.sel select{height:42px;border:0;border-radius:10px;background:var(--fill);padding:0 10px;font-size:15px;font-weight:500;min-width:0;width:100%}
+.exlist{display:grid}
+.exrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.exrow .t{font-weight:500;line-height:1.25}
+.exrow .t small{display:block;font-size:13px;color:var(--muted);font-weight:400}
+.exrow .v{font-family:var(--round);font-weight:600}
+.exrow .del{width:28px;height:28px;border-radius:50%;background:var(--fill);color:var(--muted);display:grid;place-items:center}
+.exrow .del svg{width:13px;height:13px}
+@media (max-width:370px){.exform{grid-template-columns:1fr 1fr}.exform .sel:first-child{grid-column:1/-1}}
 .wtip{font-size:13.5px;color:var(--muted);padding:0 16px}
 
 /* rings */
@@ -672,7 +684,7 @@ function proteinChooser(wk){
   if(m==="custom")h+='<div class="card"><div class="weighin"><label class="bign" for="pCustom"><input id="pCustom" type="number" inputmode="numeric" min="40" max="400" value="'+(+S.profile.proteinOverride>0?Math.round(+S.profile.proteinOverride):ruleProtein(wk))+'" aria-label="Daily protein in grams"><span>g</span></label><button type="button" class="btn sm" data-act="pcustom" style="height:44px">Save</button></div></div>';
   return h+'<p class="fnote">Switch any time. "My rule" goes back to your weekly number from your weight.</p>';
 }
-function weeksToGoal(){var x=currentWeight(),g=+S.profile.goalWeight,n=0;while(x>g&&n<400){x-=paceFor(x);n++;}return n;}
+function weeksToGoal(noExtra){var x=currentWeight(),g=+S.profile.goalWeight,n=0,e=noExtra?0:extraLbPerWeek();while(x>g&&n<400){x-=paceFor(x)+e;n++;}return n;}
 
 /* ---------- workout builder ---------- */
 function it(key,name,lvl,amt,note){return {key:key,name:name,lvl:lvl,amt:amt,note:note||""};}
@@ -806,6 +818,36 @@ function equipSwaps(){
   if(has("treadmill"))out.push(["Tuesday walk","Treadmill walk"]);
   var th=cardioPick(["elliptical","bike","treadmill"]);if(th)out.push(["Thursday walk",th[1]]);
   return out;
+}
+/* ---------- extra activity (logged on top of the plan) ---------- */
+/* METs (easy, moderate, hard), rounded from the Compendium of Physical Activities. Estimates only. */
+var EXMET={elliptical:[4,5,6.5],treadmill:[3,3.8,5],bike:[3.5,5.5,8],rower:[4,6,8.5],stair:[5,7,9],step:[5,6.5,8],
+  dumbbells:[3,3.5,6],kettlebell:[3,3.5,6],barbell:[3,3.5,6],bench:[3,3.5,6],rack:[3,3.5,6],cable:[3,3.5,6],bands:[3,3.5,6],trx:[3,3.5,6],walk:[3,3.5,4.3]};
+var EXNAME={walk:"Walking"};EQUIP.forEach(function(e){EXNAME[e[0]]=e[1];});
+var EFFORT=["Easy","Moderate","Hard"];
+function exOptions(){var o=EQUIP.filter(function(e){return has(e[0]);}).map(function(e){return e[0];});return o.length?o:["walk"];}
+function exKcal(eq,min,eff){var m=(EXMET[eq]||EXMET.walk)[eff]||5,kg=currentWeight()/2.2046;return Math.round(m*3.5*kg/200*min);}
+function exList(w,d){var L=LG(w,d);return L.ex||[];}
+function exTotals(dates){var t={min:0,kcal:0};Object.keys(S.log||{}).forEach(function(k){if(dates(k))(S.log[k].ex||[]).forEach(function(x){t.min+=x.min;t.kcal+=x.kcal;});});return t;}
+function extraLbPerWeek(){var now=new Date(),t=exTotals(function(k){var dd=diffDays(parse(k),now);return dd>=0&&dd<14;});return t.kcal/3500/2;}
+function exHTML(w,d){
+  var list=exList(w,d),opts=exOptions(),dayIdx=w*7+d,ti=todayIdx(),future=dayIdx>ti,tot={min:0,kcal:0};
+  list.forEach(function(x){tot.min+=x.min;tot.kcal+=x.kcal;});
+  var wk=exTotals(function(k){var i=diffDays(parse(S.profile.start),parse(k));return i>=w*7&&i<w*7+7;});
+  var h='<p class="sh">Extra activity</p><div class="card">';
+  if(list.length){h+='<div class="exlist">';list.forEach(function(x,i){h+='<div class="exrow"><span class="ico" style="background:var(--accentSoft);color:var(--accent)">'+IC.bolt+'</span><span class="t">'+x.min+' min '+esc((EXNAME[x.eq]||x.eq).toLowerCase())+'<small>'+EFFORT[x.eff]+' effort</small></span><span class="v num">≈'+x.kcal+' cal</span><button type="button" class="del" data-exdel="'+i+'" data-w="'+w+'" data-d="'+d+'" aria-label="Remove this activity">'+IC.x+'</button></div>';});h+='</div>';}
+  if(future)h+='<p class="small muted">You can log extra activity on the day itself.</p>';
+  else{
+    h+='<div class="exform"><label class="sel"><span>Equipment</span><select id="exEq">'+opts.map(function(k){return '<option value="'+k+'"'+(UI.exEq===k?" selected":"")+'>'+esc(EXNAME[k])+'</option>';}).join("")+'</select></label>'+
+      '<label class="sel"><span>Minutes</span><select id="exMin">'+[5,10,15,20,25,30,35,40,45,50,55,60,75,90,105,120].map(function(m){return '<option value="'+m+'"'+((UI.exMin||20)===m?" selected":"")+'>'+m+' min</option>';}).join("")+'</select></label>'+
+      '<label class="sel"><span>Effort</span><select id="exEff">'+EFFORT.map(function(e,i){return '<option value="'+i+'"'+((UI.exEff==null?1:UI.exEff)===i?" selected":"")+'>'+e+'</option>';}).join("")+'</select></label></div>'+
+      '<button type="button" class="btn sec" data-act="exadd" data-w="'+w+'" data-d="'+d+'">'+IC.plus+'Add to '+(dayIdx===ti?"today":DAYS[d])+'</button>';
+    if(opts[0]==="walk")h+='<p class="small muted">Only walking shows until you tick equipment you own in Profile → My equipment. Anything you add there appears here.</p>';
+  }
+  if(tot.min)h+='<p class="small"><b>'+(dayIdx===ti?"Today":DAYS[d])+':</b> '+tot.min+' extra min · ≈'+fmt(tot.kcal)+' cal · ≈'+(tot.kcal/3500).toFixed(2)+' lb of fat</p>';
+  if(wk.min)h+='<p class="small muted">Week '+(w+1)+' so far: '+wk.min+' extra min · ≈'+fmt(wk.kcal)+' cal · ≈'+(wk.kcal/3500).toFixed(1)+' lb. Your calorie target stays the same, so the extra burn goes to fat loss. See Progress for your new goal date.</p>';
+  else if(!future)h+='<p class="small muted">Logged on top of the plan, not instead of it. Calories are an estimate based on your weight and effort.</p>';
+  return h+'</div>';
 }
 var GATES={3:"Gate 1 check: did you finish every strength day the last 2 weeks, 2 rounds of 10 clean reps, and a 20-min walk without stopping? Yes → Week 4. No → repeat Week 3.",
   6:"Gate 2 check: 3 rounds × 12 reps, a 30-min brisk walk, and soreness gone within 48 hrs? Yes → Week 7. No → repeat Week 6.",
@@ -1077,6 +1119,7 @@ function todayHTML(){
   h+='<div class="card p'+(p+1)+'"><span class="cap">Week '+(w+1)+' · '+PHASE[p]+'</span><div class="hero"><h2>'+esc(W.title)+'</h2><div class="meta"><span>'+IC.clock+W.mins+' min</span><span>'+IC.list+ms.total+' moves</span></div></div>'+
     '<button type="button" class="btn'+(doneDay?" done":"")+'" data-act="go-workout">'+(doneDay?IC.check+"Done for today":ms.done?"Continue workout":"Start workout")+'</button></div>';
   var next=-1;D.items.forEach(function(m,i){if(next<0&&!(L.m&&L.m[i]))next=i;});
+  h+=exHTML(w,d);
   h+='<div class="sh2"><h2>Meals</h2><button type="button" data-act="go-meals">See all</button></div>';
   if(next<0)h+=note("good","Every meal and shake logged","Nice work. Keep sipping water between meals.");
   else{var m=D.items[next];
@@ -1121,6 +1164,7 @@ function workoutHTML(w,d,p,dt){
   if(d===0&&w===0)h+=note("info","Before Day 1","Weigh in, measure your waist at the belly button, chest and upper arm, and take front and side photos.");
   if(d===0&&(w===3||w===6||w===9))h+=note("acc","New phase","Every exercise moves up one rung. If a new rung is too hard, use the old one this week.");
   if(d===6&&GATES[w+1])h+=note("warn","Checkpoint",esc(GATES[w+1]));
+  h+=exHTML(w,d);
   h+='<button type="button" class="btn'+(dn?" done":"")+'" data-act="done">'+(dn?IC.check+"Day complete":"Mark day complete")+'</button>';
   h+='<p class="small muted" style="text-align:center">Stop for chest pain, dizziness or sharp joint pain. Get your doctor\'s OK first.</p>';
   return h;
@@ -1201,6 +1245,8 @@ function weighHTML(){
   if(A.last){var s=st[A.last.st];h+=note(s[2],s[0]+": "+(A.last.lost>=0?"−":"+")+Math.abs(round1(A.last.lost))+" lb","Pace "+round1(A.last.rate)+" lb/wk vs target "+A.last.target+" lb/wk. "+s[1]);}
   var lost=+pr.startWeight-cw,togo=Math.max(0,cw-+pr.goalWeight),wk=weeksToGoal(),gd=new Date();gd.setDate(gd.getDate()+wk*7);
   h+='<div class="tiles num"><div class="tile"><span>Lost</span><b style="color:var(--good)">'+round1(lost)+'</b><small>lb</small></div><div class="tile"><span>To go</span><b>'+round1(togo)+'</b><small>lb to '+pr.goalWeight+'</small></div><div class="tile"><span>Goal by</span><b style="font-size:19px">'+(togo>0?short(gd):"Done")+'</b><small>'+(togo>0?"~"+wk+" weeks":"Reached")+'</small></div></div>';
+  var ex14=exTotals(function(k){var dd=diffDays(parse(k),new Date());return dd>=0&&dd<14;}),wk0=weeksToGoal(true);
+  if(ex14.min)h+=note("good","Extra activity is speeding you up","Last 14 days: "+ex14.min+" extra min, ≈"+fmt(ex14.kcal)+" cal, about "+(ex14.kcal/3500).toFixed(1)+" lb of fat. At that rate your goal date moves "+(wk0>wk?(wk0-wk)+" week"+(wk0-wk===1?"":"s")+" sooner":"slightly sooner")+".");
   h+='<p class="sh">Weight</p><div class="card">'+chartSVG()+'</div>';
   h+=proteinTable();
   h+='<p class="sh">History</p><div class="list">';
@@ -1310,6 +1356,7 @@ document.addEventListener("click",function(e){
   if(t.dataset.eq){S.profile.equip=S.profile.equip||{};var ek=t.dataset.eq;if(S.profile.equip[ek])delete S.profile.equip[ek];else S.profile.equip[ek]=1;UI.sel=null;save();rerender();return;}
   if(t.dataset.swf){var cb=$(t.dataset.swf);cb.checked=!cb.checked;t.setAttribute("aria-checked",cb.checked);return;}
   if(t.dataset.pmode){var pm=t.dataset.pmode;S.profile.proteinMode=pm;save();rerender();if(pm==="custom"){var pc=$("pCustom");if(pc)pc.focus();}return;}
+  if(t.dataset.exdel!=null){var EL=LG(+t.dataset.w,+t.dataset.d,true);EL.ex=(EL.ex||[]).filter(function(_,j){return j!==+t.dataset.exdel;});save();rerender();return;}
   if(t.dataset.style){S.profile.dietStyle=t.dataset.style;save();rerender();return;}
   if(t.dataset.pf){UI.pf=t.dataset.pf;UI.pfOpen=true;rerender();return;}
   if(t.dataset.del){S.weighins=S.weighins.filter(function(x){return x.date!==t.dataset.del;});save();UI.msg="";rerender();return;}
@@ -1324,6 +1371,8 @@ document.addEventListener("click",function(e){
   if(a==="gcopy"){var ta=$("gtext"),txt=ta.value,ok=function(){UI.gmsg="Copied. Paste it into Notes or a text message.";rerender();};
     var fb=function(){ta.hidden=false;ta.focus();ta.select();};
     try{navigator.clipboard.writeText(txt).then(ok,fb);}catch(_){fb();}return;}
+  if(a==="exadd"){var ew=+t.dataset.w,ed=+t.dataset.d,eq=$("exEq").value,mn=+$("exMin").value,ef=+$("exEff").value;UI.exEq=eq;UI.exMin=mn;UI.exEff=ef;
+    var XL=LG(ew,ed,true);XL.ex=XL.ex||[];XL.ex.push({eq:eq,min:mn,eff:ef,kcal:exKcal(eq,mn,ef)});save();rerender();return;}
   if(a==="pcustom"){var pv=parseInt($("pCustom").value,10);if(!(pv>=40&&pv<=400)){$("pCustom").focus();return;}S.profile.proteinOverride=pv;S.profile.proteinMode="custom";save();rerender();return;}
   if(a==="back"){backTap();return;}
   if(a==="today"){var tt=todayWD()||{w:0,d:0};UI.w=tt.w;UI.d=tt.d;rerender();return;}
