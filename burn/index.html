@@ -950,18 +950,19 @@ var GU={
 };
 var VEGMAP={"cauliflower mash, no butter":"cauliflower","zucchini noodles":"zucchini","shredded cabbage":"cabbage","lettuce cups":"lettuce","bell pepper":"bell peppers","peppers":"bell peppers","cucumber slices":"cucumber","spaghetti squash":"spaghetti squash","roasted peppers":"bell peppers"};
 function groceries(w){
-  var tot={},veg=0,vegNames={},scoops=0,shakes=0,usesOil=false;
+  var tot={},days={},veg=0,vegNames={},scoops=0,shakes=0,usesOil=false;
   for(var d=0;d<7;d++){
     var D=diet(w,d);
     D.raw.forEach(function(r){
       if(r.f==="oil"){usesOil=true;return;}
       if(r.f==="veg"){veg+=r.q;(r.note||"mixed vegetables").split(/ & |, /).forEach(function(x){x=x.trim();x=VEGMAP[x]||x;if(x&&x!=="no butter")vegNames[x]=1;});return;}
-      tot[r.f]=(tot[r.f]||0)+r.q;
+      tot[r.f]=(tot[r.f]||0)+r.q;(days[r.f]=days[r.f]||{})[d]=1;
     });
     scoops+=D.scoops;shakes+=Math.ceil(D.scoops/2);
   }
+  groceries.last={scoops:scoops,shakes:shakes};
   var sec=SECT.map(function(){return [];});
-  Object.keys(tot).forEach(function(k){var g=GU[k];if(!g||!g[2])return;sec[g[0]].push({id:k,name:g[1],amt:g[2](Math.round(tot[k]*100)/100)});});
+  Object.keys(tot).forEach(function(k){var g=GU[k];if(!g||!g[2])return;var dl=Object.keys(days[k]||{}).map(Number).sort();sec[g[0]].push({id:k,name:g[1],amt:g[2](Math.round(tot[k]*100)/100)+" · "+(dl.length===7?"every day":dl.map(function(x){return DAYS[x];}).join(", "))});});
   if(veg>0)sec[2].unshift({id:"veg",name:"Non-starchy vegetables",amt:"about "+Math.ceil(veg)+" cups total: "+Object.keys(vegNames).sort().join(", ")});
   if(scoops>0){sec[5].push({id:"whey",name:"Whey protein isolate, unflavored or low-sugar",amt:n(scoops/30)+" × 2-lb tub ("+scoops+" scoops this week; a tub has about 30)"});
     sec[5].push({id:"almond",name:"Unsweetened almond milk (optional, for shakes)",amt:"up to "+pl(n(shakes*10/64),"half-gallon","half-gallons")+" if every shake uses it; water works too"});}
@@ -1092,7 +1093,8 @@ function planHTML(){
   var w=UI.w,d=UI.d,p=ph(w),dt=dateOf(w,d),ti=todayIdx(),tw=Math.floor(ti/7),td=ti%7;
   var h='<div class="sbar g"><div class="lt"><div>'+backHTML()+'<h1>Plan</h1><p class="sub">Week '+(w+1)+' · '+PHASE[p]+'</p></div><button type="button" class="pill" data-act="today">Today</button></div><div class="weeks" role="group" aria-label="Weeks">';
   for(var i=0;i<12;i++)h+='<button type="button" class="wk p'+(ph(i)+1)+(i===tw?" now":"")+'" aria-pressed="'+(i===w)+'" data-wk="'+i+'"><i></i>Week '+(i+1)+'</button>';
-  h+='</div><div class="daystrip" role="group" aria-label="Days">';
+  h+='</div>';
+  if(UI.seg==="groc")h+='<p class="small muted" style="padding:2px 2px 0">Shopping list for the whole week · '+short(dateOf(w,0))+' – '+short(dateOf(w,6))+'</p><div hidden>';else h+='<div class="daystrip" role="group" aria-label="Days">';
   for(var j=0;j<7;j++){var x=dateOf(w,j);h+='<button type="button" class="dc'+(w===tw&&j===td?" now":"")+(S.done[w+"-"+j]?" fin":"")+'" aria-pressed="'+(j===d)+'" data-day="'+j+'" aria-label="'+DAYS[j]+' '+short(x)+'"><small>'+DAYS[j].charAt(0)+'</small><b class="num">'+x.getDate()+'</b><i></i></button>';}
   h+='</div><div class="segc" role="group" aria-label="View"><button type="button" data-seg="workout" aria-pressed="'+(UI.seg==="workout")+'">Workout</button><button type="button" data-seg="diet" aria-pressed="'+(UI.seg==="diet")+'">Meals</button><button type="button" data-seg="groc" aria-pressed="'+(UI.seg==="groc")+'">Groceries</button></div></div>';
   if(ti<0)h+=note("acc","Starts "+short(parse(S.profile.start)),"Day 1 is in "+(-ti)+" day"+(-ti===1?"":"s")+". Everything here is ready to preview.");
@@ -1169,7 +1171,8 @@ function groceriesHTML(w,p){
   var sec=groceries(w),pr=S.profile,chk=(S.groc&&S.groc["g"+w])||{},total=0,got=0;
   sec.forEach(function(l){l.forEach(function(it){total++;if(chk[it.id])got++;});});
   var a=dateOf(w,0),b=dateOf(w,6);
-  var h='<div class="card"><span class="cap" style="--c:var(--accent)">'+short(a)+' – '+short(b)+' · '+STYLES[styleOf()].n+'</span><div class="prog"><div class="top"><span class="num"><b>'+got+'</b> <span class="muted">of '+total+' in the cart</span></span></div><div class="bar"><i style="width:'+(total?Math.round(got/total*100):0)+'%"></i></div></div>'+
+  var gl=groceries.last||{};
+  var h='<div class="card"><span class="cap" style="--c:var(--accent)">Whole week · '+DAYS[0]+' '+short(a)+' – '+DAYS[6]+' '+short(b)+'</span><p class="small muted">Everything for all 7 days: 28 meals and snacks'+(gl.shakes?' plus '+gl.shakes+' shakes':'')+' on the '+STYLES[styleOf()].n+' plan. Shop once for the week.</p><div class="prog"><div class="top"><span class="num"><b>'+got+'</b> <span class="muted">of '+total+' in the cart</span></span></div><div class="bar"><i style="width:'+(total?Math.round(got/total*100):0)+'%"></i></div></div>'+
     '<div class="row2"><button type="button" class="btn sm sec" data-act="gcopy">'+IC.copy+'Copy list</button><button type="button" class="btn sm gray" data-act="gclear">Uncheck all</button></div>'+
     (UI.gmsg?'<p class="small" style="color:var(--good)">'+esc(UI.gmsg)+'</p>':'')+'</div>';
   h+=note("acc","Prep day","On Sunday, bake the chicken, cook a pot of quinoa and hard-boil eggs. Cooked meat and fish keep 3–4 days, so cook the rest on Wednesday. Every meal's steps are on the Meals tab.");
@@ -1178,6 +1181,9 @@ function groceriesHTML(w,p){
     list.forEach(function(it){var on=!!chk[it.id];
       h+='<button type="button" class="lrow gi'+(on?" got":"")+'" data-g="'+it.id+'" aria-pressed="'+on+'" style="width:100%;text-align:left"><span class="ck'+(on?" on":"")+'">'+IC.check+'</span><span class="t">'+esc(it.name)+'<small>'+esc(it.amt)+'</small></span><span></span></button>';});
     h+='</div>';});
+  h+='<p class="sh">This week\'s menu</p><div class="dlist">';
+  for(var dd=0;dd<7;dd++){var DD=diet(w,dd);h+='<details><summary><span class="ico">'+IC.plan+'</span>'+DAYS[dd]+' '+short(dateOf(w,dd))+'</summary><div class="body"><ul>'+DD.items.filter(function(m){return !/shake/i.test(m.when);}).map(function(m){return '<li><b>'+esc(m.when)+':</b> '+esc(m.name)+'</li>';}).join("")+(DD.scoops?'<li><b>Shakes:</b> '+DD.scoops+' scoops</li>':'')+'</ul></div></details>';}
+  h+='</div>';
   h+='<p class="small muted" style="padding:0 4px">Meat amounts are raw weight to buy. The list follows your eating style, meal size and protein target.</p>';
   h+='<textarea id="gtext" class="gtext" readonly aria-label="Grocery list text" hidden>'+esc(groceryText(w,sec))+'</textarea>';
   return h;
