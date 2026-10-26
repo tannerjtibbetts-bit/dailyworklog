@@ -1,5 +1,5 @@
 // Keeps Burn Plan working with no signal. Bump VERSION when publishing an update.
-const VERSION = "burn-v6";
+const VERSION = "burn-v7";
 const FILES = ["./", "index.html", "manifest.webmanifest", "three.min.js", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
