@@ -117,7 +117,23 @@ main{padding-block:14px calc(96px + env(safe-area-inset-bottom,0px));display:gri
 .donebtn[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:var(--on)}
 
 /* diet */
-.targets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.targets{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.styles{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.styles::-webkit-scrollbar{display:none}
+.styles button{flex:0 0 auto;border:2px solid var(--ink);background:var(--card);padding:6px 12px;font-family:var(--label);font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.06em}
+.styles button[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#16232C}
+.stylebox{display:grid;gap:4px;font-size:14.5px}
+.stylebox p{color:var(--muted)}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--ink)}
+.seg3 button{border:0;background:var(--card);padding:8px 0;font-family:var(--label);font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.06em}
+.seg3 button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+#plans{scroll-margin-top:calc(200px + env(safe-area-inset-top,0px))}
+.plist{display:grid}
+.pl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line)}
+.pl b{font-weight:600}
+.pl .kind{font-family:var(--label);font-weight:600;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.pl p{grid-column:1/-1;font-size:14px;color:var(--muted)}
+@media (min-width:560px){.targets{grid-template-columns:repeat(4,1fr)}}
 .tg{background:var(--card);border:2px solid var(--ink);padding:10px;display:grid;gap:2px;min-width:0}
 .tg .big{font-family:var(--display);font-size:30px;font-weight:900;line-height:1}
 .tg small{font-size:12.5px;color:var(--muted);line-height:1.2}
@@ -242,84 +258,224 @@ var CUES={
 };
 function ph(w){return Math.floor(w/3);}
 
-/* ---------- food data (per 1 unit) ---------- */
+/* ---------- food data (per 1 unit): p protein, k calories, f fat, s sugar, c carbs, fb fiber ---------- */
 var F={
-  eggw:{n:"Egg whites",u:"cup",p:26,k:126,f:.4,s:1.6},
-  egg:{n:"Whole egg",u:"each",p:6.3,k:72,f:4.8,s:.2},
-  gyog:{n:"Plain nonfat Greek yogurt",u:"cup",p:23,k:130,f:.9,s:7},
-  cott:{n:"Low-fat (1%) cottage cheese",u:"cup",p:28,k:163,f:2.3,s:6},
-  chik:{n:"Grilled chicken breast",u:"oz",p:8.8,k:47,f:1,s:0},
-  turk:{n:"99% lean ground turkey",u:"oz",p:8,k:38,f:.6,s:0},
-  tuna:{n:"Tuna in water",u:"oz",p:7,k:33,f:.3,s:0},
-  tilapia:{n:"Baked tilapia",u:"oz",p:7.4,k:36,f:.8,s:0},
-  cod:{n:"Baked cod",u:"oz",p:6.5,k:30,f:.2,s:0},
-  shrimp:{n:"Shrimp",u:"oz",p:6.8,k:28,f:.3,s:0},
-  beef:{n:"95% lean ground beef",u:"oz",p:7.5,k:47,f:2,s:0},
-  pork:{n:"Pork tenderloin",u:"oz",p:7.4,k:40,f:1,s:0},
-  deli:{n:"Low-sodium deli turkey",u:"oz",p:5,k:28,f:.5,s:.5},
-  sc:{n:"Light string cheese",u:"each",p:6,k:50,f:2.5,s:0},
-  ffch:{n:"Fat-free shredded cheese",u:"tbsp",p:2.2,k:11,f:0,s:0},
-  pbp:{n:"Powdered peanut butter",u:"tbsp",p:3,k:30,f:1,s:1},
-  jerky:{n:"Low-sugar turkey jerky",u:"oz",p:12,k:80,f:1,s:2},
-  edam:{n:"Shelled edamame",u:"cup",p:18,k:188,f:8,s:3.4},
-  beans:{n:"Black beans",u:"tbsp",p:.95,k:14,f:.05,s:0},
-  veg:{n:"Non-starchy veggies",u:"cup",p:2,k:40,f:0,s:3},
-  salsa:{n:"Salsa",u:"tbsp",p:.2,k:5,f:0,s:.6},
-  marin:{n:"No-sugar-added marinara",u:"tbsp",p:.3,k:8,f:.3,s:.8},
-  berries:{n:"Berries",u:"tbsp",p:.05,k:4,f:0,s:.6}
+  eggw:{n:"Egg whites",u:"cup",p:26,k:126,f:.4,s:1.6,c:1.8,fb:0},
+  egg:{n:"Whole egg",u:"each",p:6.3,k:72,f:4.8,s:.2,c:.4,fb:0},
+  gyog:{n:"Plain nonfat Greek yogurt",u:"cup",p:23,k:130,f:.9,s:7,c:9,fb:0},
+  cott:{n:"Low-fat (1%) cottage cheese",u:"cup",p:28,k:163,f:2.3,s:6,c:6,fb:0},
+  chik:{n:"Grilled chicken breast",u:"oz",p:8.8,k:47,f:1,s:0,c:0,fb:0},
+  turk:{n:"99% lean ground turkey",u:"oz",p:8,k:38,f:.6,s:0,c:0,fb:0},
+  tuna:{n:"Tuna in water",u:"oz",p:7,k:33,f:.3,s:0,c:0,fb:0},
+  salmon:{n:"Salmon, baked or canned",u:"oz",p:6.4,k:52,f:2.3,s:0,c:0,fb:0},
+  tilapia:{n:"Baked tilapia",u:"oz",p:7.4,k:36,f:.8,s:0,c:0,fb:0},
+  cod:{n:"Baked cod",u:"oz",p:6.5,k:30,f:.2,s:0,c:0,fb:0},
+  shrimp:{n:"Shrimp",u:"oz",p:6.8,k:28,f:.3,s:0,c:0,fb:0},
+  beef:{n:"95% lean ground beef",u:"oz",p:7.5,k:47,f:2,s:0,c:0,fb:0},
+  pork:{n:"Pork tenderloin",u:"oz",p:7.4,k:40,f:1,s:0,c:0,fb:0},
+  deli:{n:"Low-sodium deli turkey",u:"oz",p:5,k:28,f:.5,s:.5,c:.7,fb:0},
+  tofu:{n:"Firm tofu",u:"oz",p:2.8,k:22,f:1.3,s:.2,c:.6,fb:.3},
+  sc:{n:"Light string cheese",u:"each",p:6,k:50,f:2.5,s:0,c:1,fb:0},
+  ffch:{n:"Fat-free shredded cheese",u:"tbsp",p:2.2,k:11,f:0,s:0,c:.3,fb:0},
+  feta:{n:"Reduced-fat feta",u:"tbsp",p:1.6,k:15,f:1,s:0,c:.3,fb:0},
+  pbp:{n:"Powdered peanut butter",u:"tbsp",p:3,k:30,f:1,s:1,c:2,fb:.5},
+  jerky:{n:"Low-sugar turkey jerky",u:"oz",p:12,k:80,f:1,s:2,c:3,fb:0},
+  edam:{n:"Shelled edamame",u:"cup",p:18,k:188,f:8,s:3.4,c:14,fb:8},
+  beans:{n:"Black or white beans",u:"tbsp",p:.95,k:14,f:.05,s:.1,c:2.5,fb:.9},
+  lentils:{n:"Cooked lentils",u:"tbsp",p:1.1,k:14,f:.05,s:.2,c:2.5,fb:1},
+  chick:{n:"Chickpeas",u:"tbsp",p:.9,k:17,f:.3,s:.5,c:2.8,fb:.8},
+  hummus:{n:"Hummus",u:"tbsp",p:1.2,k:25,f:1.4,s:0,c:2.1,fb:.9},
+  oats:{n:"Rolled oats (dry)",u:"tbsp",p:.8,k:19,f:.3,s:.1,c:3.4,fb:.5},
+  quinoa:{n:"Cooked quinoa",u:"tbsp",p:.5,k:14,f:.2,s:.1,c:2.4,fb:.3},
+  rice:{n:"Cooked brown rice",u:"tbsp",p:.3,k:14,f:.1,s:0,c:2.9,fb:.2},
+  veg:{n:"Non-starchy veggies",u:"cup",p:2,k:40,f:0,s:3,c:8,fb:3},
+  salsa:{n:"Salsa",u:"tbsp",p:.2,k:5,f:0,s:.6,c:1,fb:.3},
+  marin:{n:"No-sugar-added marinara",u:"tbsp",p:.3,k:8,f:.3,s:.8,c:1.4,fb:.3},
+  berries:{n:"Berries",u:"tbsp",p:.05,k:4,f:0,s:.6,c:1,fb:.3},
+  almonds:{n:"Chopped almonds",u:"tbsp",p:1.3,k:34,f:3,s:.3,c:1.3,fb:.8},
+  walnuts:{n:"Chopped walnuts",u:"tbsp",p:1.1,k:48,f:4.8,s:.2,c:1,fb:.5},
+  oil:{n:"Olive oil",u:"tsp",p:0,k:40,f:4.5,s:0,c:0,fb:0}
 };
-/* [food, base qty at a 1-cup meal, scales with meal size?, note] */
-var MENUS=[
- [["Breakfast","Egg-white scramble",[["eggw",.75,1],["ffch",2],["veg",.25,0,"spinach or peppers"]]],
-  ["Lunch","Greek-yogurt tuna salad",[["tuna",4,1],["gyog",.125,0,"instead of mayo"],["veg",.25,0,"celery & cucumber"]]],
-  ["Snack","Turkey & cheese roll-up",[["deli",1],["sc",1]]],
-  ["Dinner","Grilled chicken & green beans",[["chik",4,1],["veg",.25,0,"green beans"]]]],
- [["Breakfast","Peanut-butter yogurt bowl",[["gyog",.75,1],["pbp",1],["berries",2]]],
-  ["Lunch","Turkey chili",[["turk",4,1],["beans",2],["marin",2]]],
-  ["Snack","Cottage cheese cup",[["cott",.5]]],
-  ["Dinner","Shrimp & zucchini noodles",[["shrimp",4,1],["veg",.25,0,"zucchini noodles"],["marin",2]]]],
- [["Breakfast","Cottage cheese & berries",[["cott",.75,1],["berries",2]]],
-  ["Lunch","Chicken salad lettuce cups",[["chik",4,1],["gyog",.125,0,"instead of mayo"],["veg",.25,0,"lettuce cups"]]],
-  ["Snack","Turkey jerky",[["jerky",1]]],
-  ["Dinner","Baked tilapia & broccoli",[["tilapia",4,1],["veg",.25,0,"broccoli"]]]],
- [["Breakfast","Egg scramble with salsa",[["egg",1],["eggw",.5,1],["salsa",2]]],
-  ["Lunch","Deli turkey plate",[["deli",3,1],["sc",1],["veg",.25,0,"cucumber slices"]]],
-  ["Snack","Greek yogurt cup",[["gyog",.5]]],
-  ["Dinner","Pork tenderloin & cauliflower mash",[["pork",4,1],["veg",.25,0,"cauliflower mash, no butter"]]]],
- [["Breakfast","Peanut-butter yogurt bowl",[["gyog",.75,1],["pbp",1],["berries",2]]],
-  ["Lunch","Tuna lettuce cups",[["tuna",4,1],["gyog",.125,0,"instead of mayo"],["veg",.25,0,"lettuce cups"]]],
-  ["Snack","Edamame",[["edam",.25]]],
-  ["Dinner","Taco bowl, no shell",[["beef",4,1],["ffch",2],["salsa",2],["veg",.25,0,"lettuce & peppers"]]]],
- [["Breakfast","Turkey egg-white omelet",[["eggw",.75,1],["deli",1],["veg",.25,0,"spinach"]]],
-  ["Lunch","Shrimp cocktail with lemon",[["shrimp",4,1]]],
-  ["Snack","Cottage cheese cup",[["cott",.5]]],
-  ["Dinner","Grilled chicken & roasted peppers",[["chik",4,1],["veg",.25,0,"roasted peppers"]]]],
- [["Breakfast","Cinnamon cottage cheese",[["cott",.75,1]]],
-  ["Lunch","Baked cod & green beans",[["cod",4,1],["veg",.25,0,"green beans"]]],
-  ["Snack","String cheese & jerky",[["sc",1],["jerky",.5]]],
-  ["Dinner","Turkey meatballs & spaghetti squash",[["turk",4,1],["marin",2],["veg",.25,0,"spaghetti squash"]]]]
-];
+/* Meal library. st = styles it fits. Items: [food, amount at a 1-cup meal, scales with meal size?, note] */
+var LIB={
+ B:[{n:"Greek yogurt, berries & walnuts",st:"med dash flex",i:[["gyog",.75,1],["berries",2],["walnuts",1]]},
+  {n:"Veggie egg-white scramble with feta",st:"med dash lowc bari",i:[["eggw",.75,1],["feta",1],["veg",.25,0,"spinach & peppers"]]},
+  {n:"Cinnamon cottage cheese with almonds",st:"dash lowc bari",i:[["cott",.75,1],["almonds",1]]},
+  {n:"Savory oats with egg whites",st:"med dash flex",i:[["oats",2],["eggw",.5,1],["veg",.125,0,"spinach"]]},
+  {n:"Tofu veggie scramble",st:"flex",i:[["tofu",4,1],["veg",.25,0,"peppers & onion"],["salsa",1]]},
+  {n:"Egg & egg-white omelet",st:"lowc bari",i:[["egg",1],["eggw",.5,1],["veg",.25,0,"spinach & mushrooms"]]},
+  {n:"Peanut-butter protein yogurt",st:"lowc bari flex",i:[["gyog",.75,1],["pbp",1]]},
+  {n:"Salmon & cottage cheese plate",st:"med lowc",i:[["salmon",2,1],["cott",.375,1],["veg",.125,0,"cucumber"]]},
+  {n:"Cottage cheese & berries",st:"dash flex bari",i:[["cott",.75,1],["berries",2]]},
+  {n:"Turkey egg-white omelet",st:"dash lowc bari",i:[["eggw",.75,1],["deli",1],["veg",.25,0,"spinach"]]}],
+ L:[{n:"Greek-yogurt tuna salad lettuce cups",st:"med dash lowc bari",i:[["tuna",4,1],["gyog",.125,0,"instead of mayo"],["veg",.25,0,"lettuce & celery"]]},
+  {n:"Lentil soup with chicken",st:"med dash flex",i:[["lentils",4],["chik",2,1],["veg",.25,0,"carrot, celery, tomato"]]},
+  {n:"Chicken & hummus plate",st:"med dash",i:[["chik",3,1],["hummus",2],["veg",.25,0,"cucumber & tomato"]]},
+  {n:"Shrimp & white-bean salad",st:"med dash flex",i:[["shrimp",3,1],["beans",2,0,"white beans"],["veg",.25,0,"greens & tomato"],["oil",.5]]},
+  {n:"Deli turkey & cheese plate",st:"lowc bari",i:[["deli",3,1],["sc",1],["veg",.25,0,"cucumber slices"]]},
+  {n:"Tofu & edamame bowl",st:"flex",i:[["tofu",3,1],["edam",.125],["quinoa",2],["veg",.25,0,"shredded cabbage"]]},
+  {n:"Turkey chili",st:"dash lowc bari",i:[["turk",4,1],["beans",2],["marin",2]]},
+  {n:"Salmon salad lettuce cups",st:"med lowc",i:[["salmon",3,1],["gyog",.125,0,"as dressing"],["veg",.25,0,"lettuce & dill"]]},
+  {n:"Chicken salad lettuce cups",st:"dash lowc bari",i:[["chik",4,1],["gyog",.125,0,"instead of mayo"],["veg",.25,0,"lettuce & celery"]]},
+  {n:"Black-bean & egg bowl",st:"flex dash",i:[["egg",1],["eggw",.5,1],["beans",3],["salsa",2]]},
+  {n:"Tuna & chickpea salad",st:"med flex",i:[["tuna",3,1],["chick",2],["feta",1],["veg",.25,0,"cucumber & parsley"]]}],
+ S:[{n:"Cottage cheese cup",st:"med dash lowc flex bari",i:[["cott",.5]]},
+  {n:"Turkey jerky",st:"lowc bari",i:[["jerky",1]]},
+  {n:"String cheese & almonds",st:"med dash lowc",i:[["sc",1],["almonds",1]]},
+  {n:"Edamame",st:"med dash flex",i:[["edam",.25]]},
+  {n:"Greek yogurt cup",st:"med dash lowc flex bari",i:[["gyog",.5]]},
+  {n:"Egg & hummus",st:"med flex",i:[["egg",1],["hummus",1],["veg",.125,0,"cucumber"]]},
+  {n:"Turkey & cheese roll-up",st:"lowc bari dash",i:[["deli",1],["sc",1]]}],
+ D:[{n:"Baked salmon, green beans & quinoa",st:"med dash",i:[["salmon",3,1],["veg",.25,0,"green beans"],["quinoa",2]]},
+  {n:"Grilled chicken & green beans",st:"dash lowc bari",i:[["chik",4,1],["veg",.25,0,"green beans"]]},
+  {n:"Shrimp & zucchini noodles",st:"med lowc bari",i:[["shrimp",4,1],["veg",.25,0,"zucchini noodles"],["marin",2]]},
+  {n:"Lemon cod with olive oil & broccoli",st:"med dash lowc",i:[["cod",4,1],["veg",.25,0,"broccoli"],["oil",.5]]},
+  {n:"Turkey meatballs & spaghetti squash",st:"dash lowc bari",i:[["turk",4,1],["marin",2],["veg",.25,0,"spaghetti squash"]]},
+  {n:"Pork tenderloin & cauliflower mash",st:"lowc bari",i:[["pork",4,1],["veg",.25,0,"cauliflower mash, no butter"]]},
+  {n:"Turkey & lentil stuffed pepper",st:"med dash flex",i:[["turk",3,1],["lentils",2],["veg",.25,0,"bell pepper"],["marin",1]]},
+  {n:"Tofu stir-fry with brown rice",st:"flex",i:[["tofu",4,1],["veg",.25,0,"broccoli & snap peas"],["rice",2]]},
+  {n:"Taco bowl, no shell",st:"dash lowc bari",i:[["beef",4,1],["ffch",2],["salsa",2],["veg",.25,0,"lettuce & peppers"]]},
+  {n:"Baked tilapia & broccoli",st:"med dash lowc bari",i:[["tilapia",4,1],["veg",.25,0,"broccoli"]]},
+  {n:"Chicken & chickpea tagine",st:"med flex",i:[["chik",3,1],["chick",2],["veg",.25,0,"carrot & tomato"],["marin",1]]},
+  {n:"Black-bean & tofu burrito bowl",st:"flex dash",i:[["tofu",3,1],["beans",3],["salsa",2],["ffch",2]]}]
+};
+var STYLES={
+  med:{n:"Mediterranean",basis:"PREDIMED trials · rated #1 overall by U.S. News",carb:130,
+    t:"Fish, chicken, beans, Greek yogurt, vegetables, a little olive oil and nuts. In the PREDIMED trial, people without diabetes on a Mediterranean diet developed it about 40% less often than a low-fat group (10–11% vs 18% over 4 years)."},
+  dash:{n:"DASH",basis:"NIH DASH research · rated #2 overall by U.S. News",carb:130,
+    t:"Lean protein, low-fat dairy, beans and vegetables, light on salt. Built to lower blood pressure, which often runs high alongside prediabetes."},
+  lowc:{n:"Lower-carb",basis:"ADA Standards of Care · AHRQ low-carb review",carb:100,
+    t:"Swaps starches for protein and vegetables. The ADA lists lower-carb eating as an option that improves blood sugar. Kept under 100 g of carbs a day, well short of keto."},
+  flex:{n:"Flexitarian",basis:"Rated #3 overall by U.S. News · Portfolio diet",carb:130,
+    t:"Mostly eggs, dairy, tofu, edamame and beans, with some chicken or fish. Beans and soy add fiber, which slows the rise in blood sugar."},
+  bari:{n:"Protein-first",basis:"ASMBS / AACE / TOS bariatric guidelines",carb:100,
+    t:"The standard post-sleeve pattern: lean protein at every meal, very few starches, no added sugar."}
+};
 var SNACKS=[
-  ["Plain nonfat Greek yogurt cup (5.3 oz)",15,80,0,5],
-  ["Low-fat cottage cheese cup (4 oz)",13,90,2.5,4],
-  ["Tuna pouch in water (2.5 oz)",17,70,.5,0],
-  ["Chicken breast pouch (2.6 oz)",16,70,1,0],
-  ["Ready-to-drink protein shake, low sugar (11 oz)",30,160,3,1],
-  ["Clear protein water (16 oz)",15,60,0,0],
-  ["Shrimp with lemon (3 oz)",20,85,1,0],
-  ["Low-sugar turkey jerky (1 oz)",12,80,1,2],
-  ["Low-sodium deli turkey roll-ups (2 oz)",10,55,1,1],
-  ["Light string cheese (1 stick)",6,50,2.5,0],
-  ["Hard-boiled egg whites (2)",7,34,0,0],
-  ["Shelled edamame (¼ cup)",4.5,47,2,1]
+  ["Plain nonfat Greek yogurt cup (5.3 oz)",15,80,0,5,6],
+  ["Low-fat cottage cheese cup (4 oz)",13,90,2.5,4,5],
+  ["Tuna pouch in water (2.5 oz)",17,70,.5,0,0],
+  ["Chicken breast pouch (2.6 oz)",16,70,1,0,0],
+  ["Ready-to-drink protein shake, low sugar (11 oz)",30,160,3,1,5],
+  ["Clear protein water (16 oz)",15,60,0,0,0],
+  ["Shrimp with lemon (3 oz)",20,85,1,0,0],
+  ["Low-sugar turkey jerky (1 oz)",12,80,1,2,3],
+  ["Low-sodium deli turkey roll-ups (2 oz)",10,55,1,1,1],
+  ["Light string cheese (1 stick)",6,50,2.5,0,1],
+  ["Hard-boiled egg whites (2)",7,34,0,0,0],
+  ["Shelled edamame (¼ cup)",4.5,47,2,1,3.5]
 ];
-var SCOOP={p:25,k:110,f:1,s:1};
+var SCOOP={p:25,k:110,f:1,s:1,c:2,fb:0};
+/* The 100 plans screened for prediabetes + gastric sleeve. kind: G guideline/clinical program, E expert-rated pattern, C commercial program, P popular plan. */
+var PLANS=[
+ ["CDC National Diabetes Prevention Program","G","core","Made for prediabetes. Losing 5–7% of body weight plus 150 active minutes a week cut type 2 diabetes risk 58% in its trial. Sets the plan's minimum goals."],
+ ["ASMBS / AACE / TOS bariatric guidelines","G","core","Protein first, small meals, no drinking with meals, daily vitamins. Protein at least 60 g, up to 1.5 g/kg of ideal weight."],
+ ["ADA Standards of Care (2026)","G","core","Says several eating patterns can prevent or delay diabetes. All five styles here fit its list."],
+ ["ADA Diabetes Plate Method","G","core","Half vegetables, a quarter protein, a quarter carbs. Flipped to protein first for the sleeve."],
+ ["Mediterranean diet","E","core","Style option. In PREDIMED, about 40% less new diabetes than a low-fat diet."],
+ ["DASH diet","E","core","Style option. Lowers blood pressure."],
+ ["Flexitarian diet","E","core","Style option. Beans, soy, eggs and dairy, with some meat."],
+ ["Lower-carb eating (ADA-supported)","G","core","Style option, kept under 100 g carbs a day."],
+ ["Post-sleeve protein-first eating","G","core","Style option. The standard bariatric pattern."],
+ ["Look AHEAD lifestyle program","G","used","Meal-replacement shakes plus 175+ active minutes a week. Shakes fill your protein gap."],
+ ["PREDIMED-Plus","G","used","Calorie-reduced Mediterranean plus activity cut new diabetes (9.5% vs 12%). Mediterranean meals run at a calorie target."],
+ ["DiRECT (Counterweight-Plus)","G","used","Large early weight loss put early type 2 diabetes into remission for many. Its all-shake phase needs a doctor. Borrowed: planned shakes."],
+ ["MIND diet","E","used","Berries, leafy greens and nuts in small amounts."],
+ ["Mayo Clinic Diet","E","used","Habit swaps: no sugary drinks, eat breakfast, move every day."],
+ ["TLC (NIH Therapeutic Lifestyle Changes)","E","used","Low saturated fat: lean meats and low-fat dairy."],
+ ["Volumetrics","E","used","Watery vegetables and soups add fullness. Eaten after protein, since a sleeve fills fast."],
+ ["WeightWatchers","C","used","Weekly weigh-ins and tracking."],
+ ["Noom","C","used","Daily logging and small behavior goals."],
+ ["Portfolio diet","E","used","Soy, beans and nuts to lower LDL cholesterol."],
+ ["Nordic diet","E","used","Fish twice a week, cabbage and other vegetables."],
+ ["Pescatarian diet","E","used","Fish and seafood as main proteins."],
+ ["Lacto-ovo vegetarian","E","used","Eggs, Greek yogurt and cottage cheese as protein anchors."],
+ ["Anti-inflammatory diet (Dr. Weil)","E","used","Fish and colorful vegetables."],
+ ["Okinawa diet","E","used","Tofu, vegetables and small portions."],
+ ["Blue Zones eating","P","used","Beans most days."],
+ ["Traditional Japanese (washoku)","P","used","Fish, tofu and small servings."],
+ ["Atlantic diet","E","used","Fish, vegetables and home cooking."],
+ ["Zone diet","C","used","Pair every carb with protein."],
+ ["South Beach (phases 2–3)","C","used","Slow, low-glycemic carbs. The strict phase 1 is skipped."],
+ ["Atkins (later phases)","C","used","Later phases match the lower-carb style. The 20 g induction phase is skipped."],
+ ["Glycemic Index diet","P","used","Slow carbs: beans, lentils, oats, quinoa."],
+ ["Sugar Busters","P","used","Cut added sugar."],
+ ["Food-order eating","P","used","Protein and vegetables before starch to blunt the blood-sugar rise."],
+ ["High-protein diet","P","used","Protein targets and lean choices."],
+ ["Calorie counting","P","used","A daily calorie target."],
+ ["Carb counting (ADA)","G","used","Carb grams for every meal and the day."],
+ ["Macro counting (IIFYM)","P","used","Protein, carb and fat grams on every meal."],
+ ["Mindful eating","P","used","20–30 minute meals, stop at the first sign of fullness."],
+ ["Optifast (medically supervised)","C","used","Meal replacements. Borrowed: planned shakes."],
+ ["HMR program","C","used","Shakes plus vegetables. Borrowed: planned shakes."],
+ ["Optavia \"Lean & Green\" meal","C","used","The lean-protein-and-vegetables dinner. Packaged fuelings skipped."],
+ ["Nutrisystem D","C","used","Pre-portioned, lower-glycemic meals. Borrowed: portion control."],
+ ["TOPS (Take Off Pounds Sensibly)","C","used","Weekly weigh-in accountability."],
+ ["Low-fat diet","P","used","Lean meats, fat-free dairy, little added fat."],
+ ["Intuitive eating","P","used","Hunger and fullness cues. Calories are still tracked."],
+ ["Profile by Sanford","C","used","Coaching plus weekly check-ins."],
+ ["Keto","P","skip","Very high fat is hard on a sleeve, and low fluid intake raises dehydration risk. The lower-carb style keeps the blood-sugar benefit."],
+ ["Carnivore","P","skip","No fiber, high saturated fat."],
+ ["Paleo","P","skip","Cuts beans and dairy, two of the easiest sleeve proteins."],
+ ["Whole30","P","skip","Cuts beans and dairy. Its no-added-sugar rule is kept."],
+ ["Dukan","C","skip","Protein-only phases and strict rules."],
+ ["Intermittent fasting 16:8","P","skip","A sleeve needs protein spread over 5–6 small meals. An 8-hour window can't fit it."],
+ ["5:2 fasting","P","skip","500-calorie days make sleeve protein targets impossible."],
+ ["Alternate-day fasting","P","skip","Same problem as 5:2."],
+ ["One meal a day (OMAD)","P","skip","A sleeve can't hold a day of food in one meal."],
+ ["Warrior diet","P","skip","One large evening meal."],
+ ["Eat-Stop-Eat","P","skip","24-hour fasts."],
+ ["Galveston diet","C","skip","Built around fasting windows."],
+ ["Dubrow diet","C","skip","Built around fasting windows."],
+ ["Vegan","E","skip","Possible, but plant proteins take more stomach room. Flexitarian is the plant-forward option."],
+ ["Raw vegan","P","skip","Too little protein."],
+ ["Raw food diet","P","skip","Too little protein."],
+ ["Fruitarian","P","skip","Mostly sugar."],
+ ["Engine 2","E","skip","Plant-only and low fat: hard to get protein in."],
+ ["Ornish","E","skip","Very low fat and plant-based: hard to get protein in."],
+ ["Pritikin","P","skip","Grain- and volume-heavy."],
+ ["Starch Solution (McDougall)","P","skip","Starch-based. Raises blood sugar."],
+ ["Eat to Live (Nutritarian)","P","skip","Vegetable volumes a sleeve can't hold."],
+ ["Whole-food plant-based","P","skip","Too little protein per bite."],
+ ["Macrobiotic","P","skip","Grain-heavy."],
+ ["Alkaline diet","P","skip","No evidence."],
+ ["Blood type diet","P","skip","No evidence."],
+ ["Cabbage soup diet","P","skip","Crash diet with almost no protein."],
+ ["Grapefruit diet","P","skip","Crash diet."],
+ ["Master Cleanse","P","skip","Maple-syrup water: sugar spikes, no protein."],
+ ["Juice cleanses","P","skip","Sugar spikes and dumping risk, no protein."],
+ ["Military (3-day) diet","P","skip","Crash diet that includes ice cream and hot dogs."],
+ ["Baby food diet","P","skip","Too little protein."],
+ ["HCG diet","P","skip","500 calories plus an unapproved hormone. The FDA warns against it."],
+ ["Sirtfood diet","P","skip","Green-juice phases."],
+ ["Cookie diet","C","skip","Sweets as meals."],
+ ["Scarsdale diet","P","skip","Crash diet."],
+ ["Beverly Hills diet","P","skip","Fruit-only days."],
+ ["Fast Metabolism Diet","C","skip","No published trials."],
+ ["17 Day Diet","C","skip","Cycling phases with little evidence."],
+ ["Body Reset diet","C","skip","Smoothie-based, with sugar from fruit."],
+ ["Bulletproof diet","C","skip","Butter coffee: high saturated fat."],
+ ["Plant Paradox (lectin-free)","C","skip","Cuts beans. No evidence."],
+ ["Pegan","P","skip","Limits beans and dairy."],
+ ["Carb cycling","P","skip","High-carb days spike blood sugar."],
+ ["Slow-Carb (4-Hour Body)","P","skip","Weekly cheat day."],
+ ["GOLO","C","skip","Built around a supplement."],
+ ["Herbalife","C","skip","Supplement and shake sales; some shakes have added sugar."],
+ ["Isagenix","C","skip","Cleanse days."],
+ ["SlimFast","C","skip","Standard shakes are lower in protein and higher in sugar than a sleeve needs."],
+ ["Jenny Craig","C","skip","Prepared meals sized for a normal stomach."],
+ ["Medifast","C","skip","Same fuelings system as Optavia."],
+ ["Very low-calorie diet (no doctor)","P","skip","Under 800 calories needs medical supervision."],
+ ["Low-FODMAP","P","skip","For gut symptoms, not weight loss."],
+ ["Gluten-free (without celiac)","P","skip","No weight-loss benefit."]
+];
 
 /* ---------- state ---------- */
 var KEY="burnplan-v1";
 var S={profile:null,weighins:[],done:{},savedAt:0};
 var UI={tab:"plan",w:null,d:null,seg:"workout",sel:null,confirmReset:false,msg:""};
 try{var raw=localStorage.getItem(KEY);if(raw){var o=JSON.parse(raw);if(o&&typeof o==="object")S=Object.assign(S,o);}}catch(e){}
+if(S.profile){if(S.profile.prediabetes===undefined)S.profile.prediabetes=true;if(!S.profile.dietStyle)S.profile.dietStyle="med";}
 try{var u=JSON.parse(localStorage.getItem(KEY+"-ui")||"{}");if(u.seg)UI.seg=u.seg;}catch(e){}
 var cloud=null,cloudTimer=0;
 function save(){
@@ -389,7 +545,7 @@ function it(key,name,lvl,amt,note){return {key:key,name:name,lvl:lvl,amt:amt,not
 function fmt(n){return Number(n).toLocaleString("en-US");}
 function workout(w,d){
   var p=ph(w),A=assess(),r=ROUNDS[p],n=REPS[w],x=r+" × ",steps=STEPS[w]+A.steps;
-  var stepItem=it(null,"Daily steps",null,fmt(steps),"Total for the day, any walking counts");
+  var stepItem=it(null,"Daily steps",null,fmt(steps),(S.profile.prediabetes?"Include a 10–15 min walk after your biggest meal. ":"")+"Any walking counts");
   if(d===0||d===2||d===4){
     var kind=d===2?"B":"A",uni=Math.max(6,n-4);
     var push=it("push","Incline push-up",p,x+n),squat=it("squat",kind==="B"?"Chair squat, 3-s lower":"Chair squat",p,x+n),
@@ -441,27 +597,28 @@ function qtyText(q,u){
   return M[e]||((e/8)+" cup");
 }
 function roundQ(q,u){if(u==="oz"||u==="each"||u==="tbsp")return Math.max(.5,Math.round(q*2)/2);return Math.max(.125,Math.round(q*8)/8);}
+function styleOf(){var s=S.profile.dietStyle;return STYLES[s]?s:"med";}
+function pick(slot,style,w,d,off){var L=LIB[slot].filter(function(m){return m.st.split(" ").indexOf(style)>=0;});return L[(d+w*3+off)%L.length];}
+function ibwKg(){var p=S.profile,over=Math.max(0,(+p.heightIn||70)-60);return (p.sex==="female"?45.5:50)+2.3*over;}
 function diet(w,d){
-  var A=assess(),wk=w+1,fac=+S.profile.mealCups||.75,meals=[],tp=0,tk=0,tf=0,ts=0;
-  MENUS[d].forEach(function(m){
-    var lines=[],mp=0,mk=0;
-    m[2].forEach(function(row){
-      var f=F[row[0]],q=roundQ(row[2]?row[1]*fac:row[1],f.u),p=f.p*q,k=f.k*q;
-      mp+=p;mk+=k;tf+=f.f*q;ts+=f.s*q;
+  var A=assess(),wk=w+1,fac=+S.profile.mealCups||.75,style=styleOf(),meals=[],T={p:0,k:0,f:0,s:0,c:0,fb:0};
+  [["Breakfast","B",0],["Lunch","L",2],["Snack","S",4],["Dinner","D",1]].forEach(function(slot){
+    var m=pick(slot[1],style,w,d,slot[2]),lines=[],M={p:0,k:0,c:0,fb:0};
+    m.i.forEach(function(row){
+      var f=F[row[0]],q=roundQ(row[2]?row[1]*fac:row[1],f.u);
+      ["p","k","f","s","c","fb"].forEach(function(k){T[k]+=f[k]*q;if(M[k]!=null)M[k]+=f[k]*q;});
       lines.push(qtyText(q,f.u)+" "+f.n.toLowerCase()+(row[3]?" ("+row[3]+")":""));
     });
-    tp+=mp;tk+=mk;
-    meals.push({when:m[0],name:m[1],lines:lines,p:mp,k:mk});
+    meals.push({when:slot[0],name:m.n,lines:lines,p:M.p,k:M.k,c:M.c,fb:M.fb});
   });
-  var target=protein(wk),cal=calories(wk,A),gap=Math.max(0,target-tp),scoops=Math.round(gap/SCOOP.p),shakes=[];
+  var food=T.p,target=protein(wk),cal=calories(wk,A),scoops=Math.round(Math.max(0,target-food)/SCOOP.p),shakes=[];
   var slots=["Mid-morning shake","Mid-afternoon shake","Evening shake","After-workout shake","Late-evening shake","Extra shake","Extra shake","Extra shake"];
   var left=scoops,i=0;
-  while(left>0&&i<8){var sc=Math.min(2,left);shakes.push({when:slots[i],name:sc+" scoop"+(sc>1?"s":"")+" protein isolate",lines:["Mix in "+(sc>1?"12":"8")+" oz water or unsweetened almond milk","Sip over 20–30 min"],p:sc*SCOOP.p,k:sc*SCOOP.k});left-=sc;i++;}
-  tp+=scoops*SCOOP.p;tk+=scoops*SCOOP.k;tf+=scoops*SCOOP.f;ts+=scoops*SCOOP.s;
-  var order=[];
-  order.push(meals[0]);if(shakes[0])order.push(shakes[0]);order.push(meals[1]);if(shakes[1])order.push(shakes[1]);order.push(meals[2]);order.push(meals[3]);
+  while(left>0&&i<8){var sc=Math.min(2,left);shakes.push({when:slots[i],name:sc+" scoop"+(sc>1?"s":"")+" unflavored or low-sugar whey isolate",lines:["Mix in "+(sc>1?"12":"8")+" oz water or unsweetened almond milk","Sip over 20–30 min, at least 30 min away from meals"],p:sc*SCOOP.p,k:sc*SCOOP.k,c:sc*SCOOP.c,fb:0});left-=sc;i++;}
+  ["p","k","f","s","c","fb"].forEach(function(k){T[k]+=scoops*SCOOP[k];});
+  var order=[meals[0]];if(shakes[0])order.push(shakes[0]);order.push(meals[1]);if(shakes[1])order.push(shakes[1]);order.push(meals[2],meals[3]);
   for(var j=2;j<shakes.length;j++)order.push(shakes[j]);
-  return {target:target,cal:cal,items:order,tp:tp,tk:tk,tf:tf,ts:ts,scoops:scoops,food:tp-scoops*SCOOP.p};
+  return {target:target,cal:cal,items:order,T:T,scoops:scoops,food:food,style:style,carbCap:STYLES[style].carb};
 }
 
 /* ---------- helpers ---------- */
@@ -526,33 +683,59 @@ function workoutHTML(w,d,p,dt){
   return h;
 }
 function dietHTML(w,d,p,dt){
-  var D=diet(w,d),pr=S.profile,h='<div class="dayhead p'+(p+1)+'"><h2>'+DAYS[d]+' meals</h2><span class="meta num">'+short(dt)+' · Wk '+(w+1)+' · '+(pr.mealCups==.5?"½":pr.mealCups==1?"1":"¾")+'-cup meals</span></div>';
-  h+='<div class="targets num"><div class="tg"><span class="lab">Protein</span><span class="big">'+D.target+'g</span><small>'+(+pr.proteinOverride>0?"Your set number":"1 g/lb of this week's planned weight, −20 g")+'</small></div>'+
-     '<div class="tg"><span class="lab">Calories</span><span class="big">'+fmt(D.cal)+'</span><small>Daily target</small></div>'+
-     '<div class="tg"><span class="lab">Fluids</span><span class="big">64+ oz</span><small>Sipped between meals</small></div></div>';
+  var D=diet(w,d),pr=S.profile,st=STYLES[D.style],pre=!!pr.prediabetes,h='';
+  h+='<div class="dayhead p'+(p+1)+'"><h2>'+DAYS[d]+' meals</h2><span class="meta num">'+short(dt)+' · Wk '+(w+1)+' · '+(pr.mealCups==.5?"½":pr.mealCups==1?"1":"¾")+'-cup meals</span></div>';
+  h+='<div class="styles" role="group" aria-label="Eating style">'+Object.keys(STYLES).map(function(k){return '<button type="button" data-style="'+k+'" aria-pressed="'+(k===D.style)+'">'+STYLES[k].n+'</button>';}).join("")+'</div>';
+  h+='<div class="stylebox"><span class="lab">'+esc(st.basis)+'</span><p>'+esc(st.t)+'</p></div>';
+  h+='<div class="targets num">'+
+    '<div class="tg"><span class="lab">Protein</span><span class="big">'+D.target+'g</span><small>'+(+pr.proteinOverride>0?"Your set number":"1 g/lb of this week's planned weight, −20 g")+'</small></div>'+
+    '<div class="tg"><span class="lab">Calories</span><span class="big">'+fmt(D.cal)+'</span><small>Daily target</small></div>'+
+    (pre?'<div class="tg"><span class="lab">Carbs</span><span class="big">≤'+D.carbCap+'g</span><small>Low-carb line is 130 g/day; ≤30 g a meal</small></div>':'')+
+    '<div class="tg"><span class="lab">Fluids</span><span class="big">64+ oz</span><small>Sipped between meals</small></div></div>';
   h+=adjBanner();
-  if(!(+pr.proteinOverride>0)&&D.target>150&&pr.sleeve)h+='<div class="banner warn"><b>Check this number with your surgeon</b><span>'+D.target+' g is far above the 60–80 g minimum most bariatric teams set after a sleeve, and food can only cover about '+Math.round(D.food)+' g at your meal size, so the rest comes from '+D.scoops+' scoops of protein powder. If your team gives you a number, enter it in Profile and the plan will use it.</span></div>';
+  if(!(+pr.proteinOverride>0)&&pr.sleeve){var ib=ibwKg(),m15=Math.round(ib*1.5),m21=Math.round(ib*2.1);
+    if(D.target>m21)h+='<div class="banner warn"><b>Check this protein number with your surgeon</b><span>Bariatric guidelines (ASMBS/AACE/TOS) set at least 60 g a day, up to 1.5 g per kg of ideal body weight: about '+m15+' g for your height, and up to about '+m21+' g in special cases. Your rule gives '+D.target+' g. Food covers about '+Math.round(D.food)+' g at your meal size, so the rest comes from '+D.scoops+' scoops of protein powder.</span>'+
+      '<div class="confirm"><button type="button" class="ghost" data-act="asmbs" data-g="'+m15+'">Use '+m15+' g (guideline)</button><button type="button" class="ghost" data-act="asmbs" data-g="'+m21+'">Use '+m21+' g (upper)</button></div></div>';}
   h+='<div class="card p'+(p+1)+'">';
   D.items.forEach(function(m){
     var isShake=/shake/i.test(m.when);
-    h+='<div class="meal'+(isShake?" shake":"")+'"><div class="mh"><span class="lab">'+esc(m.when)+'</span><span class="mt num">'+Math.round(m.p)+' g protein · '+Math.round(m.k)+' cal</span></div><h4>'+esc(m.name)+'</h4><ul>'+m.lines.map(function(l){return "<li>"+esc(l)+"</li>";}).join("")+'</ul></div>';
+    h+='<div class="meal'+(isShake?" shake":"")+'"><div class="mh"><span class="lab">'+esc(m.when)+'</span><span class="mt num">'+Math.round(m.p)+' g protein · '+Math.round(m.c)+' g carbs · '+Math.round(m.k)+' cal</span></div><h4>'+esc(m.name)+'</h4><ul>'+m.lines.map(function(l){return "<li>"+esc(l)+"</li>";}).join("")+'</ul></div>';
   });
-  h+='<div class="tot num"><span><b>'+Math.round(D.tp)+'</b>g protein</span><span><b>'+fmt(Math.round(D.tk))+'</b>cal</span><span><b>'+Math.round(D.tf)+'</b>g fat</span><span><b>'+Math.round(D.ts)+'</b>g sugar</span></div>';
-  if(D.tk>D.cal+100)h+='<p class="banner warn"><span>This day runs '+Math.round(D.tk-D.cal)+' calories over target. Swap a shake scoop for clear protein water, or lower your protein number in Profile.</span></p>';
-  else if(D.tk<D.cal-250)h+='<p class="banner"><span>About '+Math.round(D.cal-D.tk)+' calories of room left. If you\'re hungry, add veggies or one snack from the list below.</span></p>';
+  var T=D.T;
+  h+='<div class="tot num"><span><b>'+Math.round(T.p)+'</b>g protein</span><span><b>'+fmt(Math.round(T.k))+'</b>cal</span><span><b>'+Math.round(T.c)+'</b>g carbs</span><span><b>'+Math.round(T.fb)+'</b>g fiber</span><span><b>'+Math.round(T.f)+'</b>g fat</span><span><b>'+Math.round(T.s)+'</b>g sugar</span></div>';
+  if(T.k>D.cal+100)h+='<p class="banner warn"><span>This day runs '+Math.round(T.k-D.cal)+' calories over target. Swap a shake scoop for clear protein water, or lower your protein number in Profile.</span></p>';
+  else if(T.k<D.cal-250)h+='<p class="banner"><span>About '+Math.round(D.cal-T.k)+' calories of room left. If you\'re hungry, add non-starchy veggies or one snack from the list below.</span></p>';
   h+='</div>';
+  if(pre)h+='<details class="card" open><summary>Prediabetes rules</summary><ul class="rules">'+
+    '<li>Never eat carbs alone. Protein and vegetables first, starch last.</li>'+
+    '<li>Keep each meal to about 30 g of carbs or less. The daily ceiling is shown above.</li>'+
+    '<li>Pick beans, lentils, oats, quinoa or brown rice over white bread, white rice, crackers and cereal.</li>'+
+    '<li>No soda, juice or sweet coffee drinks. They spike blood sugar and can trigger dumping after a sleeve.</li>'+
+    '<li>Walk 10–15 minutes after your biggest meal. Light walking after eating lowers the blood-sugar rise.</li>'+
+    '<li>Shaky, sweaty or foggy 1–3 hours after eating? That can be low blood sugar after a sleeve. Take about 15 g of fast sugar (4 oz juice), then a protein snack, and tell your surgeon.</li>'+
+    '<li>Ask your doctor to recheck your A1C. The ADA advises at least once a year with prediabetes.</li></ul></details>';
   h+='<details class="card"><summary>Sleeve eating rules</summary><ul class="rules">'+
     '<li>Protein first at every meal, then vegetables. Stop at the first sign of fullness.</li>'+
     '<li>Take 20–30 minutes per meal. Small bites, chewed well.</li>'+
     '<li>No drinking from 30 minutes before a meal until 30 minutes after.</li>'+
     '<li>Sip 64+ oz of fluid a day between meals. Shakes count.</li>'+
     '<li>Skip carbonation, sugar and fried or greasy food. Sugar and fat can trigger dumping.</li>'+
-    '<li>Take the vitamins your team prescribed (usually a bariatric multivitamin, calcium citrate and B12).</li>'+
+    '<li>Take the vitamins your team prescribed (usually a bariatric multivitamin, calcium citrate, vitamin D, iron and B12).</li>'+
     '<li>Your bariatric team\'s instructions come first. This plan follows general sleeve guidance.</li></ul></details>';
   h+='<details class="card"><summary>Quick protein snacks</summary><p class="lab">High protein · low calorie, fat & sugar</p><div class="snacks num">'+
-    SNACKS.map(function(s){return '<div class="sn"><b>'+esc(s[0])+'</b><span class="pp">'+s[1]+'g</span><span class="mac"><span>'+s[2]+' cal</span><span>'+s[3]+' g fat</span><span>'+s[4]+' g sugar</span></span></div>';}).join("")+
+    SNACKS.map(function(s){return '<div class="sn"><b>'+esc(s[0])+'</b><span class="pp">'+s[1]+'g</span><span class="mac"><span>'+s[2]+' cal</span><span>'+s[5]+' g carbs</span><span>'+s[3]+' g fat</span><span>'+s[4]+' g sugar</span></span></div>';}).join("")+
     '</div><p class="lab">Numbers are typical. Check the label of the brand you buy.</p></details>';
+  h+=plansHTML();
   return h;
+}
+function plansHTML(){
+  var f=UI.pf||"core",cnt={core:0,used:0,skip:0};PLANS.forEach(function(x){cnt[x[2]]++;});
+  var KIND={G:"Guideline / clinical",E:"Expert-rated",C:"Commercial",P:"Popular plan"};
+  var h='<details class="card"'+(UI.pfOpen?" open":"")+' id="plans"><summary>The 100 plans behind this</summary>'+
+    '<p style="font-size:14.5px;color:var(--muted)">Every plan was screened for two things: does it help prediabetes, and can a sleeve stomach follow it? Core plans shape the menus. Used plans each gave one idea. Skipped plans clash with one or both.</p>'+
+    '<div class="seg3" role="group" aria-label="Filter plans">'+[["core","Core"],["used","Used"],["skip","Skipped"]].map(function(x){return '<button type="button" data-pf="'+x[0]+'" aria-pressed="'+(f===x[0])+'">'+x[1]+' <span class="num">'+cnt[x[0]]+'</span></button>';}).join("")+'</div><div class="plist">';
+  PLANS.forEach(function(x){if(x[2]!==f)return;h+='<div class="pl"><b>'+esc(x[0])+'</b><span class="kind">'+KIND[x[1]]+'</span><p>'+esc(x[3])+'</p></div>';});
+  return h+'</div></details>';
 }
 function weighHTML(){
   var A=assess(),cw=currentWeight(),pr=S.profile,ti=todayIdx(),list=sortedW(),h='<h2 style="font-size:34px">Weekly weigh-in</h2>';
@@ -593,7 +776,7 @@ function chartSVG(){
   return s;
 }
 function profileHTML(){
-  var p=S.profile||{name:"",age:43,sex:"male",heightIn:"",startWeight:310,goalWeight:220,start:iso(mondayOf(new Date())),pace:"max",mealCups:.75,sleeve:true,proteinOverride:""};
+  var p=S.profile||{name:"",age:43,sex:"male",heightIn:"",startWeight:310,goalWeight:220,start:iso(mondayOf(new Date())),pace:"max",mealCups:.75,sleeve:true,prediabetes:true,dietStyle:"med",proteinOverride:""};
   var ft=p.heightIn?Math.floor(p.heightIn/12):"",inch=p.heightIn?p.heightIn%12:"";
   var h='';
   if(!S.profile)h+='<div class="intro"><h2>Set up your <span>plan</span></h2><p style="color:var(--muted);margin-top:8px">12 weeks of calisthenics and walking, with a gastric-sleeve-friendly meal plan. Every weekly weigh-in re-tunes your steps, walks, calories and protein so you stay on pace for your goal.</p></div>';
@@ -609,6 +792,8 @@ function profileHTML(){
    '<div class="fld"><label for="fStart">Start date</label><input id="fStart" type="date" value="'+esc(p.start)+'"><span class="hint">Snaps to the Monday of that week so days line up.</span></div>'+
    '<div class="fld"><label for="fPace">Weight-loss pace</label><select id="fPace"><option value="max"'+(p.pace==="max"?" selected":"")+'>Fastest safe: about 1% of body weight a week</option><option value="2"'+(p.pace==="2"?" selected":"")+'>2 lb a week</option><option value="1.5"'+(p.pace==="1.5"?" selected":"")+'>1.5 lb a week</option></select></div>'+
    '<div class="chk"><input id="fSleeve" type="checkbox"'+(p.sleeve?" checked":"")+'><label for="fSleeve">I\'ve had a gastric sleeve</label></div>'+
+   '<div class="chk"><input id="fPre" type="checkbox"'+(p.prediabetes?" checked":"")+'><label for="fPre">I\'m prediabetic (borderline diabetic)</label></div>'+
+   '<div class="fld"><label for="fStyle">Eating style</label><select id="fStyle">'+Object.keys(STYLES).map(function(k){return '<option value="'+k+'"'+((p.dietStyle||"med")===k?" selected":"")+'>'+STYLES[k].n+'</option>';}).join("")+'</select><span class="hint">You can switch any time on the Diet tab.</span></div>'+
    '<div class="fld"><label for="fCups">Meal size I can handle</label><select id="fCups"><option value="0.5"'+(p.mealCups==.5?" selected":"")+'>½ cup</option><option value="0.75"'+(p.mealCups==.75?" selected":"")+'>¾ cup</option><option value="1"'+(p.mealCups==1?" selected":"")+'>1 cup</option></select></div>'+
    '<div class="fld"><label for="fProt">Protein target from my surgeon (g/day, optional)</label><input id="fProt" type="number" inputmode="numeric" min="40" max="400" value="'+esc(p.proteinOverride||"")+'" placeholder="Leave blank to use 1 g/lb − 20 g"></div>'+
    '<button type="submit" class="primary">'+(S.profile?"Save changes":"Build my plan")+'</button>'+
@@ -630,8 +815,11 @@ document.addEventListener("click",function(e){
   if(t.dataset.day!=null){UI.d=+t.dataset.day;render();return;}
   if(t.dataset.seg){UI.seg=t.dataset.seg;saveUI();render();return;}
   if(t.dataset.sel!=null){UI.sel.i=+t.dataset.sel;[].forEach.call(document.querySelectorAll(".mv"),function(b){b.classList.toggle("sel",b===t);});showSelected();var vw=$("viewer");if(vw&&vw.getBoundingClientRect().top<0)vw.scrollIntoView({behavior:"smooth",block:"start"});return;}
+  if(t.dataset.style){S.profile.dietStyle=t.dataset.style;save();render();return;}
+  if(t.dataset.pf){UI.pf=t.dataset.pf;UI.pfOpen=true;render();var pe=$("plans");if(pe)pe.scrollIntoView({block:"start"});return;}
   if(t.dataset.del){S.weighins=S.weighins.filter(function(x){return x.date!==t.dataset.del;});save();UI.msg="";render();return;}
   var a=t.dataset.act;
+  if(a==="asmbs"){S.profile.proteinOverride=+t.dataset.g;save();render();return;}
   if(a==="today"){UI.w=curWeek();UI.d=curDay();render();}
   else if(a==="done"){var k=UI.w+"-"+UI.d;if(S.done[k])delete S.done[k];else S.done[k]=1;save();render();}
   else if(a==="weigh"){var v=parseFloat($("wiW").value),dt=$("wiD").value||iso(new Date());
@@ -651,7 +839,7 @@ document.addEventListener("submit",function(e){
   if(bad){var el=$(bad);el.setCustomValidity("Check this value");el.reportValidity&&el.reportValidity();el.focus();setTimeout(function(){el.setCustomValidity("");},2000);return;}
   var startD=g("fStart")?mondayOf(parse(g("fStart"))):mondayOf(new Date());
   var isNew=!S.profile;
-  S.profile={name:g("fName"),age:age,sex:g("fSex"),heightIn:ft*12+(inch||0),startWeight:round1(sw),goalWeight:round1(gw),start:iso(startD),pace:g("fPace"),sleeve:$("fSleeve").checked,mealCups:parseFloat(g("fCups")),proteinOverride:parseInt(g("fProt"),10)||""};
+  S.profile={name:g("fName"),age:age,sex:g("fSex"),heightIn:ft*12+(inch||0),startWeight:round1(sw),goalWeight:round1(gw),start:iso(startD),pace:g("fPace"),sleeve:$("fSleeve").checked,prediabetes:$("fPre").checked,dietStyle:g("fStyle"),mealCups:parseFloat(g("fCups")),proteinOverride:parseInt(g("fProt"),10)||""};
   save();
   if(isNew){UI.tab="plan";UI.w=null;UI.msg="";}else UI.msg="Saved. Your plan is updated.";
   render();window.scrollTo(0,0);
@@ -876,7 +1064,7 @@ function showSelected(){
       if(!id)return;var ref=db.doc("data/users/"+id+"/burnplan");
       return ref.get().then(function(snap){
         var d=snap.exists&&snap.data();
-        if(d&&typeof d.state==="string"){try{var st=JSON.parse(d.state);if(st&&(st.savedAt||0)>(S.savedAt||0)){S=Object.assign({profile:null,weighins:[],done:{},savedAt:0},st);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}UI.w=null;render();}}catch(e){}}
+        if(d&&typeof d.state==="string"){try{var st=JSON.parse(d.state);if(st&&(st.savedAt||0)>(S.savedAt||0)){S=Object.assign({profile:null,weighins:[],done:{},savedAt:0},st);if(S.profile){if(S.profile.prediabetes===undefined)S.profile.prediabetes=true;if(!S.profile.dietStyle)S.profile.dietStyle="med";}try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}UI.w=null;render();}}catch(e){}}
         cloud=ref;if(S.profile&&(!d||(S.savedAt||0)>((d&&d.savedAt)||0)))ref.set({state:JSON.stringify(S)}).catch(function(){});
       });
     });
