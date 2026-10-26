@@ -77,7 +77,19 @@ p{margin:0}
 
 /* main */
 main{padding-block:14px calc(96px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;max-width:760px;margin:0 auto}
-.seg{display:grid;grid-template-columns:1fr 1fr;border:2px solid var(--ink)}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;border:2px solid var(--ink)}
+.gbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--label);font-weight:600;font-size:15px}
+.gbar span{flex:1 1 auto}
+.gbar b{font-family:var(--display);font-size:22px;font-weight:900}
+.gsec{gap:0}
+.gsec .lab{padding-bottom:4px}
+.gi{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 0}
+.gi .box{width:26px;height:26px;border:2px solid var(--ink);display:grid;place-items:center;font-weight:700;color:var(--on)}
+.gi.on .box{background:var(--good);border-color:var(--good)}
+.gi .t{min-width:0;font-weight:600;line-height:1.25}
+.gi .t small{display:block;font-weight:400;font-size:13.5px;color:var(--muted)}
+.gi.on .t{text-decoration:line-through;color:var(--muted)}
+.gtext{width:100%;min-height:200px;font-family:ui-monospace,monospace;font-size:13px;background:var(--card);color:var(--ink);border:2px solid var(--ink);padding:8px}
 .seg button{border:0;background:var(--card);padding:9px 0;font-family:var(--label);font-weight:700;font-size:17px;text-transform:uppercase;letter-spacing:.08em}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .card{background:var(--card);border:2px solid var(--ink);padding:14px;display:grid;gap:10px;min-width:0}
@@ -478,7 +490,7 @@ var PLANS=[
 
 /* ---------- state ---------- */
 var KEY="burnplan-v1";
-var S={profile:null,weighins:[],done:{},savedAt:0};
+var S={profile:null,weighins:[],done:{},groc:{},savedAt:0};
 var UI={tab:"plan",w:null,d:null,seg:"workout",sel:null,confirmReset:false,msg:""};
 try{var raw=localStorage.getItem(KEY);if(raw){var o=JSON.parse(raw);if(o&&typeof o==="object")S=Object.assign(S,o);}}catch(e){}
 if(S.profile){if(S.profile.prediabetes===undefined)S.profile.prediabetes=true;if(!S.profile.dietStyle)S.profile.dietStyle="med";}
@@ -607,12 +619,13 @@ function styleOf(){var s=S.profile.dietStyle;return STYLES[s]?s:"med";}
 function pick(slot,style,w,d,off){var L=LIB[slot].filter(function(m){return m.st.split(" ").indexOf(style)>=0;});return L[(d+w*3+off)%L.length];}
 function ibwKg(){var p=S.profile,over=Math.max(0,(+p.heightIn||70)-60);return (p.sex==="female"?45.5:50)+2.3*over;}
 function diet(w,d){
-  var A=assess(),wk=w+1,fac=+S.profile.mealCups||.75,style=styleOf(),meals=[],T={p:0,k:0,f:0,s:0,c:0,fb:0};
+  var A=assess(),wk=w+1,fac=+S.profile.mealCups||.75,style=styleOf(),meals=[],raw=[],T={p:0,k:0,f:0,s:0,c:0,fb:0};
   [["Breakfast","B",0],["Lunch","L",2],["Snack","S",4],["Dinner","D",1]].forEach(function(slot){
     var m=pick(slot[1],style,w,d,slot[2]),lines=[],M={p:0,k:0,c:0,fb:0};
     m.i.forEach(function(row){
       var f=F[row[0]],q=roundQ(row[2]?row[1]*fac:row[1],f.u);
       ["p","k","f","s","c","fb"].forEach(function(k){T[k]+=f[k]*q;if(M[k]!=null)M[k]+=f[k]*q;});
+      raw.push({f:row[0],q:q,note:row[3]});
       lines.push(qtyText(q,f.u)+" "+f.n.toLowerCase()+(row[3]?" ("+row[3]+")":""));
     });
     meals.push({when:slot[0],name:m.n,lines:lines,p:M.p,k:M.k,c:M.c,fb:M.fb});
@@ -624,7 +637,97 @@ function diet(w,d){
   ["p","k","f","s","c","fb"].forEach(function(k){T[k]+=scoops*SCOOP[k];});
   var order=[meals[0]];if(shakes[0])order.push(shakes[0]);order.push(meals[1]);if(shakes[1])order.push(shakes[1]);order.push(meals[2],meals[3]);
   for(var j=2;j<shakes.length;j++)order.push(shakes[j]);
-  return {target:target,cal:cal,items:order,T:T,scoops:scoops,food:food,style:style,carbCap:STYLES[style].carb};
+  return {target:target,cal:cal,items:order,T:T,scoops:scoops,food:food,style:style,carbCap:STYLES[style].carb,raw:raw};
+}
+
+/* ---------- grocery list ---------- */
+var SECT=["Meat & seafood","Dairy & eggs","Produce","Frozen","Pantry & canned","Protein powder","Staples to have on hand"];
+var FR={0:"",1:"⅛",2:"¼",3:"⅜",4:"½",5:"⅝",6:"¾",7:"⅞"};
+function cupsTxt(c){var e=Math.max(1,Math.round(c*8)),w=Math.floor(e/8),r=e%8;if(!w&&r===1)return "2 tbsp";return (w?w:"")+FR[r]+" cup"+(e>8?"s":"");}
+function lbTxt(lb){var q=Math.round(lb*4),w=Math.floor(q/4),r=q%4;return (w?w:"")+["","¼","½","¾"][r]+" lb";}
+function rawLb(oz){return lbTxt(Math.ceil(oz/0.75/16*4)/4)+" raw";}
+function pl(k,one,many){return k+" "+(k===1?one:many);}
+function n(x){return Math.max(1,Math.ceil(x-1e-9));}
+var GU={
+  chik:[0,"Boneless skinless chicken breast",function(q){return rawLb(q)+" ("+(Math.round(q*2)/2)+" oz cooked)";}],
+  turk:[0,"99% lean ground turkey",function(q){return rawLb(q);}],
+  salmon:[0,"Salmon fillet (or canned salmon)",function(q){return rawLb(q);}],
+  tilapia:[0,"Tilapia fillets (frozen is fine)",function(q){return rawLb(q);}],
+  cod:[0,"Cod fillets (frozen is fine)",function(q){return rawLb(q);}],
+  shrimp:[0,"Peeled shrimp (frozen is fine)",function(q){return rawLb(q);}],
+  beef:[0,"95% lean ground beef",function(q){return rawLb(q);}],
+  pork:[0,"Pork tenderloin",function(q){return rawLb(q);}],
+  deli:[0,"Low-sodium deli turkey",function(q){return lbTxt(Math.ceil(q/16*4)/4)+" ("+(Math.round(q*2)/2)+" oz)";}],
+  eggw:[1,"Liquid egg whites",function(q){return n(q/4)+" × 32-oz carton ("+cupsTxt(q)+" needed)";}],
+  egg:[1,"Eggs",function(q){return pl(n(q),"egg","eggs");}],
+  gyog:[1,"Plain nonfat Greek yogurt",function(q){return n(q/4)+" × 32-oz tub ("+cupsTxt(q)+" needed)";}],
+  cott:[1,"Low-fat (1%) cottage cheese",function(q){return n(q/2)+" × 16-oz container ("+cupsTxt(q)+" needed)";}],
+  sc:[1,"Light string cheese",function(q){return pl(n(q),"stick","sticks");}],
+  ffch:[1,"Fat-free shredded cheese",function(q){return n(q/32)+" × 8-oz bag";}],
+  feta:[1,"Reduced-fat feta",function(q){return n(q/16)+" × 4-oz container";}],
+  hummus:[1,"Hummus",function(q){return n(q/18)+" × 10-oz tub";}],
+  tofu:[1,"Firm tofu",function(q){return n(q/14)+" × 14-oz block";}],
+  berries:[2,"Berries (or frozen, no sugar added)",function(q){return n(q/16)+" × 6-oz container";}],
+  edam:[3,"Shelled edamame",function(q){return n(q/2.5)+" × 12-oz bag";}],
+  tuna:[4,"Tuna in water",function(q){return n(q/4)+" × 5-oz can";}],
+  beans:[4,"Black or white beans",function(q){return n(q/24)+" × 15-oz can";}],
+  lentils:[4,"Lentils (canned, or dry)",function(q){return n(q/24)+" × 15-oz can";}],
+  chick:[4,"Chickpeas",function(q){return n(q/24)+" × 15-oz can";}],
+  oats:[4,"Rolled oats",function(q){return "1 canister ("+cupsTxt(q/16)+" this week)";}],
+  quinoa:[4,"Quinoa",function(q){return "1 bag ("+cupsTxt(Math.max(.125,q/16/3))+" dry this week)";}],
+  rice:[4,"Brown rice (or 90-second pouch)",function(q){return "1 bag or pouch ("+cupsTxt(Math.max(.125,q/16/3))+" dry)";}],
+  salsa:[4,"Salsa",function(q){return n(q/30)+" × 16-oz jar";}],
+  marin:[4,"No-sugar-added marinara",function(q){return n(q/44)+" × 24-oz jar";}],
+  pbp:[4,"Powdered peanut butter",function(q){return "1 jar (lasts weeks; "+q+" tbsp this week)";}],
+  jerky:[4,"Low-sugar turkey jerky",function(q){return (Math.round(q*2)/2)+" oz";}],
+  almonds:[4,"Almonds",function(q){return "1 small bag ("+q+" tbsp this week)";}],
+  walnuts:[4,"Walnuts",function(q){return "1 small bag ("+q+" tbsp this week)";}],
+  ffx:[0,"",null]
+};
+var VEGMAP={"cauliflower mash, no butter":"cauliflower","zucchini noodles":"zucchini","shredded cabbage":"cabbage","lettuce cups":"lettuce","bell pepper":"bell peppers","peppers":"bell peppers","cucumber slices":"cucumber","spaghetti squash":"spaghetti squash","roasted peppers":"bell peppers"};
+function groceries(w){
+  var tot={},veg=0,vegNames={},scoops=0,shakes=0,usesOil=false;
+  for(var d=0;d<7;d++){
+    var D=diet(w,d);
+    D.raw.forEach(function(r){
+      if(r.f==="oil"){usesOil=true;return;}
+      if(r.f==="veg"){veg+=r.q;(r.note||"mixed vegetables").split(/ & |, /).forEach(function(x){x=x.trim();x=VEGMAP[x]||x;if(x&&x!=="no butter")vegNames[x]=1;});return;}
+      tot[r.f]=(tot[r.f]||0)+r.q;
+    });
+    scoops+=D.scoops;shakes+=Math.ceil(D.scoops/2);
+  }
+  var sec=SECT.map(function(){return [];});
+  Object.keys(tot).forEach(function(k){var g=GU[k];if(!g||!g[2])return;sec[g[0]].push({id:k,name:g[1],amt:g[2](Math.round(tot[k]*100)/100)});});
+  if(veg>0)sec[2].unshift({id:"veg",name:"Non-starchy vegetables",amt:"about "+Math.ceil(veg)+" cups total: "+Object.keys(vegNames).sort().join(", ")});
+  if(scoops>0){sec[5].push({id:"whey",name:"Whey protein isolate, unflavored or low-sugar",amt:n(scoops/30)+" × 2-lb tub ("+scoops+" scoops this week; a tub has about 30)"});
+    sec[5].push({id:"almond",name:"Unsweetened almond milk (optional, for shakes)",amt:"up to "+pl(n(shakes*10/64),"half-gallon","half-gallons")+" if every shake uses it; water works too"});}
+  sec[6].push({id:"lemon",name:"Lemons",amt:"2–3"});
+  sec[6].push({id:"spice",name:"Cinnamon, garlic powder, cumin, chili powder, dried oregano, dill",amt:"as needed"});
+  if(usesOil)sec[6].push({id:"oil",name:"Extra-virgin olive oil",amt:"1 bottle"});
+  sec[6].push({id:"spray",name:"Cooking spray",amt:"1 can"});
+  sec.forEach(function(list){list.sort(function(a,b){return a.name<b.name?-1:1;});});
+  return sec;
+}
+function groceriesHTML(w,p){
+  var sec=groceries(w),pr=S.profile,key="g"+w,chk=(S.groc&&S.groc[key])||{},total=0,got=0;
+  sec.forEach(function(l){l.forEach(function(it){total++;if(chk[it.id])got++;});});
+  var a=dateOf(w,0),b=dateOf(w,6);
+  var h='<div class="dayhead p'+(p+1)+'"><h2>Week '+(w+1)+' groceries</h2><span class="meta num">'+short(a)+' – '+short(b)+' · '+STYLES[styleOf()].n+' · '+(pr.mealCups==.5?"½":pr.mealCups==1?"1":"¾")+'-cup meals</span></div>';
+  h+='<p style="font-size:14.5px;color:var(--muted)">Everything for this week\'s 7 days of meals, snacks and shakes. Meat amounts are raw weight to buy. The list changes if you switch eating style or meal size, or when a weigh-in changes your protein.</p>';
+  h+='<div class="gbar"><span class="num"><b>'+got+'</b> of '+total+' in the cart</span><button type="button" class="ghost" data-act="gcopy">Copy list</button><button type="button" class="ghost" data-act="gclear">Uncheck all</button></div>';
+  if(UI.gmsg)h+='<p class="banner good"><span>'+esc(UI.gmsg)+'</span></p>';
+  sec.forEach(function(list,i){if(!list.length)return;
+    h+='<div class="card gsec"><span class="lab">'+SECT[i]+'</span>';
+    list.forEach(function(it){var on=!!chk[it.id];
+      h+='<button type="button" class="gi'+(on?" on":"")+'" data-g="'+it.id+'" aria-pressed="'+on+'"><span class="box">'+(on?"✓":"")+'</span><span class="t">'+esc(it.name)+'<small>'+esc(it.amt)+'</small></span></button>';});
+    h+='</div>';});
+  h+='<textarea id="gtext" class="gtext" readonly aria-label="Grocery list text" hidden>'+esc(groceryText(w,sec))+'</textarea>';
+  return h;
+}
+function groceryText(w,sec){
+  var t="Burn Plan · Week "+(w+1)+" groceries\n";
+  sec.forEach(function(list,i){if(!list.length)return;t+="\n"+SECT[i].toUpperCase()+"\n";list.forEach(function(it){t+="[ ] "+it.name+" — "+it.amt+"\n";});});
+  return t;
 }
 
 /* ---------- helpers ---------- */
@@ -662,8 +765,8 @@ function planHTML(){
   var w=UI.w,d=UI.d,p=ph(w),dt=dateOf(w,d),h='',ti=todayIdx();
   if(ti<0)h+='<div class="banner"><b>Starts '+short(parse(S.profile.start))+'</b><span>Look around now. Day 1 is in '+(-ti)+' day'+(-ti===1?"":"s")+'.</span></div>';
   if(ti>83)h+='<div class="banner good"><b>12 weeks done</b><span>Do the retest, then set a new start date in Profile to begin the next cycle.</span></div>';
-  h+='<div class="seg" role="group" aria-label="View"><button type="button" data-seg="workout" aria-pressed="'+(UI.seg==="workout")+'">Workout</button><button type="button" data-seg="diet" aria-pressed="'+(UI.seg==="diet")+'">Diet</button></div>';
-  h+=UI.seg==="workout"?workoutHTML(w,d,p,dt):dietHTML(w,d,p,dt);
+  h+='<div class="seg" role="group" aria-label="View"><button type="button" data-seg="workout" aria-pressed="'+(UI.seg==="workout")+'">Workout</button><button type="button" data-seg="diet" aria-pressed="'+(UI.seg==="diet")+'">Diet</button><button type="button" data-seg="groc" aria-pressed="'+(UI.seg==="groc")+'">Groceries</button></div>';
+  h+=UI.seg==="workout"?workoutHTML(w,d,p,dt):UI.seg==="groc"?groceriesHTML(w,p):dietHTML(w,d,p,dt);
   return h;
 }
 function workoutHTML(w,d,p,dt){
@@ -827,14 +930,19 @@ function profileHTML(){
 document.addEventListener("click",function(e){
   var t=e.target.closest("button");if(!t)return;
   if(t.dataset.tab){if(!S.profile)return;UI.tab=t.dataset.tab;UI.msg="";UI.confirmReset=false;render();window.scrollTo(0,0);return;}
-  if(t.dataset.wk!=null){UI.w=+t.dataset.wk;render();return;}
+  if(t.dataset.wk!=null){UI.w=+t.dataset.wk;UI.gmsg="";render();return;}
   if(t.dataset.day!=null){UI.d=+t.dataset.day;render();return;}
   if(t.dataset.seg){UI.seg=t.dataset.seg;saveUI();render();return;}
   if(t.dataset.sel!=null){UI.sel.i=+t.dataset.sel;[].forEach.call(document.querySelectorAll(".mv"),function(b){b.classList.toggle("sel",b===t);});showSelected();var vw=$("viewer");if(vw&&vw.getBoundingClientRect().top<0)vw.scrollIntoView({behavior:"smooth",block:"start"});return;}
+  if(t.dataset.g&&t.classList.contains("gi")){S.groc=S.groc||{};var gk="g"+UI.w;S.groc[gk]=S.groc[gk]||{};if(S.groc[gk][t.dataset.g])delete S.groc[gk][t.dataset.g];else S.groc[gk][t.dataset.g]=1;save();UI.gmsg="";var y=window.scrollY;render();window.scrollTo(0,y);return;}
   if(t.dataset.style){S.profile.dietStyle=t.dataset.style;save();render();return;}
   if(t.dataset.pf){UI.pf=t.dataset.pf;UI.pfOpen=true;render();var pe=$("plans");if(pe)pe.scrollIntoView({block:"start"});return;}
   if(t.dataset.del){S.weighins=S.weighins.filter(function(x){return x.date!==t.dataset.del;});save();UI.msg="";render();return;}
   var a=t.dataset.act;
+  if(a==="gclear"){if(S.groc)delete S.groc["g"+UI.w];save();UI.gmsg="";render();return;}
+  if(a==="gcopy"){var ta=$("gtext"),txt=ta.value,done=function(){UI.gmsg="Copied. Paste it into Notes or a text message.";render();};
+    var fallback=function(){ta.hidden=false;ta.focus();ta.select();UI.gmsg="";};
+    try{navigator.clipboard.writeText(txt).then(done,fallback);}catch(_){fallback();}return;}
   if(a==="unlock"){S.profile.proteinOverride="";save();render();return;}
   if(a==="asmbs"){S.profile.proteinOverride=+t.dataset.g;save();render();return;}
   if(a==="today"){UI.w=curWeek();UI.d=curDay();render();}
