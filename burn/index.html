@@ -258,7 +258,9 @@ main{max-width:720px;margin:0 auto;padding-block:6px calc(100px + env(safe-area-
 .fr{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:0 16px;min-height:52px;position:relative}
 .fr+.fr::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--line)}
 .fr label{font-size:16px}
-.fr input,.fr select{border:0;background:transparent;text-align:right;font-size:16px;color:var(--muted);padding:12px 0;min-width:0;max-width:62vw;-webkit-appearance:none;appearance:none}
+.fr input,.fr select{border:0;background:transparent;text-align:right;font-size:16px;color:var(--muted);padding:12px 0;min-width:0;width:9.5em;max-width:46vw;-webkit-appearance:none;appearance:none}
+.fr input[type=date]{width:auto}
+.fr label{min-width:0}
 .fr select{color:var(--accent);font-weight:500;padding-right:2px}
 .fr input:focus{color:var(--ink);outline:none}
 .fr.stack{grid-template-columns:1fr;gap:2px;padding-block:10px}
@@ -1241,7 +1243,7 @@ function equipHTML(){
   var sw=equipSwaps();
   h+='<p class="sh">How your plan changes</p><div class="list">';
   if(!sw.length)h+='<div class="lrow"><span class="ico">'+IC.home+'</span><span class="t">No swaps yet<small>Bodyweight moves, a chair, a step and a doorway</small></span><span></span></div>';
-  sw.forEach(function(s){h+='<div class="lrow"><span class="ico" style="background:var(--accentSoft);color:var(--accent)">'+IC.bolt+'</span><span class="t">'+esc(s[1])+'<small>replaces '+esc(s[0].toLowerCase())+'</small></span><span></span></div>';});
+  sw.forEach(function(s){h+='<div class="lrow"><span class="ico" style="background:var(--accentSoft);color:var(--accent)">'+IC.bolt+'</span><span class="t">'+esc(s[1])+'<small>replaces '+esc(/^(Tuesday|Thursday)/.test(s[0])?s[0]:s[0].charAt(0).toLowerCase()+s[0].slice(1))+'</small></span><span></span></div>';});
   h+='</div>';
   if(sw.length)h+='<p class="fnote">Hip thrusts start in Week 4 and barbell box squats in Week 7. Planks, dead bugs and the Saturday long walk stay the same.</p>';
   return h;
