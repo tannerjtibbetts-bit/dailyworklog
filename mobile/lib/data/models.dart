@@ -466,17 +466,23 @@ class AttRow {
   /// One of [Attendance.statuses], or '' if not answered.
   String status = '';
 
-  Map<String, dynamic> toJson() => {'name': name, 'status': status};
+  /// A short note about this person today, e.g. "Left at 1pm for a doctor's appointment".
+  String comment = '';
+
+  bool get isEmpty => name.isEmpty && status.isEmpty && comment.trim().isEmpty;
+
+  Map<String, dynamic> toJson() => {'name': name, 'status': status, 'comment': comment};
 
   static AttRow fromJson(Map<String, dynamic> o) => AttRow()
     ..name = _s(o, 'name')
-    ..status = _s(o, 'status');
+    ..status = _s(o, 'status')
+    ..comment = _s(o, 'comment');
 }
 
 /// Attendance sheet: one row per crew member with whether they're here today.
 class Attendance {
   static const yes = 'Yes', no = 'No';
-  static const statuses = [yes, no, 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up'];
+  static const statuses = [yes, no, 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up', 'Late', 'Left early'];
 
   /// ISO date this sheet is for.
   String date = '';
@@ -495,14 +501,15 @@ class Attendance {
           if (count(s) > 0) '$s ${count(s)}',
       ].join(' · ');
 
-  /// Drops rows with no name and no answer.
-  void removeEmptyRows() => rows.removeWhere((r) => r.name.isEmpty && r.status.isEmpty);
+  /// Drops rows with no name, answer or comment.
+  void removeEmptyRows() => rows.removeWhere((r) => r.isEmpty);
 
-  /// A new day: keep the names and notes, clear the answers.
+  /// A new day: keep the names and notes, clear the answers and comments.
   void startDay(String iso) {
     date = iso;
     for (final r in rows) {
       r.status = '';
+      r.comment = '';
     }
   }
 

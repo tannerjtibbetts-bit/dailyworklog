@@ -141,11 +141,11 @@ final class ReportDocx {
                 + "<w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>"
                 + "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>";
         body.append("<w:tbl><w:tblPr><w:tblW w:w=\"10080\" w:type=\"dxa\"/><w:tblBorders>").append(b)
-                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"6720\"/>")
-                .append("<w:gridCol w:w=\"3360\"/></w:tblGrid>");
-        int[] widths = {6720, 3360};
-        attRow(new String[]{"Name", "Here?"}, widths, true);
-        for (Models.Attendance.AttRow r : rows) attRow(new String[]{r.name, dash(r.status)}, widths, false);
+                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"4030\"/>")
+                .append("<w:gridCol w:w=\"2220\"/><w:gridCol w:w=\"3830\"/></w:tblGrid>");
+        int[] widths = {4030, 2220, 3830};
+        attRow(new String[]{"Name", "Here?", "Comment"}, widths, true);
+        for (Models.Attendance.AttRow r : rows) attRow(new String[]{r.name, dash(r.status), r.comment.trim()}, widths, false);
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
         String sum = at.summary();
         para(sum.isEmpty() ? "Nobody marked yet" : sum, true, 10, TEXT, 120, false, null);
@@ -158,12 +158,12 @@ final class ReportDocx {
             body.append("<w:tc><w:tcPr><w:tcW w:w=\"").append(widths[i]).append("\" w:type=\"dxa\"/>");
             if (head) body.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E4E7EC\"/>");
             body.append("</w:tcPr><w:p><w:pPr><w:keepNext/><w:spacing w:before=\"40\" w:after=\"40\"/>")
-                    .append(i == 0 ? "" : "<w:jc w:val=\"center\"/>").append("</w:pPr>");
+                    .append(i == 1 ? "<w:jc w:val=\"center\"/>" : "").append("</w:pPr>");
             String v = cells[i];
             boolean red = Models.Attendance.NO.equals(v) || Models.Attendance.AWOL.equals(v);
             boolean green = Models.Attendance.YES.equals(v);
-            String col = i > 0 && green ? GREEN : i > 0 && red ? RED : TEXT;
-            run(v, head || (i > 0 && (green || red)), 10, col, null);
+            String col = i == 1 && green ? GREEN : i == 1 && red ? RED : TEXT;
+            run(v, head || (i == 1 && (green || red)), 10, col, null);
             body.append("</w:p></w:tc>");
         }
         body.append("</w:tr>");

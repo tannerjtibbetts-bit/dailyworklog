@@ -8,6 +8,7 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -22,7 +23,9 @@ final class AttendancePane {
     private AttendancePane() {}
 
     private static final String PICK = "Select…", BLANK = "–";
-    private static final float NAME_W = 2f, STATUS_W = 1f;
+    private static final float NAME_W = 1.9f, STATUS_W = 1.2f, COMMENT_W = 1.8f;
+    /** Narrower screens scroll the table sideways instead of squashing it. */
+    private static final int MIN_WIDTH_DP = 470;
 
     static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
@@ -103,8 +106,17 @@ final class AttendancePane {
         LinearLayout head = OvertimePane.row(a);
         head.addView(OvertimePane.cellLabel(a, "Name"), OvertimePane.weight(a, NAME_W));
         head.addView(OvertimePane.cellLabel(a, "Here?"), OvertimePane.weight(a, STATUS_W));
+        head.addView(OvertimePane.cellLabel(a, "Comment"), OvertimePane.weight(a, COMMENT_W));
         head.addView(new View(a), OvertimePane.removeSize(a));
-        card.addView(head);
+        // The headings and rows scroll sideways together on narrow screens.
+        LinearLayout grid = new LinearLayout(a);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        grid.setMinimumWidth(Ui.dp(a, MIN_WIDTH_DP));
+        android.widget.HorizontalScrollView sideways = new android.widget.HorizontalScrollView(a);
+        sideways.setFillViewport(true);
+        sideways.addView(grid, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(sideways);
+        grid.addView(head);
 
         List<String> names = new ArrayList<>();
         names.add(PICK);
@@ -122,7 +134,7 @@ final class AttendancePane {
 
         LinearLayout table = new LinearLayout(a);
         table.setOrientation(LinearLayout.VERTICAL);
-        card.addView(table);
+        grid.addView(table);
         for (Models.Attendance.AttRow r : at.rows) table.addView(line(a, store, at, table, r, names, refresh));
         card.addView(summary);
         refresh.run();
@@ -186,7 +198,7 @@ final class AttendancePane {
 
         TextView clear = OvertimePane.action(a, "Clear answers", R.color.deep_blue);
         clear.setOnClickListener(v -> Ui.confirm(a, "Clear the attendance answers?",
-                "Names and notes stay. The date changes to today.", "Clear", () -> {
+                "Answers and comments are cleared and the date changes to today. Names and notes stay.", "Clear", () -> {
                     at.startDay(Fmt.todayIso());
                     store.save();
                     render(a, store, p, box);
@@ -210,7 +222,7 @@ final class AttendancePane {
                 new android.graphics.Rect(0, 0, target.getWidth(), target.getHeight()), false));
     }
 
-    /** One table row: Name and Here? dropdowns and the remove button. */
+    /** One table row: Name and Here? dropdowns, the Comment box and the remove button. */
     private static LinearLayout line(Activity a, Store store, Models.Attendance at, LinearLayout table,
                                      Models.Attendance.AttRow r, List<String> names, Runnable refresh) {
         LinearLayout line = OvertimePane.row(a);
@@ -228,6 +240,7 @@ final class AttendancePane {
             sp.setBackgroundResource(OvertimePane.cellBg(r.status));
             refresh.run();
         }, true), OvertimePane.weight(a, STATUS_W));
+        line.addView(commentBox(a, store, r), OvertimePane.weight(a, COMMENT_W));
         line.addView(OvertimePane.removeButton(a, () -> r.name, r::isBlank, () -> {
             at.rows.remove(r);
             table.removeView(line);
@@ -235,5 +248,29 @@ final class AttendancePane {
             refresh.run();
         }), OvertimePane.removeSize(a));
         return line;
+    }
+
+    private static EditText commentBox(Activity a, Store store, Models.Attendance.AttRow r) {
+        EditText e = new EditText(a);
+        e.setSingleLine(true);
+        e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        e.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        e.setTextSize(15);
+        e.setTextColor(a.getColor(R.color.text));
+        e.setHint("Comment");
+        e.setHintTextColor(a.getColor(R.color.grey_light));
+        e.setBackgroundResource(R.drawable.bg_cell);
+        e.setMinHeight(Ui.dp(a, 44));
+        e.setPadding(Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8));
+        e.setText(r.comment);
+        e.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                r.comment = s.toString();
+                store.save();
+            }
+        });
+        return e;
     }
 }

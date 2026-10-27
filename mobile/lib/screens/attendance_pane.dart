@@ -45,6 +45,7 @@ class AttendancePane extends StatefulWidget {
 
 class _AttendancePaneState extends State<AttendancePane> {
   late final TextEditingController _notes = TextEditingController(text: widget.project.attendance.notes);
+  final Map<AttRow, TextEditingController> _comments = {};
   final _lastRow = GlobalKey();
 
   Store get store => Store.instance;
@@ -52,6 +53,9 @@ class _AttendancePaneState extends State<AttendancePane> {
 
   @override
   void dispose() {
+    for (final c in _comments.values) {
+      c.dispose();
+    }
     _notes.dispose();
     super.dispose();
   }
@@ -82,14 +86,47 @@ class _AttendancePaneState extends State<AttendancePane> {
     store.save();
   }
 
-  Widget _row(Widget name, Widget status, {Widget? end}) => Padding(
+  /// The table is at least this wide; on a narrow phone it slides sideways.
+  static const _tableMinWidth = 470.0;
+
+  Widget _row(Widget name, Widget status, Widget comment, {Widget? end}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(children: [
-          Expanded(flex: 19, child: Padding(padding: const EdgeInsets.only(right: 6), child: name)),
-          Expanded(flex: 12, child: Padding(padding: const EdgeInsets.only(right: 6), child: status)),
+          Expanded(flex: 19, child: Padding(padding: const EdgeInsets.only(right: 4), child: name)),
+          Expanded(flex: 12, child: Padding(padding: const EdgeInsets.only(right: 4), child: status)),
+          Expanded(flex: 18, child: Padding(padding: const EdgeInsets.only(right: 4), child: comment)),
           end ?? const SizedBox(width: 32),
         ]),
       );
+
+  TextEditingController _commentFor(AttRow r) =>
+      _comments.putIfAbsent(r, () => TextEditingController(text: r.comment));
+
+  /// Free-text comment for one person, e.g. why they left early.
+  Widget _commentBox(AttRow r) {
+    return TextField(
+      controller: _commentFor(r),
+      textCapitalization: TextCapitalization.sentences,
+      textInputAction: TextInputAction.done,
+      style: const TextStyle(fontSize: 15, color: C.text),
+      decoration: InputDecoration(
+        hintText: 'Comment',
+        hintStyle: const TextStyle(color: C.greyLight),
+        isDense: true,
+        filled: true,
+        fillColor: const Color(0xFFF2F7FD),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.cardStroke)),
+        focusedBorder:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.blue)),
+      ),
+      onChanged: (v) {
+        r.comment = v;
+        store.save();
+      },
+    );
+  }
 
   static Widget _label(String s) => Text(s,
       textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: C.grey, fontWeight: FontWeight.bold));
@@ -105,8 +142,9 @@ class _AttendancePaneState extends State<AttendancePane> {
             r.status = v == _blank ? '' : v;
             store.save();
           }, yesNo: true),
+          _commentBox(r),
           end: removeRowButton(() {
-            confirmRemoveRow(context, r.name, r.name.isEmpty && r.status.isEmpty, () {
+            confirmRemoveRow(context, r.name, r.isEmpty, () {
               att.rows.remove(r);
               store.save();
             });
@@ -127,6 +165,12 @@ class _AttendancePaneState extends State<AttendancePane> {
     final p = widget.project;
     prepareAttendance(p);
     final names = attendanceNames(p);
+    // Rows removed elsewhere drop their comment boxes.
+    _comments.removeWhere((r, c) {
+      if (att.rows.contains(r)) return false;
+      c.dispose();
+      return true;
+    });
     final summary = att.summary();
     final card = BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: C.cardStroke));
@@ -188,8 +232,19 @@ class _AttendancePaneState extends State<AttendancePane> {
               ]),
             ),
             const SizedBox(height: 6),
-            _row(_label('Name'), _label('Here?')),
-            for (final r in att.rows) _line(r, names),
+            // Name, Here? and Comment on one line; slides sideways if the phone is narrow.
+            LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: box.maxWidth < _tableMinWidth ? _tableMinWidth : box.maxWidth,
+                  child: Column(children: [
+                    _row(_label('Name'), _label('Here?'), _label('Comment')),
+                    for (final r in att.rows) _line(r, names),
+                  ]),
+                ),
+              ),
+            ),
             // The count of each answer sits under the table; after adding rows the screen scrolls here.
             KeyedSubtree(
               key: _lastRow,
@@ -260,9 +315,12 @@ class _AttendancePaneState extends State<AttendancePane> {
         Align(
           alignment: Alignment.centerLeft,
           child: _action('Clear answers', C.deepBlue, () {
-            confirm(context, 'Clear the attendance answers?', 'Names and notes stay. The date changes to today.',
+            confirm(context, 'Clear the attendance answers?', 'Answers and comments are cleared and the date changes to today. Names and notes stay.',
                 'Clear', () {
               att.startDay(Fmt.todayIso());
+              for (final c in _comments.values) {
+                c.clear();
+              }
               store.save();
             });
           }),

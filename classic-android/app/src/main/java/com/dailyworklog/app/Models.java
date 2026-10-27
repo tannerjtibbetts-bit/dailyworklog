@@ -580,7 +580,7 @@ public final class Models {
     /** Attendance sheet: who is here today (Yes, No, AWOL, Vacation and so on). */
     public static class Attendance {
         public static final String YES = "Yes", NO = "No", AWOL = "AWOL";
-        public static final String[] STATUSES = {"Yes", "No", "AWOL", "Vacation", "Off", "Training", "D72", "Step up"};
+        public static final String[] STATUSES = {"Yes", "No", "AWOL", "Vacation", "Off", "Training", "D72", "Step up", "Late", "Left early"};
         /** ISO date this sheet is for ("" until first shown). */
         public String date = "";
         public boolean include;
@@ -591,11 +591,14 @@ public final class Models {
             public String name = "";
             /** One of STATUSES, or "" when not answered. */
             public String status = "";
+            /** Short free-text note for this person today. */
+            public String comment = "";
 
             JSONObject toJson() throws JSONException {
                 JSONObject o = new JSONObject();
                 o.put("name", name);
                 o.put("status", status);
+                o.put("comment", comment);
                 return o;
             }
 
@@ -603,11 +606,12 @@ public final class Models {
                 AttRow r = new AttRow();
                 r.name = o.optString("name", "");
                 r.status = o.optString("status", "");
+                r.comment = o.optString("comment", "");
                 return r;
             }
 
             public boolean isBlank() {
-                return name.isEmpty() && status.isEmpty();
+                return name.isEmpty() && status.isEmpty() && comment.isEmpty();
             }
         }
 
@@ -634,15 +638,18 @@ public final class Models {
             return String.join(" \u00B7 ", parts);
         }
 
-        /** Drops rows with no name and no status. */
+        /** Drops rows with no name, status or comment. */
         public void removeEmptyRows() {
             rows.removeIf(AttRow::isBlank);
         }
 
-        /** New day: keep the names and notes, clear every status. */
+        /** New day: keep the names and notes, clear every status and comment. */
         public void startDay(String iso) {
             date = iso;
-            for (AttRow r : rows) r.status = "";
+            for (AttRow r : rows) {
+                r.status = "";
+                r.comment = "";
+            }
         }
 
         /** Before showing the tab: set the date and, only when there are no rows, one per crew member with names. */

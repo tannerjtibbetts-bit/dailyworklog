@@ -228,14 +228,14 @@ class ReportPdf {
     _drawOvertimeNotes(notes, w);
   }
 
-  /// Attendance table: Name and Here?, then how many of each answer and the notes.
+  /// Attendance table: Name, Here? and Comment, then how many of each answer and the notes.
   /// In the daily report only when ticked and someone is on it; force draws it regardless.
   void _drawAttendance(Project p, bool force) {
     final a = p.attendance;
     final rows = a.filled();
     final notes = a.notes.trim();
     if (force ? rows.isEmpty && notes.isEmpty : !a.include || rows.isEmpty) return;
-    const w = _w - 2 * _m, rowH = 20.0, nameW = w * 0.62, stW = w - nameW;
+    const w = _w - 2 * _m, rowH = 20.0, nameW = w * 0.40, stW = w * 0.22, comW = w - nameW - stW;
     _ensure(70 + rowH * 2);
     _y += 6;
     // The sheet on its own already has the title and date at the top.
@@ -244,6 +244,7 @@ class ReportPdf {
       _fillRect(_m, _y, w, rowH, _barTrack);
       _drawString('Name', _otBold, _m + 6, _y + 13.5);
       _drawString('Here?', _otBold, _m + nameW + (stW - _measure('Here?', _otBold)) / 2, _y + 13.5);
+      _drawString('Comment', _otBold, _m + nameW + stW + 6, _y + 13.5);
       _y += rowH;
       for (final r in rows) {
         _ensure(rowH);
@@ -258,6 +259,8 @@ class ReportPdf {
             ? _small
             : _body;
         _drawString(s, tp, _m + nameW + (stW - _measure(s, tp)) / 2, _y + 13.5);
+        final c = r.comment.trim().replaceAll('\n', ' ');
+        if (c.isNotEmpty) _drawString(_ellipsize(c, _body, comW - 10), _body, _m + nameW + stW + 6, _y + 13.5);
         _y += rowH;
       }
       _hLine(_m, _m + w, _y);

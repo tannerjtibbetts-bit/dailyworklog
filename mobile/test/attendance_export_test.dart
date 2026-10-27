@@ -38,14 +38,15 @@ void main() {
       ..notes = 'Cy at medical';
     for (final r in [
       ['Al Smith', 'Yes'],
-      ['Bo & Co', 'AWOL'],
+      ['Bo & Co', 'AWOL', 'No call, no show'],
       ['', ''],
       ['Cy Lee', 'Step up'],
       ['Di Ray', 'Yes'],
     ]) {
       p.attendance.rows.add(AttRow()
         ..name = r[0]
-        ..status = r[1]);
+        ..status = r[1]
+        ..comment = r.length > 2 ? r[2] : '');
     }
     log = DailyLog()..date = '2026-10-27';
     log.tasks.add(Task()..title = 'Torque checks');
@@ -62,6 +63,8 @@ void main() {
     expect(sheet, contains('<c r="A5" t="inlineStr" s="2"><is><t xml:space="preserve">Name</t>'));
     expect(sheet, contains('<c r="B6" t="inlineStr" s="3"><is><t xml:space="preserve">Yes</t>'));
     expect(sheet, contains('Bo &amp; Co'));
+    expect(sheet, contains('<c r="C5" t="inlineStr" s="2"><is><t xml:space="preserve">Comment</t>'));
+    expect(sheet, contains('<c r="C7" t="inlineStr"><is><t xml:space="preserve">No call, no show</t>'));
     expect(sheet, contains('<c r="B7" t="inlineStr" s="4"><is><t xml:space="preserve">AWOL</t>'));
     // 4 people on rows 6-9, a gap, then the counts.
     expect(sheet, contains('<c r="A11" t="inlineStr" s="1"><is><t xml:space="preserve">Yes</t></is></c><c r="B11"><v>2</v></c>'));
@@ -73,7 +76,7 @@ void main() {
     final own = File('${tmp.path}/att.pdf')..writeAsBytesSync(await ReportPdf.writeAttendance(p, 'Tester', day));
     final text = await _pdfText(own);
     if (text != null) {
-      for (final s in ['Attendance', 'B44 · Tue Oct 27, 2026', 'Here?', 'Bo & Co', 'AWOL', 'Yes 2 · AWOL 1 · Step up 1', 'Cy at medical']) {
+      for (final s in ['Attendance', 'B44 · Tue Oct 27, 2026', 'Here?', 'Comment', 'No call, no show', 'Bo & Co', 'AWOL', 'Yes 2 · AWOL 1 · Step up 1', 'Cy at medical']) {
         expect(text, contains(s));
       }
     }
@@ -90,6 +93,7 @@ void main() {
     XmlDocument.parse(doc);
     expect(doc, contains('Attendance Tue Oct 27, 2026'));
     expect(doc, contains('Here?'));
+    expect(doc, contains('No call, no show'));
     expect(doc, contains('Yes 2 · AWOL 1 · Step up 1'));
     p.attendance.include = false;
     final off = _unzip(ReportDocx.write(p, log, 'Tester', day, tmp.path))['word/document.xml']!;

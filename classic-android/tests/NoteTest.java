@@ -76,13 +76,37 @@ class AttendanceTest { public static void main(String[] a) throws Exception {
   NoteTest.check(sh.contains("<c r=\"A1\" t=\"inlineStr\" s=\"5\"><is><t xml:space=\"preserve\">Attendance</t>"), "A1 title");
   NoteTest.check(sh.contains("<c r=\"A2\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Date: Tue Oct 27, 2026</t>"), "A2 date");
   NoteTest.check(sh.contains("<c r=\"A3\" t=\"inlineStr\"><is><t xml:space=\"preserve\">B44 Zone 2</t>"), "A3 project");
-  NoteTest.check(sh.contains("<c r=\"A5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Name</t>") && sh.contains("<c r=\"B5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Here?</t>"), "header row 5");
+  NoteTest.check(sh.contains("<c r=\"A5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Name</t>") && sh.contains("<c r=\"B5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Here?</t>")
+      && sh.contains("<c r=\"C5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Comment</t>"), "header row 5");
   NoteTest.check(sh.contains("<c r=\"A6\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Sam Maint</t>") && sh.contains("<c r=\"B6\" t=\"inlineStr\" s=\"3\"><is><t xml:space=\"preserve\">Yes</t>")
       && sh.contains("<c r=\"B8\" t=\"inlineStr\" s=\"4\"><is><t xml:space=\"preserve\">AWOL</t>"), "rows");
   NoteTest.check(sh.contains("<row r=\"10\"><c r=\"A10\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Yes</t></is></c><c r=\"B10\"><v>1</v></c>")
       && sh.contains("<c r=\"A11\" t=\"inlineStr\"><is><t xml:space=\"preserve\">AWOL</t>") && sh.contains("<c r=\"A12\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Vacation</t>"), "counts");
   NoteTest.check(sh.contains("<c r=\"A14\" t=\"inlineStr\" s=\"1\"><is><t xml:space=\"preserve\">Notes</t>") && sh.contains("Jim back Monday"), "notes");
   NoteTest.check(sh.contains("width=\"28\"") && sh.contains("<col min=\"2\" max=\"2\" width=\"14\""), "widths");
+  // Comments, Late and Left early
+  NoteTest.check(String.join(",", Models.Attendance.STATUSES).equals("Yes,No,AWOL,Vacation,Off,Training,D72,Step up,Late,Left early"), "statuses");
+  Models.Project c = new Models.Project();
+  Models.Attendance.AttRow c1 = new Models.Attendance.AttRow(); c1.name = "Sam"; c1.status = "Late"; c1.comment = "In at 7:40"; c.attendance.rows.add(c1);
+  Models.Attendance.AttRow c2 = new Models.Attendance.AttRow(); c2.comment = "Ask about Friday"; c.attendance.rows.add(c2);
+  Models.Attendance.AttRow c3 = new Models.Attendance.AttRow(); c3.name = "Jo"; c3.status = "Left early"; c.attendance.rows.add(c3);
+  c.attendance.rows.add(new Models.Attendance.AttRow());
+  NoteTest.check(c.attendance.summary().equals("Late 1 \u00B7 Left early 1"), "late in summary " + c.attendance.summary());
+  Models.Project cq = Models.Project.fromJson(c.toJson());
+  NoteTest.check(cq.attendance.rows.get(0).comment.equals("In at 7:40") && c.toJson().getJSONObject("attendance").getJSONArray("rows").getJSONObject(0).getString("comment").equals("In at 7:40"), "comment round trip");
+  org.json.JSONObject nc = c.toJson(); nc.getJSONObject("attendance").getJSONArray("rows").getJSONObject(0).remove("comment");
+  NoteTest.check(Models.Project.fromJson(nc).attendance.rows.get(0).comment.isEmpty(), "old row without comment");
+  NoteTest.check(!c2.isBlank(), "comment-only row is not blank");
+  cq.attendance.removeEmptyRows(); NoteTest.check(cq.attendance.rows.size()==3 && cq.attendance.rows.get(1).comment.equals("Ask about Friday"), "remove empty rows keeps a comment-only row");
+  cq.attendance.startDay("2026-10-29"); NoteTest.check(cq.attendance.rows.get(0).comment.isEmpty() && cq.attendance.rows.get(0).status.isEmpty() && cq.attendance.rows.get(0).name.equals("Sam"), "startDay clears comment");
+  c.attendance.date = "2026-10-27";
+  java.io.ByteArrayOutputStream cb = new java.io.ByteArrayOutputStream(); AttendanceXlsx.write(c, cb);
+  String cs = null;
+  try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(cb.toByteArray()))) {
+    for (java.util.zip.ZipEntry e; (e = z.getNextEntry()) != null; ) if (e.getName().equals("xl/worksheets/sheet1.xml")) cs = new String(z.readAllBytes(), "UTF-8");
+  }
+  NoteTest.check(cs.contains("<c r=\"C4\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Comment</t>")
+      && cs.contains("<c r=\"C5\" t=\"inlineStr\"><is><t xml:space=\"preserve\">In at 7:40</t>") && cs.contains("<col min=\"3\" max=\"3\" width=\"40\""), "xlsx comment column");
   System.out.println("ATTENDANCE PASS"); } }
 class ShiftTest { public static void main(String[] a) throws Exception {
   Models.Project p = new Models.Project(); Models.DailyLog l = new Models.DailyLog(); p.logs.add(l);

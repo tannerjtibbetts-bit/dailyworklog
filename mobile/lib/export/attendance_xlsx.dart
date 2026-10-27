@@ -1,4 +1,4 @@
-// The Attendance tab as a small Excel (.xlsx) file: Name / Here?, how many of each answer, and notes.
+// The Attendance tab as a small Excel (.xlsx) file: Name / Here? / Comment, how many of each answer, and notes.
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -38,12 +38,13 @@ class AttendanceXlsx {
     row(['Date: ${Fmt.longDay(a.date)}'], _normal);
     if (p.name.isNotEmpty) row([p.name], _normal);
     r++;
-    row(['Name', 'Here?'], _head);
+    row(['Name', 'Here?', 'Comment'], _head);
     for (final o in a.filled()) {
       r++;
       rows.write('<row r="$r">');
       cell('A', r, o.name, _normal);
       cell('B', r, o.status, _style(o.status));
+      if (o.comment.trim().isNotEmpty) cell('C', r, o.comment.trim(), _normal);
       rows.write('</row>');
     }
     r++;
@@ -69,7 +70,8 @@ class AttendanceXlsx {
     final sheet =
         '$head<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         '<cols><col min="1" max="1" width="28" customWidth="1"/>'
-        '<col min="2" max="2" width="14" customWidth="1"/></cols>'
+        '<col min="2" max="2" width="14" customWidth="1"/>'
+        '<col min="3" max="3" width="40" customWidth="1"/></cols>'
         '<sheetData>$rows</sheetData></worksheet>';
 
     final zip = Archive()

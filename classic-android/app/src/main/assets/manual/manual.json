@@ -2357,7 +2357,7 @@
       "id": "attendance-tab",
       "title": "Attendance: who's here today",
       "group": "Tabs",
-      "summary": "Mark each person Yes, No, AWOL, Vacation, Off, Training, D72 or Step up. Remove rows, export, and Clear answers.",
+      "summary": "Mark each person Yes, No, AWOL, Vacation, Off, Training, D72, Step up, Late or Left early, and add a comment. Remove rows, export, and Clear answers.",
       "keywords": [
         "attendance",
         "here",
@@ -2379,7 +2379,11 @@
         "pdf",
         "clear answers",
         "include in reports",
-        "date"
+        "date",
+        "late",
+        "left early",
+        "comment",
+        "why"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2398,21 +2402,23 @@
           "items": [
             "Open the project and tap \"Attendance\".",
             "Check the date at the top. To pick another day, tap \"Change\".",
-            "In each row, tap the box under \"Here?\" and pick an answer: \"Yes\", \"No\", \"AWOL\", \"Vacation\", \"Off\", \"Training\", \"D72\" or \"Step up\".",
+            "In each row, tap the box under \"Here?\" and pick an answer: \"Yes\", \"No\", \"AWOL\", \"Vacation\", \"Off\", \"Training\", \"D72\", \"Step up\", \"Late\" or \"Left early\".",
+            "To add a comment for that person, tap the \"Comment\" box at the end of the row and type, for example \"Left at 1pm, doctor\".",
             "To change who is on a row, tap the name and pick someone else.",
             "Type anything else in the \"Notes\" box under the table."
           ]
         },
         {
           "type": "text",
-          "text": "Yes turns green. No and AWOL turn red. The line under the table counts each answer, for example \"Yes 5 · Vacation 1\". Everything saves by itself."
+          "text": "Yes turns green. No and AWOL turn red. The line under the table counts each answer, for example \"Yes 5 · Vacation 1 · Late 1\". Everything saves by itself."
         },
         {
           "type": "bullets",
           "items": [
+            "On a narrow phone, slide the table left to see the \"Comment\" box and the \"×\".",
             "\"+  Add a row\" and \"+  Add 5 rows\" add more rows.",
-            "The \"×\" at the end of a row removes just that row. If it has a name or answer, tap \"Remove\" to confirm. Your crew list doesn't change.",
-            "\"Remove empty rows\" takes out rows with no name and no answer."
+            "The \"×\" at the end of a row removes just that row. If it has a name, answer or comment, tap \"Remove\" to confirm. Your crew list doesn't change.",
+            "\"Remove empty rows\" takes out rows with no name, answer or comment."
           ]
         },
         {
@@ -2433,13 +2439,13 @@
         },
         {
           "type": "text",
-          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the attendance table to your daily reports too."
+          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the attendance table, with the comments, to your daily reports too."
         },
         {
           "type": "steps",
           "items": [
             "For a new day, tap \"Clear answers\" at the bottom.",
-            "Tap \"Clear\". The answers are cleared and the date changes to today. Names and notes stay."
+            "Tap \"Clear\". The answers and comments are cleared and the date changes to today. Names and notes stay."
           ]
         },
         {
@@ -2805,7 +2811,7 @@
             "The sea can list, after the fields, only when \"Include in my reports (PDF, Word and email)\" is ticked on the Sea Can Movements tab. It shows the sea cans that have a number, with Moves, Can #, From location and Current location.",
             "\"Also today\": only the items you ticked, with the time and any photos.",
             "\"Weekend overtime\": the table and notes, only when \"Include in my reports\" is ticked on the Overtime tab.",
-            "\"Attendance\" with the date: the table and the count of each answer, only when \"Include in my reports\" is ticked on the Attendance tab."
+            "\"Attendance\" with the date: each person's answer and comment, and the count of each answer, only when \"Include in my reports\" is ticked on the Attendance tab."
           ]
         },
         {

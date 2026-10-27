@@ -151,15 +151,17 @@ class ReportDocx {
         '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:bottom w:val="single" w:sz="4" w:color="D5D9DE"/><w:right w:val="single" w:sz="4" w:color="D5D9DE"/>'
         '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
-    const widths = [6240, 3840];
+    const widths = [4030, 2220, 3830];
     _body.write(
       '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
-      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="6240"/>'
-      '<w:gridCol w:w="3840"/></w:tblGrid>',
+      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4030"/>'
+      '<w:gridCol w:w="2220"/><w:gridCol w:w="3830"/></w:tblGrid>',
     );
-    _otRow(const ['Name', 'Here?'], true, 'E4E7EC', true, widths: widths);
+    _otRow(const ['Name', 'Here?', 'Comment'], true, 'E4E7EC', true, widths: widths, leftLast: true);
     for (var i = 0; i < rows.length; i++) {
-      _otRow([rows[i].name, _dash(rows[i].status)], false, null, i < rows.length - 1, widths: widths);
+      final r = rows[i];
+      _otRow([r.name, _dash(r.status), r.comment.trim()], false, null, i < rows.length - 1,
+          widths: widths, leftLast: true);
     }
     _body.write('</w:tbl>');
     final sum = a.summary();
@@ -230,20 +232,22 @@ class ReportDocx {
 
   static String _dash(String v) => v.isEmpty ? '-' : v;
 
+  /// [leftLast] keeps the last column (a comment) left-aligned and plain.
   void _otRow(List<String> cells, bool bold, String? shade, bool keep,
-      {List<int> widths = const [4080, 1500, 1500, 1500, 1500]}) {
+      {List<int> widths = const [4080, 1500, 1500, 1500, 1500], bool leftLast = false}) {
     _body.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
     for (var i = 0; i < cells.length; i++) {
+      final plain = leftLast && i == cells.length - 1;
       _body.write('<w:tc><w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/>');
       if (shade != null) _body.write('<w:shd w:val="clear" w:color="auto" w:fill="$shade"/>');
       _body.write(
         '</w:tcPr><w:p><w:pPr>${keep ? '<w:keepNext/>' : ''}<w:spacing w:before="40" w:after="40"/>'
-        '${i == 0 ? '' : '<w:jc w:val="center"/>'}</w:pPr>',
+        '${i == 0 || plain ? '' : '<w:jc w:val="center"/>'}</w:pPr>',
       );
       final v = cells[i];
-      final red = v == Overtime.no || v == 'AWOL';
-      final yesNo = i > 0 && (v == Overtime.yes || red);
-      final col = i > 0 && v == Overtime.yes
+      final red = !plain && (v == Overtime.no || v == 'AWOL');
+      final yesNo = i > 0 && !plain && (v == Overtime.yes || red);
+      final col = i > 0 && !plain && v == Overtime.yes
           ? _green
           : i > 0 && red
           ? _red

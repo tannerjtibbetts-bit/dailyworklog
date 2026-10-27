@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/** The Attendance tab as a small Excel (.xlsx) file: Name / Here?, counts and notes. */
+/** The Attendance tab as a small Excel (.xlsx) file: Name / Here? / Comment, counts and notes. */
 final class AttendanceXlsx {
     private AttendanceXlsx() {}
 
@@ -21,12 +21,13 @@ final class AttendanceXlsx {
         row(rows, r, new String[]{"Date: " + Fmt.longDay(at.date)}, NORMAL);
         if (!p.name.isEmpty()) row(rows, r, new String[]{p.name}, NORMAL);
         r[0]++;
-        row(rows, r, new String[]{"Name", "Here?"}, HEAD);
+        row(rows, r, new String[]{"Name", "Here?", "Comment"}, HEAD);
         for (Models.Attendance.AttRow o : at.filled()) {
             r[0]++;
             rows.append("<row r=\"").append(r[0]).append("\">");
             cell(rows, "A", r[0], o.name, NORMAL);
             cell(rows, "B", r[0], o.status, style(o.status));
+            cell(rows, "C", r[0], o.comment, NORMAL);
             rows.append("</row>");
         }
         r[0]++;
@@ -48,7 +49,8 @@ final class AttendanceXlsx {
         String sheet = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
                 + "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
                 + "<cols><col min=\"1\" max=\"1\" width=\"28\" customWidth=\"1\"/>"
-                + "<col min=\"2\" max=\"2\" width=\"14\" customWidth=\"1\"/></cols>"
+                + "<col min=\"2\" max=\"2\" width=\"14\" customWidth=\"1\"/>"
+                + "<col min=\"3\" max=\"3\" width=\"40\" customWidth=\"1\"/></cols>"
                 + "<sheetData>" + rows + "</sheetData></worksheet>";
 
         try (ZipOutputStream zip = new ZipOutputStream(out)) {

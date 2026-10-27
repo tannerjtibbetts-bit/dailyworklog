@@ -217,7 +217,7 @@ final class ReportPdf {
         List<Models.Attendance.AttRow> rows = at.filled();
         String notes = at.notes.trim();
         if (!force && (!at.include || rows.isEmpty())) return;
-        float w = W - 2 * M, rowH = 20, nameW = w * 0.65f, statusW = w - nameW;
+        float w = W - 2 * M, rowH = 20, nameW = w * 0.40f, statusW = w * 0.22f, commentW = w - nameW - statusW;
         ensure(70 + rowH * 2);
         if (!force) {
             y += 6;
@@ -230,6 +230,7 @@ final class ReportPdf {
             c.drawRect(M, y, M + w, y + rowH, barTrack);
             c.drawText("Name", M + 6, y + 13.5f, bold);
             c.drawText("Here?", M + nameW + (statusW - bold.measureText("Here?")) / 2f, y + 13.5f, bold);
+            c.drawText("Comment", M + nameW + statusW + 6, y + 13.5f, bold);
             y += rowH;
             for (Models.Attendance.AttRow r : rows) {
                 ensure(rowH);
@@ -240,6 +241,8 @@ final class ReportPdf {
                         : Models.Attendance.NO.equals(r.status) || Models.Attendance.AWOL.equals(r.status) ? no
                         : r.status.isEmpty() ? small : body;
                 c.drawText(s, M + nameW + (statusW - tp.measureText(s)) / 2f, y + 13.5f, tp);
+                String cm = TextUtils.ellipsize(r.comment.trim(), body, commentW - 12, TextUtils.TruncateAt.END).toString();
+                c.drawText(cm, M + nameW + statusW + 6, y + 13.5f, body);
                 y += rowH;
             }
             c.drawLine(M, y, M + w, y, line);

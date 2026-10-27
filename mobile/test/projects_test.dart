@@ -193,24 +193,33 @@ void main() {
       a.rows[1].status = 'Yes';
       a.rows[2].status = 'AWOL';
       a.rows[3].status = 'Step up';
+      a.rows[3].comment = 'Covering for Lee';
       a.rows.add(AttRow()..status = 'Yes'); // no name: not counted
       a.rows.add(AttRow());
+      a.rows.add(AttRow()..comment = 'Who was this?'); // only a comment: kept
       expect(a.summary(), 'Yes 2 · AWOL 1 · Step up 1');
+      a.rows[1].status = 'Late';
+      expect(a.summary(), 'Yes 1 · AWOL 1 · Step up 1 · Late 1');
+      a.rows[1].status = 'Yes';
+      // Files from before comments existed load with none.
+      expect(AttRow.fromJson({'name': 'x', 'status': 'Yes'}).comment, '');
       expect(Attendance().summary(), '');
       final q = Project.fromJson(Map<String, dynamic>.from(p.toJson()));
-      expect(q.attendance.rows.length, 6);
+      expect(q.attendance.rows.length, 7);
+      expect(q.attendance.rows[3].comment, 'Covering for Lee');
       expect(q.attendance.include, true);
       expect(q.attendance.notes, 'Cy at medical');
       q.attendance.removeEmptyRows();
-      expect(q.attendance.rows.length, 5);
+      expect(q.attendance.rows.length, 6);
       q.renamePerson('Cy', 'Cyrus');
       expect(q.attendance.rows[2].name, 'Cyrus');
       q.attendance.startDay('2026-10-28');
       expect(q.attendance.date, '2026-10-28');
-      expect(q.attendance.rows.every((r) => r.status.isEmpty), true);
+      expect(q.attendance.rows.every((r) => r.status.isEmpty && r.comment.isEmpty), true);
       expect(q.attendance.rows[0].name, 'Al');
       expect(q.attendance.notes, 'Cy at medical');
-      expect(Attendance.statuses, ['Yes', 'No', 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up']);
+      expect(Attendance.statuses,
+          ['Yes', 'No', 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up', 'Late', 'Left early']);
       expect(Fmt.longDay('2026-10-27'), 'Tue Oct 27, 2026');
     });
   });
@@ -413,7 +422,15 @@ void main() {
       expect(p.attendance.rows[1].status, 'Vacation');
       expect(find.text('Vacation 1'), findsOneWidget);
 
-      // Remove Bo's row: asks first, the crew list stays.
+      // A comment for Al.
+      await tester.enterText(find.widgetWithText(TextField, 'Comment').first, 'Left at 1pm');
+      await tester.pump();
+      expect(p.attendance.rows[0].comment, 'Left at 1pm');
+
+      // Remove Bo's row: asks first, the crew list stays. On a narrow phone the × is off to
+      // the right, so slide the table over first.
+      await tester.ensureVisible(find.byTooltip('Remove row').at(1));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Remove row').at(1));
       await tester.pumpAndSettle();
       expect(find.text("Bo Jones comes off this sheet. Your crew list doesn't change."), findsOneWidget);
@@ -426,6 +443,8 @@ void main() {
       await tester.tap(find.text('+  Add a row'));
       await tester.pumpAndSettle();
       expect(p.attendance.rows.length, 3);
+      await tester.ensureVisible(find.byTooltip('Remove row').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Remove row').last);
       await tester.pumpAndSettle();
       expect(p.attendance.rows.length, 2);
