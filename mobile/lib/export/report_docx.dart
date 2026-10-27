@@ -90,6 +90,7 @@ class ReportDocx {
     }
 
     _renderOvertime(p);
+    _renderAttendance(p);
     _renderSeaCans(p);
 
     final extras = log.includedExtras();
@@ -136,6 +137,34 @@ class ReportDocx {
     _otRow(['Yes total', '${ot.yesCount(0)}', '${ot.yesCount(1)}', '${ot.yesCount(2)}', ''], true, null, false);
     _body.write('</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr></w:p>');
     _overtimeNotes(notes);
+  }
+
+  /// Attendance table, only when ticked and someone is on it.
+  void _renderAttendance(Project p) {
+    final a = p.attendance;
+    final rows = a.filled();
+    if (!a.include || rows.isEmpty) return;
+    _body.write('<w:p><w:pPr><w:keepNext/><w:spacing w:before="360" w:after="100"/></w:pPr>');
+    _run('Attendance ${Fmt.longDay(a.date)}', true, 13, _navy);
+    _body.write('</w:p>');
+    const b =
+        '<w:top w:val="single" w:sz="4" w:color="D5D9DE"/><w:left w:val="single" w:sz="4" w:color="D5D9DE"/>'
+        '<w:bottom w:val="single" w:sz="4" w:color="D5D9DE"/><w:right w:val="single" w:sz="4" w:color="D5D9DE"/>'
+        '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
+    const widths = [6240, 3840];
+    _body.write(
+      '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
+      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="6240"/>'
+      '<w:gridCol w:w="3840"/></w:tblGrid>',
+    );
+    _otRow(const ['Name', 'Here?'], true, 'E4E7EC', true, widths: widths);
+    for (var i = 0; i < rows.length; i++) {
+      _otRow([rows[i].name, _dash(rows[i].status)], false, null, i < rows.length - 1, widths: widths);
+    }
+    _body.write('</w:tbl>');
+    final sum = a.summary();
+    if (sum.isNotEmpty) _para(sum, true, 10, _navy, 120, false);
+    _overtimeNotes(a.notes.trim());
   }
 
   void _renderSeaCans(Project p) {
@@ -201,8 +230,8 @@ class ReportDocx {
 
   static String _dash(String v) => v.isEmpty ? '-' : v;
 
-  void _otRow(List<String> cells, bool bold, String? shade, bool keep) {
-    const widths = [4080, 1500, 1500, 1500, 1500];
+  void _otRow(List<String> cells, bool bold, String? shade, bool keep,
+      {List<int> widths = const [4080, 1500, 1500, 1500, 1500]}) {
     _body.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
     for (var i = 0; i < cells.length; i++) {
       _body.write('<w:tc><w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/>');
@@ -212,10 +241,11 @@ class ReportDocx {
         '${i == 0 ? '' : '<w:jc w:val="center"/>'}</w:pPr>',
       );
       final v = cells[i];
-      final yesNo = i > 0 && (v == Overtime.yes || v == Overtime.no);
+      final red = v == Overtime.no || v == 'AWOL';
+      final yesNo = i > 0 && (v == Overtime.yes || red);
       final col = i > 0 && v == Overtime.yes
           ? _green
-          : i > 0 && v == Overtime.no
+          : i > 0 && red
           ? _red
           : _text;
       _run(v, bold || yesNo, 10, col);

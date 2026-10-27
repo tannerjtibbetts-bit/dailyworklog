@@ -100,6 +100,24 @@ class ReportPdf {
     return r._doc.save();
   }
 
+  /// Just the Attendance tab as its own PDF, to send on its own.
+  static Future<Uint8List> writeAttendance(Project p, String generatedBy, int generatedAt) {
+    final r = ReportPdf._('Attendance${p.name.isEmpty ? '' : ' - ${p.name}'}', '');
+    final a = p.attendance;
+    r._newPage();
+    const w = _w - 2 * _m;
+    r._text('Attendance', _title, _m, w, 6);
+    r._text('${p.name.isEmpty ? '' : '${p.name} · '}${Fmt.longDay(a.date)}', _meta, _m, w, 2);
+    r._text('Generated ${Fmt.longStamp(generatedAt)} by $generatedBy', _meta, _m, w, 10);
+    if (a.filled().isEmpty && a.notes.trim().isEmpty) {
+      r._text('Nobody marked yet.', _body, _m, w, 4);
+    } else {
+      r._drawAttendance(p, true);
+    }
+    r._finishPage();
+    return r._doc.save();
+  }
+
   /// Just the Sea Can Movements tab as its own PDF, to send on its own.
   static Future<Uint8List> writeSeaCans(Project p, String generatedBy, int generatedAt) {
     final title = 'Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'}';
@@ -156,6 +174,7 @@ class ReportPdf {
     }
     _drawExtras(log);
     _drawOvertime(p, false);
+    _drawAttendance(p, false);
     _drawSeaCans(p, false);
     _finishPage();
   }
@@ -206,6 +225,49 @@ class ReportPdf {
       _drawString(s, _otYes, _m + nameW + d * dayW + (dayW - _measure(s, _otYes)) / 2, _y + 13.5);
     }
     _y += rowH + 10;
+    _drawOvertimeNotes(notes, w);
+  }
+
+  /// Attendance table: Name and Here?, then how many of each answer and the notes.
+  /// In the daily report only when ticked and someone is on it; force draws it regardless.
+  void _drawAttendance(Project p, bool force) {
+    final a = p.attendance;
+    final rows = a.filled();
+    final notes = a.notes.trim();
+    if (force ? rows.isEmpty && notes.isEmpty : !a.include || rows.isEmpty) return;
+    const w = _w - 2 * _m, rowH = 20.0, nameW = w * 0.62, stW = w - nameW;
+    _ensure(70 + rowH * 2);
+    _y += 6;
+    // The sheet on its own already has the title and date at the top.
+    if (!force) _text('Attendance ${Fmt.longDay(a.date)}', _heading, _m, w, 8);
+    if (rows.isNotEmpty) {
+      _fillRect(_m, _y, w, rowH, _barTrack);
+      _drawString('Name', _otBold, _m + 6, _y + 13.5);
+      _drawString('Here?', _otBold, _m + nameW + (stW - _measure('Here?', _otBold)) / 2, _y + 13.5);
+      _y += rowH;
+      for (final r in rows) {
+        _ensure(rowH);
+        _hLine(_m, _m + w, _y);
+        _drawString(_ellipsize(r.name, _body, nameW - 10), _body, _m + 6, _y + 13.5);
+        final s = r.status.isEmpty ? '-' : r.status;
+        final tp = r.status == Attendance.yes
+            ? _otYes
+            : r.status == Attendance.no || r.status == 'AWOL'
+            ? _otNo
+            : r.status.isEmpty
+            ? _small
+            : _body;
+        _drawString(s, tp, _m + nameW + (stW - _measure(s, tp)) / 2, _y + 13.5);
+        _y += rowH;
+      }
+      _hLine(_m, _m + w, _y);
+      final sum = a.summary();
+      if (sum.isNotEmpty) {
+        _y += 6;
+        _text(sum, _otBold, _m, w, 4);
+      }
+      _y += 10;
+    }
     _drawOvertimeNotes(notes, w);
   }
 

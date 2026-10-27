@@ -13,19 +13,22 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /** Overtime tab: weekend sign-up table with Name / Fri / Sat / Sun dropdowns. */
 final class OvertimePane {
     private OvertimePane() {}
 
     private static final String PICK = "Select\u2026", BLANK = "\u2013";
-    private static final float NAME_W = 1.9f;
+    private static final float NAME_W = 2.2f;
 
     static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
@@ -36,10 +39,8 @@ final class OvertimePane {
         box.removeAllViews();
         parent.post(() -> parent.scrollTo(0, scrollY));
         Models.Overtime ot = p.overtime;
-        if (ot.weekOf.isEmpty()) ot.weekOf = Fmt.upcomingFriday();
-        // One row per crew member (at least one).
-        int want = Math.max(1, p.crew.size());
-        while (ot.rows.size() < want) ot.rows.add(new Models.Overtime.OtRow());
+        // Rows are only made when there are none, so a removed row stays gone.
+        ot.prepare(p.crew.size(), Fmt.upcomingFriday());
 
         LinearLayout card = card(a);
         box.addView(card);
@@ -76,6 +77,7 @@ final class OvertimePane {
         head.addView(cellLabel(a, "Name"), weight(a, NAME_W));
         for (String d : new String[]{"Fri", "Sat", "Sun"}) head.addView(cellLabel(a, d), weight(a, 1f));
         head.addView(cellLabel(a, "Hours"), weight(a, 1f));
+        head.addView(new View(a), removeSize(a));
         card.addView(head);
 
         List<String> names = new ArrayList<>();
@@ -92,7 +94,7 @@ final class OvertimePane {
         LinearLayout table = new LinearLayout(a);
         table.setOrientation(LinearLayout.VERTICAL);
         card.addView(table);
-        for (Models.Overtime.OtRow r : ot.rows) table.addView(line(a, store, r, names, refreshTotals));
+        for (Models.Overtime.OtRow r : ot.rows) table.addView(line(a, store, ot, table, r, names, refreshTotals));
 
         LinearLayout totals = row(a);
         totals.addView(cellLabel(a, "Yes total"), weight(a, NAME_W));
@@ -103,6 +105,7 @@ final class OvertimePane {
             totals.addView(t, weight(a, 1f));
         }
         totals.addView(cellLabel(a, ""), weight(a, 1f));
+        totals.addView(new View(a), removeSize(a));
         card.addView(totals);
         refreshTotals.run();
 
@@ -180,7 +183,7 @@ final class OvertimePane {
         for (int i = 0; i < count; i++) {
             Models.Overtime.OtRow r = new Models.Overtime.OtRow();
             ot.rows.add(r);
-            last = line(a, store, r, names, refreshTotals);
+            last = line(a, store, ot, table, r, names, refreshTotals);
             table.addView(last);
         }
         store.save();
@@ -189,9 +192,9 @@ final class OvertimePane {
                 new android.graphics.Rect(0, 0, target.getWidth(), target.getHeight()), false));
     }
 
-    /** One table row: Name, Fri, Sat, Sun dropdowns and the Hours box. */
-    private static LinearLayout line(Activity a, Store store, Models.Overtime.OtRow r,
-                                     List<String> names, Runnable refreshTotals) {
+    /** One table row: Name, Fri, Sat, Sun dropdowns, the Hours box and the remove button. */
+    private static LinearLayout line(Activity a, Store store, Models.Overtime ot, LinearLayout table,
+                                     Models.Overtime.OtRow r, List<String> names, Runnable refreshTotals) {
         LinearLayout line = row(a);
         line.addView(dropdown(a, names, r.name.isEmpty() ? PICK : r.name, (sp, v) -> {
             r.name = PICK.equals(v) ? "" : v;
@@ -212,18 +215,55 @@ final class OvertimePane {
                 store.save();
                 sp.setBackgroundResource(cellBg(val));
                 refreshTotals.run();
-            }, true), weight(a, 1f));
+            }, true, false), weight(a, 1f));
         }
         line.addView(hoursBox(a, store, r), weight(a, 1f));
+        line.addView(removeButton(a, () -> r.name, () -> Models.Overtime.isBlank(r), () -> {
+            ot.rows.remove(r);
+            table.removeView(line);
+            store.save();
+            refreshTotals.run();
+        }), removeSize(a));
         return line;
     }
 
-    private static int cellBg(String v) {
-        return Models.Overtime.YES.equals(v) ? R.drawable.bg_cell_yes
-                : Models.Overtime.NO.equals(v) ? R.drawable.bg_cell_no : R.drawable.bg_cell;
+    /** Grey "×" at the end of a row. A blank row goes at once; otherwise it asks first. */
+    static ImageView removeButton(Activity a, Supplier<String> name, BooleanSupplier blank, Runnable remove) {
+        ImageView b = new ImageView(a);
+        b.setImageResource(R.drawable.ic_close);
+        b.setColorFilter(a.getColor(R.color.grey));
+        b.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        // 20dp icon inside a 32 x 40dp tap area
+        b.setPadding(Ui.dp(a, 6), Ui.dp(a, 10), Ui.dp(a, 6), Ui.dp(a, 10));
+        b.setBackgroundResource(android.R.drawable.list_selector_background);
+        b.setContentDescription("Remove row");
+        b.setOnClickListener(v -> {
+            if (blank.getAsBoolean()) {
+                remove.run();
+                return;
+            }
+            String who = name.get().isEmpty() ? "This row" : name.get();
+            Ui.confirm(a, "Remove this row?", who + " comes off this sheet. Your crew list doesn't change.",
+                    "Remove", remove);
+        });
+        return b;
     }
 
-    private static LinearLayout card(Activity a) {
+    static LinearLayout.LayoutParams removeSize(Activity a) {
+        return new LinearLayout.LayoutParams(Ui.dp(a, 32), Ui.dp(a, 40));
+    }
+
+    private static boolean isRed(String v) {
+        return Models.Overtime.NO.equals(v) || Models.Attendance.AWOL.equals(v);
+    }
+
+    /** Box colour: Yes green, No and AWOL red, anything else the normal box. */
+    static int cellBg(String v) {
+        return Models.Overtime.YES.equals(v) ? R.drawable.bg_cell_yes
+                : isRed(v) ? R.drawable.bg_cell_no : R.drawable.bg_cell;
+    }
+
+    static LinearLayout card(Activity a) {
         LinearLayout card = new LinearLayout(a);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.bg_card);
@@ -280,7 +320,12 @@ final class OvertimePane {
         void onPick(Spinner sp, String value);
     }
 
-    private static Spinner dropdown(Activity a, List<String> items, String current, Pick pick, boolean yesNo) {
+    static Spinner dropdown(Activity a, List<String> items, String current, Pick pick, boolean yesNo) {
+        return dropdown(a, items, current, pick, yesNo, true);
+    }
+
+    /** arrow false hides the dropdown arrow so short answers fit narrow cells. */
+    static Spinner dropdown(Activity a, List<String> items, String current, Pick pick, boolean yesNo, boolean arrow) {
         Spinner sp = new Spinner(a, Spinner.MODE_DROPDOWN);
         ArrayAdapter<String> ad = new ArrayAdapter<String>(a, android.R.layout.simple_spinner_item, items) {
             @Override
@@ -290,10 +335,10 @@ final class OvertimePane {
                 t.setTextSize(yesNo ? 16 : 15);
                 t.setSingleLine(true);
                 t.setGravity(yesNo ? Gravity.CENTER : Gravity.CENTER_VERTICAL);
-                t.setPadding(Ui.dp(a, yesNo ? 4 : 10), Ui.dp(a, 10), Ui.dp(a, 4), Ui.dp(a, 10));
-                t.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_drop, 0);
-                t.setTypeface(null, Models.Overtime.YES.equals(v) || Models.Overtime.NO.equals(v) ? Typeface.BOLD : Typeface.NORMAL);
-                int col = Models.Overtime.YES.equals(v) ? 0xFF148A3A : Models.Overtime.NO.equals(v) ? 0xFFC9353A
+                t.setPadding(Ui.dp(a, !arrow ? 2 : yesNo ? 4 : 10), Ui.dp(a, 10), Ui.dp(a, arrow ? 4 : 2), Ui.dp(a, 10));
+                t.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, arrow ? R.drawable.ic_drop : 0, 0);
+                t.setTypeface(null, Models.Overtime.YES.equals(v) || isRed(v) ? Typeface.BOLD : Typeface.NORMAL);
+                int col = Models.Overtime.YES.equals(v) ? 0xFF148A3A : isRed(v) ? 0xFFC9353A
                         : (PICK.equals(v) || BLANK.equals(v)) ? a.getColor(R.color.grey_light) : a.getColor(R.color.text);
                 t.setTextColor(col);
                 return t;
@@ -320,7 +365,7 @@ final class OvertimePane {
         return sp;
     }
 
-    private static LinearLayout row(Activity a) {
+    static LinearLayout row(Activity a) {
         // The dropdowns ask the screen to stop scrolling as soon as a finger rests on them,
         // which made the table impossible to scroll. Ignoring that request lets a swipe
         // that starts on a dropdown scroll the screen, while a tap still opens it.
@@ -334,19 +379,19 @@ final class OvertimePane {
         return r;
     }
 
-    private static LinearLayout.LayoutParams weight(Activity a, float w) {
+    static LinearLayout.LayoutParams weight(Activity a, float w) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, w);
-        lp.setMarginEnd(Ui.dp(a, 6));
+        lp.setMarginEnd(Ui.dp(a, 4));
         return lp;
     }
 
-    private static TextView cellLabel(Activity a, String s) {
+    static TextView cellLabel(Activity a, String s) {
         TextView t = text(a, s, 14, R.color.grey, true);
         t.setGravity(Gravity.CENTER);
         return t;
     }
 
-    private static TextView text(Activity a, String s, int sp, int color, boolean bold) {
+    static TextView text(Activity a, String s, int sp, int color, boolean bold) {
         TextView t = new TextView(a);
         t.setText(s);
         t.setTextSize(sp);
@@ -355,7 +400,7 @@ final class OvertimePane {
         return t;
     }
 
-    private static TextView action(Activity a, String s, int color) {
+    static TextView action(Activity a, String s, int color) {
         TextView t = text(a, s, 18, color, false);
         t.setPadding(Ui.dp(a, 8), Ui.dp(a, 16), Ui.dp(a, 8), Ui.dp(a, 4));
         t.setBackgroundResource(android.R.drawable.list_selector_background);

@@ -39,13 +39,13 @@ import java.util.Locale;
 public class LogsActivity extends AppCompatActivity {
     private Store store;
     private Models.Project project;
-    private static final int MODE_LOGS = 0, MODE_TEMPLATES = 1, MODE_LINKS = 2, MODE_NOTIFY = 3, MODE_OVERTIME = 4, MODE_NOTES = 5, MODE_SEACANS = 6;
+    private static final int MODE_LOGS = 0, MODE_TEMPLATES = 1, MODE_LINKS = 2, MODE_NOTIFY = 3, MODE_OVERTIME = 4, MODE_NOTES = 5, MODE_SEACANS = 6, MODE_ATTENDANCE = 7;
     private static final int TYPE_CARD = 0, TYPE_LINK = 1, TYPE_NOTICE = 2, TYPE_NOTE = 3;
     private int mode = MODE_LOGS;
     private String query = "";
     private final List<Object> rows = new ArrayList<>();
     private RowAdapter adapter;
-    private TextView empty, title, location, pillLogs, pillOvertime, pillLinks, pillNotify, pillNotes, pillSeaCans;
+    private TextView empty, title, location, pillLogs, pillOvertime, pillAttendance, pillLinks, pillNotify, pillNotes, pillSeaCans;
     private EditText search;
     private ExportHelper exporter;
 
@@ -68,6 +68,7 @@ public class LogsActivity extends AppCompatActivity {
         empty = findViewById(R.id.empty);
         pillLogs = findViewById(R.id.pillLogs);
         pillOvertime = findViewById(R.id.pillOvertime);
+        pillAttendance = findViewById(R.id.pillAttendance);
         pillSeaCans = findViewById(R.id.pillSeaCans);
         pillLinks = findViewById(R.id.pillLinks);
         pillNotify = findViewById(R.id.pillNotify);
@@ -91,6 +92,7 @@ public class LogsActivity extends AppCompatActivity {
         });
         pillLogs.setOnClickListener(v -> setMode(MODE_LOGS));
         pillOvertime.setOnClickListener(v -> setMode(MODE_OVERTIME));
+        pillAttendance.setOnClickListener(v -> setMode(MODE_ATTENDANCE));
         pillSeaCans.setOnClickListener(v -> setMode(MODE_SEACANS));
         pillLinks.setOnClickListener(v -> setMode(MODE_LINKS));
         pillNotify.setOnClickListener(v -> setMode(MODE_NOTIFY));
@@ -123,14 +125,19 @@ public class LogsActivity extends AppCompatActivity {
     }
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
-    static final String[] TAB_IDS = {"notify", "links", "overtime", "notes", "seacans"};
-    static final String[] TAB_NAMES = {"Notify", "Links", "Overtime", "Notes", "Sea Can Movements"};
-    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_OVERTIME, MODE_NOTES, MODE_SEACANS};
+    static final String[] TAB_IDS = {"notify", "links", "overtime", "attendance", "notes", "seacans"};
+    static final String[] TAB_NAMES = {"Notify", "Links", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
+    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_OVERTIME, MODE_ATTENDANCE, MODE_NOTES, MODE_SEACANS};
 
-    /** Puts the tabs that aren't hidden into rows of three, in their usual order. */
+    /** How many pills go in the first row: 4 when all 7 show, otherwise up to 3. */
+    static int firstRowCount(int shown) {
+        return shown >= 7 ? 4 : Math.min(3, shown);
+    }
+
+    /** Puts the tabs that aren't hidden into two rows, in their usual order. */
     private void layoutTabs() {
         LinearLayout row1 = findViewById(R.id.tabRow1), row2 = findViewById(R.id.tabRow2);
-        TextView[] pills = {pillNotify, pillLinks, pillOvertime, pillNotes, pillSeaCans};
+        TextView[] pills = {pillNotify, pillLinks, pillOvertime, pillAttendance, pillNotes, pillSeaCans};
         row1.removeAllViews();
         row2.removeAllViews();
         List<TextView> shown = new ArrayList<>();
@@ -140,9 +147,10 @@ public class LogsActivity extends AppCompatActivity {
             if (!hidden) shown.add(pills[i]);
             if (hidden && mode == TAB_MODES[i]) mode = MODE_LOGS;
         }
+        int first = firstRowCount(shown.size());
         for (int i = 0; i < shown.size(); i++) {
             TextView pill = shown.get(i);
-            LinearLayout row = i < 3 ? row1 : row2;
+            LinearLayout row = i < first ? row1 : row2;
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 46), pill == pillSeaCans ? 1.6f : 1f);
             if (row.getChildCount() > 0) lp.setMarginStart(Ui.dp(this, 4));
             row.addView(pill, lp);
@@ -186,12 +194,13 @@ public class LogsActivity extends AppCompatActivity {
         location.setVisibility(project.location.isEmpty() ? View.GONE : View.VISIBLE);
         stylePill(pillLogs, mode == MODE_LOGS);
         stylePill(pillOvertime, mode == MODE_OVERTIME);
+        stylePill(pillAttendance, mode == MODE_ATTENDANCE);
         stylePill(pillSeaCans, mode == MODE_SEACANS);
         stylePill(pillLinks, mode == MODE_LINKS);
         stylePill(pillNotify, mode == MODE_NOTIFY);
         stylePill(pillNotes, mode == MODE_NOTES);
-        // Overtime and Sea Can Movements are full pages in the same scroller, not lists.
-        boolean ot = mode == MODE_OVERTIME || mode == MODE_SEACANS;
+        // Overtime, Attendance and Sea Can Movements are full pages in the same scroller, not lists.
+        boolean ot = mode == MODE_OVERTIME || mode == MODE_ATTENDANCE || mode == MODE_SEACANS;
         findViewById(R.id.overtimePane).setVisibility(ot ? View.VISIBLE : View.GONE);
         findViewById(R.id.list).setVisibility(ot ? View.GONE : View.VISIBLE);
         findViewById(R.id.searchBox).setVisibility(ot ? View.GONE : View.VISIBLE);
@@ -200,6 +209,7 @@ public class LogsActivity extends AppCompatActivity {
         if (ot) {
             empty.setVisibility(View.GONE);
             if (mode == MODE_SEACANS) SeaCanPane.render(this, store, project, findViewById(R.id.overtimeContent));
+            else if (mode == MODE_ATTENDANCE) AttendancePane.render(this, store, project, findViewById(R.id.overtimeContent));
             else OvertimePane.render(this, store, project, findViewById(R.id.overtimeContent));
             return;
         }
@@ -756,6 +766,14 @@ public class LogsActivity extends AppCompatActivity {
         items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export overtime to PDF", () -> exporter.exportOvertime(project, false)));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "Export overtime to Excel", () -> exporter.exportOvertime(project, true)));
         Ui.menu(this, "Send just the overtime sheet. Your daily report still includes it when ticked.", items);
+    }
+
+    /** Attendance tab's Export button: just that sheet, as PDF or Excel. */
+    void exportAttendance() {
+        List<Ui.SheetItem> items = new ArrayList<>();
+        items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export attendance to PDF", () -> exporter.exportAttendance(project, false)));
+        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export attendance to Excel", () -> exporter.exportAttendance(project, true)));
+        Ui.menu(this, "Send just the attendance sheet. Your daily report still includes it when ticked.", items);
     }
 
     // ----- notes -----

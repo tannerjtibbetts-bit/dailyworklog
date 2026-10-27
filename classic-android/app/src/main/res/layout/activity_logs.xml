@@ -145,6 +145,22 @@
                 android:textSize="14sp" />
 
             <TextView
+                android:id="@+id/pillAttendance"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                app:autoSizeMaxTextSize="14sp"
+                app:autoSizeMinTextSize="10sp"
+                app:autoSizeTextType="uniform"
+                android:gravity="center"
+                android:maxLines="1"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="Attendance"
+                android:textSize="14sp" />
+
+            <TextView
                 android:id="@+id/pillNotes"
                 android:layout_width="0dp"
                 android:layout_height="46dp"

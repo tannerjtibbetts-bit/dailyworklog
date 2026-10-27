@@ -33,7 +33,7 @@ public final class Store {
     public final java.util.Set<String> myColours = new java.util.LinkedHashSet<>(java.util.Collections.singletonList(ZoneSheet.BLUE));
     /** Your usual answers for the Observation & Coaching form (Formstack links). */
     public final FormPrefill.Details formDetails = new FormPrefill.Details();
-    /** Project tabs this person has hidden ("notify", "links", "overtime", "notes", "seacans"). */
+    /** Project tabs this person has hidden ("notify", "links", "overtime", "attendance", "notes", "seacans"). */
     public final java.util.Set<String> hiddenTabs = new java.util.LinkedHashSet<>();
 
     private final File dataFile;

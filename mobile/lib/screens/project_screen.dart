@@ -1,4 +1,4 @@
-// A project's screen: Checklists, Notify, Links, Overtime, Notes and Sea Can Movements tabs.
+// A project's screen: Checklists, Notify, Links, Overtime, Attendance, Notes and Sea Can Movements tabs.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,17 +17,19 @@ import 'field_widgets.dart' show ProgressRing;
 import 'log_screen.dart';
 import 'note_screen.dart';
 import 'notify_screen.dart';
+import 'attendance_pane.dart';
 import 'overtime_pane.dart';
 import 'seacan_pane.dart';
 import 'projects_screen.dart' show AddPill;
 
-enum ProjectTab { checklists, notify, links, overtime, notes, seaCans }
+enum ProjectTab { checklists, notify, links, overtime, attendance, notes, seaCans }
 
 const _tabLabels = {
   ProjectTab.checklists: 'Checklists',
   ProjectTab.notify: 'Notify',
   ProjectTab.links: 'Links',
   ProjectTab.overtime: 'Overtime',
+  ProjectTab.attendance: 'Attendance',
   ProjectTab.notes: 'Notes',
   ProjectTab.seaCans: 'Sea Can Movements',
 };
@@ -37,6 +39,7 @@ const tabIds = {
   ProjectTab.notify: 'notify',
   ProjectTab.links: 'links',
   ProjectTab.overtime: 'overtime',
+  ProjectTab.attendance: 'attendance',
   ProjectTab.notes: 'notes',
   ProjectTab.seaCans: 'seacans',
 };
@@ -46,6 +49,14 @@ List<ProjectTab> visibleTabs(Set<String> hidden) => [
   for (final t in ProjectTab.values)
     if (t == ProjectTab.checklists || !hidden.contains(tabIds[t])) t,
 ];
+
+/// Splits the shown tabs into rows: threes, or four then three when there are seven.
+List<List<ProjectTab>> tabRows(List<ProjectTab> shown) {
+  if (shown.length > 6) return [shown.sublist(0, 4), shown.sublist(4)];
+  return [
+    for (var i = 0; i < shown.length; i += 3) shown.sublist(i, i + 3 > shown.length ? shown.length : i + 3),
+  ];
+}
 
 /// Tick the tabs to show; unticked ones disappear from every project until ticked again.
 Future<void> chooseTabs(BuildContext context) async {
@@ -504,6 +515,21 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ]);
   }
 
+  // ----- attendance -----
+
+  /// Attendance tab's Export button: just that sheet, as PDF or Excel.
+  void _exportAttendance() {
+    final p = project!;
+    menu(context, 'Send just the attendance sheet. Your daily report still includes it when ticked.', [
+      SheetItem(
+        Icons.picture_as_pdf_outlined,
+        'Export attendance to PDF',
+        () => Export.attendance(context, p, excel: false),
+      ),
+      SheetItem(Icons.grid_on, 'Export attendance to Excel', () => Export.attendance(context, p, excel: true)),
+    ]);
+  }
+
   // ----- sea cans -----
 
   /// Sea Can Movements tab's Export button: just the list, as PDF, Excel, CSV or Word.
@@ -916,12 +942,11 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ),
   );
 
-  /// The tabs that aren't hidden, in rows of three; Sea Can Movements gets a wider pill for its longer name.
+  /// The tabs that aren't hidden, in rows of three (four on top when all seven show);
+  /// Sea Can Movements gets a wider pill for its longer name.
   Widget _pills() {
     final shown = visibleTabs(Store.instance.hiddenTabs);
-    final rows = [
-      for (var i = 0; i < shown.length; i += 3) shown.sublist(i, i + 3 > shown.length ? shown.length : i + 3),
-    ];
+    final rows = tabRows(shown);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
       child: Column(
@@ -988,10 +1013,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
         }
         return const Scaffold();
       }
-      // Overtime and Sea Can Movements are full pages, not lists.
+      // Overtime, Attendance and Sea Can Movements are full pages, not lists.
       // A tab hidden while it was open goes back to Checklists.
       if (!visibleTabs(Store.instance.hiddenTabs).contains(mode)) mode = ProjectTab.checklists;
-      final ot = mode == ProjectTab.overtime || mode == ProjectTab.seaCans;
+      final ot = mode == ProjectTab.overtime || mode == ProjectTab.attendance || mode == ProjectTab.seaCans;
       final rows = ot ? const <Widget>[] : _rows(p);
       return Scaffold(
         body: SafeArea(
@@ -1064,6 +1089,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   Expanded(
                     child: mode == ProjectTab.seaCans
                         ? SeaCanPane(project: p, onExport: _exportSeaCans)
+                        : mode == ProjectTab.attendance
+                        ? AttendancePane(project: p, onExport: _exportAttendance)
                         : ot
                         ? OvertimePane(project: p, onExport: _exportOvertime)
                         : rows.isEmpty

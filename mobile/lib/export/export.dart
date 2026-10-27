@@ -1,4 +1,4 @@
-// Report, overtime and sea can exports. The file is built in the background, then offered to
+// Report, overtime, attendance and sea can exports. The file is built in the background, then offered to
 // share/email or save to the phone.
 import 'dart:convert';
 import 'dart:io';
@@ -14,6 +14,7 @@ import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/store.dart';
 import '../ui/common.dart';
+import 'attendance_xlsx.dart';
 import 'overtime_xlsx.dart';
 import 'report_docx.dart';
 import 'report_pdf.dart';
@@ -78,6 +79,32 @@ class Export {
       name,
       'Couldn\'t build the file. Please try again.',
       () => compute(_overtimeJob, _OtJob(_slim(project), by, at, excel)),
+    );
+    if (f == null || !context.mounted) return;
+    final mime = excel ? xlsx : pdf;
+    await menu(context, '${_name(f)} is ready', [
+      SheetItem(Icons.share, 'Share or email', () => _share(context, f, mime)),
+      SheetItem(Icons.download, 'Save to phone', () => _saveTo(context, f, mime)),
+    ]);
+  }
+
+  /// Just the attendance sheet, as PDF or Excel.
+  static Future<void> attendance(BuildContext context, Project project, {required bool excel}) async {
+    final store = Store.instance;
+    final by = store.me();
+    final at = nowMs();
+    final name =
+        Fmt.fileSafe(
+          'Attendance ${Fmt.logDate(project.attendance.date)}'
+          '${project.name.isEmpty ? '' : ' ${project.name}'}',
+        ) +
+        (excel ? '.xlsx' : '.pdf');
+    final f = await _build(
+      context,
+      excel ? 'Building Excel sheet…' : 'Building PDF…',
+      name,
+      'Couldn\'t build the file. Please try again.',
+      () => compute(_attendanceJob, _OtJob(_slim(project), by, at, excel)),
     );
     if (f == null || !context.mounted) return;
     final mime = excel ? xlsx : pdf;
@@ -191,6 +218,7 @@ class Export {
     ..name = p.name
     ..location = p.location
     ..overtime = p.overtime
+    ..attendance = p.attendance
     ..seaCans = p.seaCans
     ..seaCanInclude = p.seaCanInclude;
 
@@ -341,6 +369,9 @@ Future<Uint8List> _reportJob(_ReportJob j) async => j.word
 
 Future<Uint8List> _overtimeJob(_OtJob j) async =>
     j.excel ? OvertimeXlsx.write(j.project, j.by, j.at) : await ReportPdf.writeOvertime(j.project, j.by, j.at);
+
+Future<Uint8List> _attendanceJob(_OtJob j) async =>
+    j.excel ? AttendanceXlsx.write(j.project, j.by, j.at) : await ReportPdf.writeAttendance(j.project, j.by, j.at);
 
 Future<Uint8List> _seaCanJob(_CanJob j) async => switch (j.format) {
   'xlsx' => SeaCanXlsx.write(j.project, j.by, j.at),

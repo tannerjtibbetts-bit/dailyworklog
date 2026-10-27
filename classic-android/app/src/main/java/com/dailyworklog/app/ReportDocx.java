@@ -82,6 +82,7 @@ final class ReportDocx {
         }
 
         renderOvertime(p);
+        renderAttendance(p);
         renderSeaCans(p, false);
 
         List<Models.Extra> extras = log.includedExtras();
@@ -126,6 +127,46 @@ final class ReportDocx {
         otRow(new String[]{"Yes total", String.valueOf(ot.yesCount(0)), String.valueOf(ot.yesCount(1)), String.valueOf(ot.yesCount(2)), ""}, true, null, false);
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
         overtimeNotes(notes);
+    }
+
+    /** Attendance table, only when ticked and someone is on it. */
+    private void renderAttendance(Models.Project p) {
+        Models.Attendance at = p.attendance;
+        List<Models.Attendance.AttRow> rows = at.filled();
+        if (!at.include || rows.isEmpty()) return;
+        body.append("<w:p><w:pPr><w:keepNext/><w:spacing w:before=\"360\" w:after=\"100\"/></w:pPr>");
+        run("Attendance " + Fmt.longDay(at.date), true, 13, NAVY, null);
+        body.append("</w:p>");
+        String b = "<w:top w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:left w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>"
+                + "<w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>"
+                + "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>";
+        body.append("<w:tbl><w:tblPr><w:tblW w:w=\"10080\" w:type=\"dxa\"/><w:tblBorders>").append(b)
+                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"6720\"/>")
+                .append("<w:gridCol w:w=\"3360\"/></w:tblGrid>");
+        int[] widths = {6720, 3360};
+        attRow(new String[]{"Name", "Here?"}, widths, true);
+        for (Models.Attendance.AttRow r : rows) attRow(new String[]{r.name, dash(r.status)}, widths, false);
+        body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
+        String sum = at.summary();
+        para(sum.isEmpty() ? "Nobody marked yet" : sum, true, 10, TEXT, 120, false, null);
+        overtimeNotes(at.notes.trim());
+    }
+
+    private void attRow(String[] cells, int[] widths, boolean head) {
+        body.append("<w:tr><w:trPr><w:cantSplit/>").append(head ? "<w:tblHeader/>" : "").append("</w:trPr>");
+        for (int i = 0; i < cells.length; i++) {
+            body.append("<w:tc><w:tcPr><w:tcW w:w=\"").append(widths[i]).append("\" w:type=\"dxa\"/>");
+            if (head) body.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E4E7EC\"/>");
+            body.append("</w:tcPr><w:p><w:pPr><w:keepNext/><w:spacing w:before=\"40\" w:after=\"40\"/>")
+                    .append(i == 0 ? "" : "<w:jc w:val=\"center\"/>").append("</w:pPr>");
+            String v = cells[i];
+            boolean red = Models.Attendance.NO.equals(v) || Models.Attendance.AWOL.equals(v);
+            boolean green = Models.Attendance.YES.equals(v);
+            String col = i > 0 && green ? GREEN : i > 0 && red ? RED : TEXT;
+            run(v, head || (i > 0 && (green || red)), 10, col, null);
+            body.append("</w:p></w:tc>");
+        }
+        body.append("</w:tr>");
     }
 
     /** Just the Sea Can Movements tab as its own Word document. */

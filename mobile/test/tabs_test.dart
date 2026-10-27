@@ -10,7 +10,11 @@ void main() {
   test('Checklists always shows; hidden tabs are left out in order', () {
     expect(visibleTabs({}), ProjectTab.values);
     expect(visibleTabs({'links', 'seacans'}),
-        [ProjectTab.checklists, ProjectTab.notify, ProjectTab.overtime, ProjectTab.notes]);
+        [ProjectTab.checklists, ProjectTab.notify, ProjectTab.overtime, ProjectTab.attendance, ProjectTab.notes]);
+    expect(tabIds[ProjectTab.attendance], 'attendance');
+    // All seven: four on top, three below. Six or fewer: rows of three.
+    expect(tabRows(ProjectTab.values).map((r) => r.length), [4, 3]);
+    expect(tabRows(visibleTabs({'links'})).map((r) => r.length), [3, 3]);
     expect(visibleTabs(tabIds.values.toSet()), [ProjectTab.checklists]);
   });
 

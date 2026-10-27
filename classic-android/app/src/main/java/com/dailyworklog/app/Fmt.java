@@ -60,6 +60,16 @@ final class Fmt {
         }
     }
 
+    /** "Tue Oct 27, 2026" */
+    static String longDay(String iso) {
+        try {
+            Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(iso);
+            return new SimpleDateFormat("EEE MMM d, yyyy", Locale.US).format(d);
+        } catch (Exception e) {
+            return iso;
+        }
+    }
+
     static String todayIso() {
         Calendar c = Calendar.getInstance();
         return iso(c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));

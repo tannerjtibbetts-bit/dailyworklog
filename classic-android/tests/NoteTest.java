@@ -24,7 +24,66 @@ class OtTest { public static void main(String[] a) throws Exception {
   NoteTest.check(q.overtime.rows.size()==40 && q.overtime.notes.equals(ot.notes), "40 rows + notes saved");
   q.overtime.removeEmptyRows(); NoteTest.check(q.overtime.rows.size()==3, "remove empty rows keeps 3, got "+q.overtime.rows.size());
   q.overtime.startWeekend("2026-10-09"); NoteTest.check(q.overtime.notes.equals(ot.notes), "clear answers keeps notes");
+  // Rows are only made when the list is empty, so a removed row stays gone.
+  Models.Overtime o2 = new Models.Overtime(); o2.prepare(3, "2026-10-30");
+  NoteTest.check(o2.rows.size()==3 && o2.weekOf.equals("2026-10-30"), "prepare makes one row per crew member");
+  o2.rows.remove(1); o2.prepare(3, "2026-11-06"); NoteTest.check(o2.rows.size()==2 && o2.weekOf.equals("2026-10-30"), "prepare does not top up");
+  o2.rows.clear(); o2.prepare(0, "x"); NoteTest.check(o2.rows.size()==1, "at least one row");
   System.out.println("OT PASS"); } }
+class AttendanceTest { public static void main(String[] a) throws Exception {
+  Models.Project p = new Models.Project(); p.name = "B44 Zone 2";
+  p.crew.add("Sam Maint"); p.crew.add("Jim McLaren"); p.crew.add("Al");
+  Models.Attendance at = p.attendance;
+  at.prepare(p.crew, "2026-10-27");
+  NoteTest.check(at.rows.size()==3 && at.rows.get(0).name.equals("Sam Maint") && at.rows.get(2).name.equals("Al") && at.date.equals("2026-10-27"), "prepare fills crew names");
+  NoteTest.check(at.summary().isEmpty(), "empty summary");
+  at.rows.get(0).status = "Yes"; at.rows.get(1).status = "Vacation"; at.rows.get(2).status = "AWOL";
+  Models.Attendance.AttRow extra = new Models.Attendance.AttRow(); extra.status = "Yes"; at.rows.add(extra); // no name: not counted
+  at.rows.add(new Models.Attendance.AttRow());
+  NoteTest.check(at.summary().equals("Yes 1 \u00B7 AWOL 1 \u00B7 Vacation 1"), "summary " + at.summary());
+  NoteTest.check(at.count("Yes")==1 && at.filled().size()==3, "count and filled");
+  at.include = true; at.notes = "Jim back Monday";
+  Models.Project q = Models.Project.fromJson(p.toJson());
+  NoteTest.check(p.toJson().has("attendance") && q.attendance.rows.size()==5 && q.attendance.include && q.attendance.notes.equals("Jim back Monday")
+      && q.attendance.date.equals("2026-10-27") && q.attendance.rows.get(1).status.equals("Vacation"), "JSON round trip");
+  org.json.JSONObject r0 = p.toJson().getJSONObject("attendance").getJSONArray("rows").getJSONObject(0);
+  NoteTest.check(r0.getString("name").equals("Sam Maint") && r0.getString("status").equals("Yes"), "JSON keys");
+  org.json.JSONObject old = p.toJson(); old.remove("attendance");
+  Models.Project o = Models.Project.fromJson(old);
+  NoteTest.check(o.attendance.rows.isEmpty() && o.attendance.date.isEmpty() && !o.attendance.include, "old data loads");
+  old.put("attendance", "garbage"); NoteTest.check(Models.Project.fromJson(old).attendance.rows.isEmpty(), "garbage loads");
+  q.attendance.prepare(q.crew, "2026-11-01"); NoteTest.check(q.attendance.rows.size()==5 && q.attendance.date.equals("2026-10-27"), "prepare leaves rows and date");
+  q.attendance.removeEmptyRows(); NoteTest.check(q.attendance.rows.size()==4, "remove empty rows keeps a row with only a status");
+  q.renamePerson("Jim McLaren", "Jimmy McLaren"); NoteTest.check(q.attendance.rows.get(1).name.equals("Jimmy McLaren"), "rename reaches attendance");
+  q.attendance.startDay("2026-10-28");
+  NoteTest.check(q.attendance.date.equals("2026-10-28") && q.attendance.rows.get(0).status.isEmpty() && q.attendance.rows.get(0).name.equals("Sam Maint")
+      && q.attendance.notes.equals("Jim back Monday"), "startDay clears statuses only");
+  Models.Attendance none = new Models.Attendance(); none.prepare(new java.util.ArrayList<>(), "2026-10-27");
+  NoteTest.check(none.rows.size()==1 && none.rows.get(0).name.isEmpty(), "one blank row with no crew");
+  NoteTest.check(Fmt.longDay("2026-10-27").equals("Tue Oct 27, 2026"), "long day " + Fmt.longDay("2026-10-27"));
+  // Excel
+  java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+  AttendanceXlsx.write(p, bo);
+  java.util.Map<String,String> parts = new java.util.HashMap<>();
+  try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bo.toByteArray()))) {
+    for (java.util.zip.ZipEntry e; (e = z.getNextEntry()) != null; ) parts.put(e.getName(), new String(z.readAllBytes(), "UTF-8"));
+  }
+  NoteTest.check(parts.keySet().containsAll(java.util.Arrays.asList("[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/styles.xml", "xl/worksheets/sheet1.xml")), "xlsx parts");
+  javax.xml.parsers.DocumentBuilderFactory f = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+  for (String k : parts.keySet()) f.newDocumentBuilder().parse(new java.io.ByteArrayInputStream(parts.get(k).getBytes("UTF-8")));
+  String sh = parts.get("xl/worksheets/sheet1.xml");
+  NoteTest.check(parts.get("xl/workbook.xml").contains("name=\"Attendance\""), "sheet name");
+  NoteTest.check(sh.contains("<c r=\"A1\" t=\"inlineStr\" s=\"5\"><is><t xml:space=\"preserve\">Attendance</t>"), "A1 title");
+  NoteTest.check(sh.contains("<c r=\"A2\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Date: Tue Oct 27, 2026</t>"), "A2 date");
+  NoteTest.check(sh.contains("<c r=\"A3\" t=\"inlineStr\"><is><t xml:space=\"preserve\">B44 Zone 2</t>"), "A3 project");
+  NoteTest.check(sh.contains("<c r=\"A5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Name</t>") && sh.contains("<c r=\"B5\" t=\"inlineStr\" s=\"2\"><is><t xml:space=\"preserve\">Here?</t>"), "header row 5");
+  NoteTest.check(sh.contains("<c r=\"A6\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Sam Maint</t>") && sh.contains("<c r=\"B6\" t=\"inlineStr\" s=\"3\"><is><t xml:space=\"preserve\">Yes</t>")
+      && sh.contains("<c r=\"B8\" t=\"inlineStr\" s=\"4\"><is><t xml:space=\"preserve\">AWOL</t>"), "rows");
+  NoteTest.check(sh.contains("<row r=\"10\"><c r=\"A10\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Yes</t></is></c><c r=\"B10\"><v>1</v></c>")
+      && sh.contains("<c r=\"A11\" t=\"inlineStr\"><is><t xml:space=\"preserve\">AWOL</t>") && sh.contains("<c r=\"A12\" t=\"inlineStr\"><is><t xml:space=\"preserve\">Vacation</t>"), "counts");
+  NoteTest.check(sh.contains("<c r=\"A14\" t=\"inlineStr\" s=\"1\"><is><t xml:space=\"preserve\">Notes</t>") && sh.contains("Jim back Monday"), "notes");
+  NoteTest.check(sh.contains("width=\"28\"") && sh.contains("<col min=\"2\" max=\"2\" width=\"14\""), "widths");
+  System.out.println("ATTENDANCE PASS"); } }
 class ShiftTest { public static void main(String[] a) throws Exception {
   Models.Project p = new Models.Project(); Models.DailyLog l = new Models.DailyLog(); p.logs.add(l);
   Models.Task t = new Models.Task(); t.title="Finish torque checks"; t.nextShift=true; t.notes="bay 3"; l.tasks.add(t);
@@ -226,6 +285,9 @@ class ManualTest { public static void main(String[] a) throws Exception {
   System.out.println("MANUAL PASS"); } }
 class HiddenTabsTest { public static void main(String[] a) throws Exception {
   NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
+  NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,overtime,attendance,notes,seacans")
+      && LogsActivity.TAB_NAMES[3].equals("Attendance"), "attendance after overtime");
+  NoteTest.check(LogsActivity.firstRowCount(7)==4 && LogsActivity.firstRowCount(6)==3 && LogsActivity.firstRowCount(2)==2, "pill rows");
   System.out.println("TABS PASS"); } }
 class DoneTextTest { public static void main(String[] a) throws Exception {
   Models.Project p = new Models.Project(); p.name = "B44 Zone 2";

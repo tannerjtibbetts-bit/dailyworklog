@@ -9,7 +9,7 @@ import '../ui/common.dart';
 import '../ui/theme.dart';
 
 const _pick = 'Select…', _blank = '–';
-const _nameFlex = 19, _cellFlex = 10;
+const _nameFlex = 22, _cellFlex = 10;
 
 /// Hours box text to the saved value: '' when blank, the number for 1 to 10, null if not allowed.
 String? otHours(String typed) {
@@ -20,13 +20,15 @@ String? otHours(String typed) {
   return '$n';
 }
 
-/// Fills in the week and makes one row per crew member (at least one).
+/// Fills in the week and, for an empty sheet, makes one row per crew member (at least one).
 void prepareOvertime(Project p) {
   final ot = p.overtime;
   if (ot.weekOf.isEmpty) ot.weekOf = Fmt.upcomingFriday();
-  final want = p.crew.isEmpty ? 1 : p.crew.length;
-  while (ot.rows.length < want) {
-    ot.rows.add(OtRow());
+  // Only when the sheet is empty, so a row someone removed doesn't come back.
+  if (ot.rows.isEmpty) {
+    for (var i = 0; i < (p.crew.isEmpty ? 1 : p.crew.length); i++) {
+      ot.rows.add(OtRow());
+    }
   }
 }
 
@@ -37,6 +39,114 @@ List<String> overtimeNames(Project p) {
     if (r.name.isNotEmpty && !names.contains(r.name)) names.add(r.name);
   }
   return names;
+}
+
+bool _isRed(String v) => v == Overtime.no || v == 'AWOL';
+
+BoxDecoration _cellBg(String v) => BoxDecoration(
+      color: v == Overtime.yes
+          ? const Color(0xFFE3F6EA)
+          : _isRed(v)
+              ? const Color(0xFFFDECEC)
+              : const Color(0xFFF2F7FD),
+      border: Border.all(
+          color: v == Overtime.yes
+              ? const Color(0xFFB5E3C5)
+              : _isRed(v)
+                  ? const Color(0xFFF4C4C5)
+                  : C.cardStroke),
+      borderRadius: BorderRadius.circular(10),
+    );
+
+Color _valueColour(String v) => v == Overtime.yes
+    ? const Color(0xFF148A3A)
+    : _isRed(v)
+        ? const Color(0xFFC9353A)
+        : (v == _pick || v == _blank)
+            ? C.greyLight
+            : C.text;
+
+/// A table dropdown: Yes in green, No and AWOL in red. [yesNo] centres short answers.
+/// [arrow] false hides the little arrow, for narrow boxes.
+Widget sheetDropdown(List<String> items, String current, ValueChanged<String> onPick,
+    {required bool yesNo, bool arrow = true}) {
+  return Container(
+    constraints: const BoxConstraints(minHeight: 44),
+    decoration: _cellBg(current),
+    padding: EdgeInsets.only(left: yesNo ? 2 : 10, right: 2),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: items.contains(current) ? current : items.first,
+        isExpanded: true,
+        isDense: true,
+        iconSize: arrow ? 18 : 0,
+        icon: arrow ? const Icon(Icons.arrow_drop_down, color: C.grey) : const SizedBox.shrink(),
+        items: [
+          for (final v in items)
+            DropdownMenuItem(
+              value: v,
+              child: Text(
+                v,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: yesNo ? TextAlign.center : TextAlign.start,
+                style: TextStyle(
+                  fontSize: yesNo ? 16 : 15,
+                  color: _valueColour(v),
+                  fontWeight: v == Overtime.yes || _isRed(v) ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+        ],
+        selectedItemBuilder: (_) => [
+          for (final v in items)
+            Container(
+              alignment: yesNo ? Alignment.center : Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                v,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: yesNo ? 16 : 15,
+                  color: _valueColour(v),
+                  fontWeight: v == Overtime.yes || _isRed(v) ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+        ],
+        onChanged: (v) {
+          if (v != null && v != current) onPick(v);
+        },
+      ),
+    ),
+  );
+}
+
+/// The small × at the end of a table row.
+Widget removeRowButton(VoidCallback onTap) => Semantics(
+      label: 'Remove row',
+      button: true,
+      child: SizedBox(
+        width: 32,
+        height: 44,
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          tooltip: 'Remove row',
+          icon: const Icon(Icons.close, color: C.grey, size: 20),
+          onPressed: onTap,
+        ),
+      ),
+    );
+
+/// Removes a row: at once if it's empty, otherwise after asking.
+void confirmRemoveRow(BuildContext context, String name, bool empty, VoidCallback remove) {
+  if (empty) {
+    remove();
+    return;
+  }
+  confirm(context, 'Remove this row?',
+      "${name.isEmpty ? 'This row' : name} comes off this sheet. Your crew list doesn't change.", 'Remove', remove);
 }
 
 class OvertimePane extends StatefulWidget {
@@ -91,83 +201,6 @@ class _OvertimePaneState extends State<OvertimePane> {
     });
   }
 
-  static BoxDecoration _cellBg(String v) => BoxDecoration(
-        color: v == Overtime.yes
-            ? const Color(0xFFE3F6EA)
-            : v == Overtime.no
-                ? const Color(0xFFFDECEC)
-                : const Color(0xFFF2F7FD),
-        border: Border.all(
-            color: v == Overtime.yes
-                ? const Color(0xFFB5E3C5)
-                : v == Overtime.no
-                    ? const Color(0xFFF4C4C5)
-                    : C.cardStroke),
-        borderRadius: BorderRadius.circular(10),
-      );
-
-  static Color _valueColour(String v) => v == Overtime.yes
-      ? const Color(0xFF148A3A)
-      : v == Overtime.no
-          ? const Color(0xFFC9353A)
-          : (v == _pick || v == _blank)
-              ? C.greyLight
-              : C.text;
-
-  Widget _dropdown(List<String> items, String current, ValueChanged<String> onPick, {required bool yesNo}) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 44),
-      decoration: _cellBg(current),
-      padding: EdgeInsets.only(left: yesNo ? 4 : 10, right: 2),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: items.contains(current) ? current : items.first,
-          isExpanded: true,
-          isDense: true,
-          iconSize: 18,
-          icon: const Icon(Icons.arrow_drop_down, color: C.grey),
-          items: [
-            for (final v in items)
-              DropdownMenuItem(
-                value: v,
-                child: Text(
-                  v,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: yesNo ? TextAlign.center : TextAlign.start,
-                  style: TextStyle(
-                    fontSize: yesNo ? 16 : 15,
-                    color: _valueColour(v),
-                    fontWeight: v == Overtime.yes || v == Overtime.no ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-          ],
-          selectedItemBuilder: (_) => [
-            for (final v in items)
-              Container(
-                alignment: yesNo ? Alignment.center : Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(
-                  v,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: yesNo ? 16 : 15,
-                    color: _valueColour(v),
-                    fontWeight: v == Overtime.yes || v == Overtime.no ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-          ],
-          onChanged: (v) {
-            if (v != null && v != current) onPick(v);
-          },
-        ),
-      ),
-    );
-  }
-
   /// Number box for hours willing to work: accepts 1 to 10.
   Widget _hoursBox(OtRow r) => TextField(
         controller: _hoursFor(r),
@@ -209,14 +242,16 @@ class _OvertimePaneState extends State<OvertimePane> {
         },
       );
 
-  Widget _row(List<Widget> cells) => Padding(
+  /// A table line; [end] is the remove button (or a gap the same width).
+  Widget _row(List<Widget> cells, {Widget? end}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           for (var i = 0; i < cells.length; i++)
             Expanded(
               flex: i == 0 ? _nameFlex : _cellFlex,
-              child: Padding(padding: const EdgeInsets.only(right: 6), child: cells[i]),
+              child: Padding(padding: const EdgeInsets.only(right: 4), child: cells[i]),
             ),
+          end ?? const SizedBox(width: 32),
         ]),
       );
 
@@ -227,17 +262,23 @@ class _OvertimePaneState extends State<OvertimePane> {
   Widget _line(OtRow r, List<String> names, {Key? key}) => KeyedSubtree(
         key: key,
         child: _row([
-          _dropdown(names, r.name.isEmpty ? _pick : r.name, (v) {
+          sheetDropdown(names, r.name.isEmpty ? _pick : r.name, (v) {
             r.name = v == _pick ? '' : v;
             store.save();
           }, yesNo: false),
           for (var d = 0; d < 3; d++)
-            _dropdown(const [_blank, Overtime.yes, Overtime.no], r.day(d).isEmpty ? _blank : r.day(d), (v) {
+            sheetDropdown(const [_blank, Overtime.yes, Overtime.no], r.day(d).isEmpty ? _blank : r.day(d), (v) {
               r.setDay(d, v == _blank ? '' : v);
               store.save();
-            }, yesNo: true),
+            }, yesNo: true, arrow: false),
           _hoursBox(r),
-        ]),
+        ], end: removeRowButton(() {
+          final empty = r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty;
+          confirmRemoveRow(context, r.name, empty, () {
+            ot.rows.remove(r);
+            store.save();
+          });
+        })),
       );
 
   Widget _action(String s, Color color, VoidCallback onTap) => InkWell(

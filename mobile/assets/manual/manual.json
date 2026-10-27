@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-10-16",
+  "updated": "2026-10-27",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -31,7 +31,7 @@
             "You tick fields off as they get done. Your name and the time are stamped on each one.",
             "You can add photos and notes to a field, and assign crew to it. The app can text them.",
             "At the end of the day you send a PDF or Word report, or email it to your report list.",
-            "Each project also has tabs for texting the crew (Notify), web links, weekend overtime, notes and sea can movements."
+            "Each project also has tabs for texting the crew (Notify), web links, weekend overtime, attendance, notes and sea can movements."
           ]
         },
         {
@@ -636,7 +636,7 @@
       "id": "project-screen",
       "title": "Inside a project: the tabs",
       "group": "Projects & checklists",
-      "summary": "A project has six tabs: Checklists, Notify, Links, Overtime, Notes and Sea Can Movements.",
+      "summary": "A project has seven tabs: Checklists, Notify, Links, Overtime, Attendance, Notes and Sea Can Movements.",
       "keywords": [
         "tabs",
         "pills",
@@ -644,6 +644,7 @@
         "notify",
         "links",
         "overtime",
+        "attendance",
         "notes",
         "sea can",
         "search"
@@ -653,7 +654,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "When you open a project, you see its name at the top and the tab buttons, three to a row."
+          "text": "When you open a project, you see its name at the top and the tab buttons: four in the top row and three below."
         },
         {
           "type": "image",
@@ -667,6 +668,7 @@
             "\"Notify\": send a crew member a note or photo by text.",
             "\"Links\": saved web links and forms. They show in every project.",
             "\"Overtime\": the weekend overtime sign-up sheet.",
+            "\"Attendance\": who is here today, and why not if they aren't.",
             "\"Notes\": your own notes and photos.",
             "\"Sea Can Movements\": where each sea can came from and where it is now."
           ]
@@ -765,6 +767,7 @@
         "links",
         "notify",
         "overtime",
+        "attendance",
         "notes",
         "customize"
       ],
@@ -2277,14 +2280,17 @@
         "pdf",
         "clear answers",
         "include in reports",
-        "reset weekend"
+        "reset weekend",
+        "remove row",
+        "delete row",
+        "x"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Overtime\" tab is a weekend overtime sheet. It has one row per crew member to start."
+          "text": "The \"Overtime\" tab is a weekend overtime sheet. It starts with one row per crew member."
         },
         {
           "type": "image",
@@ -2309,7 +2315,8 @@
           "type": "bullets",
           "items": [
             "\"+  Add a row\" and \"+  Add 5 rows\" add more rows.",
-            "\"Remove empty rows\" takes out rows with no name and no answers."
+            "\"Remove empty rows\" takes out rows with no name and no answers.",
+            "The \"×\" at the end of a row removes just that row. If it has a name or answers, tap \"Remove\" to confirm. Your crew list doesn't change."
           ]
         },
         {
@@ -2338,6 +2345,112 @@
             "For the next weekend, tap \"Clear answers\" at the bottom.",
             "Tap \"Clear\". The Yes/No answers and hours are cleared. Names and notes stay in place."
           ]
+        },
+        {
+          "type": "see",
+          "id": "attendance-tab",
+          "text": "Related: Attendance: who's here today"
+        }
+      ]
+    },
+    {
+      "id": "attendance-tab",
+      "title": "Attendance: who's here today",
+      "group": "Tabs",
+      "summary": "Mark each person Yes, No, AWOL, Vacation, Off, Training, D72 or Step up. Remove rows, export, and Clear answers.",
+      "keywords": [
+        "attendance",
+        "here",
+        "present",
+        "absent",
+        "awol",
+        "vacation",
+        "off",
+        "training",
+        "d72",
+        "step up",
+        "yes",
+        "no",
+        "roll call",
+        "remove row",
+        "delete row",
+        "attendance export",
+        "excel",
+        "pdf",
+        "clear answers",
+        "include in reports",
+        "date"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Attendance\" tab shows who is here today. It starts with one row for each person in your crew, with their name filled in."
+        },
+        {
+          "type": "image",
+          "file": "attendance.png",
+          "caption": "The Attendance tab"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Attendance\".",
+            "Check the date at the top. To pick another day, tap \"Change\".",
+            "In each row, tap the box under \"Here?\" and pick an answer: \"Yes\", \"No\", \"AWOL\", \"Vacation\", \"Off\", \"Training\", \"D72\" or \"Step up\".",
+            "To change who is on a row, tap the name and pick someone else.",
+            "Type anything else in the \"Notes\" box under the table."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Yes turns green. No and AWOL turn red. The line under the table counts each answer, for example \"Yes 5 · Vacation 1\". Everything saves by itself."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"+  Add a row\" and \"+  Add 5 rows\" add more rows.",
+            "The \"×\" at the end of a row removes just that row. If it has a name or answer, tap \"Remove\" to confirm. Your crew list doesn't change.",
+            "\"Remove empty rows\" takes out rows with no name and no answer."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "If there is no crew yet, you see \"Add your crew first: tap ⋯ at the top, then Manage crew.\""
+        },
+        {
+          "type": "text",
+          "text": "Exporting attendance:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Attendance\" tab, tap \"Export\" at the top right.",
+            "Pick \"Export attendance to PDF\" or \"Export attendance to Excel\".",
+            "When it's ready, pick \"Share or email\" or \"Save to phone\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the attendance table to your daily reports too."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "For a new day, tap \"Clear answers\" at the bottom.",
+            "Tap \"Clear\". The answers are cleared and the date changes to today. Names and notes stay."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "overtime-tab",
+          "text": "Related: Overtime: the weekend sign-up sheet"
+        },
+        {
+          "type": "see",
+          "id": "whats-in-the-report",
+          "text": "Related: What goes in the report"
         }
       ]
     },
@@ -2659,7 +2772,7 @@
       "id": "whats-in-the-report",
       "title": "What goes in the report",
       "group": "Reports",
-      "summary": "Fields grouped South, North, Unzoned with stamps and photos, plus ticked Also today items, sea cans and overtime.",
+      "summary": "Fields grouped South, North, Unzoned with stamps and photos, plus ticked Also today items, sea cans, overtime and attendance.",
       "keywords": [
         "report contents",
         "what is in report",
@@ -2669,6 +2782,7 @@
         "photos",
         "also today",
         "overtime",
+        "attendance",
         "pdf"
       ],
       "newAppOnly": false,
@@ -2690,12 +2804,13 @@
             "\"Photos required: none attached\" in red if a required photo is missing.",
             "The sea can list, after the fields, only when \"Include in my reports (PDF, Word and email)\" is ticked on the Sea Can Movements tab. It shows the sea cans that have a number, with Moves, Can #, From location and Current location.",
             "\"Also today\": only the items you ticked, with the time and any photos.",
-            "\"Weekend overtime\": the table and notes, only when \"Include in my reports\" is ticked on the Overtime tab."
+            "\"Weekend overtime\": the table and notes, only when \"Include in my reports\" is ticked on the Overtime tab.",
+            "\"Attendance\" with the date: the table and the count of each answer, only when \"Include in my reports\" is ticked on the Attendance tab."
           ]
         },
         {
           "type": "tip",
-          "text": "Unticked \"Also today\" items and unticked notes are not in the report. Neither are sea cans or overtime unless their \"Include in my reports\" box is ticked."
+          "text": "Unticked \"Also today\" items and unticked notes are not in the report. Neither are sea cans, overtime or attendance unless their \"Include in my reports\" box is ticked."
         },
         {
           "type": "see",

@@ -524,8 +524,18 @@ public final class Models {
 
         /** Drops rows with no name and no answers. */
         public void removeEmptyRows() {
-            rows.removeIf(r -> r.name.isEmpty() && r.fri.isEmpty() && r.sat.isEmpty()
-                    && r.sun.isEmpty() && r.hours.isEmpty());
+            rows.removeIf(Overtime::isBlank);
+        }
+
+        /** Before showing the tab: set the weekend and, only when there are no rows, one per crew member. */
+        public void prepare(int crewSize, String friday) {
+            if (weekOf.isEmpty()) weekOf = friday;
+            if (rows.isEmpty()) for (int i = 0; i < Math.max(1, crewSize); i++) rows.add(new OtRow());
+        }
+
+        /** True when the row has no name, answers or hours. */
+        public static boolean isBlank(OtRow r) {
+            return r.name.isEmpty() && r.fri.isEmpty() && r.sat.isEmpty() && r.sun.isEmpty() && r.hours.isEmpty();
         }
 
         /** Fresh weekend: keep the names, clear the Yes/No answers and hours. */
@@ -561,6 +571,114 @@ public final class Models {
                 for (int i = 0; i < a.length(); i++) {
                     JSONObject r = a.optJSONObject(i);
                     if (r != null) t.rows.add(OtRow.fromJson(r));
+                }
+            }
+            return t;
+        }
+    }
+
+    /** Attendance sheet: who is here today (Yes, No, AWOL, Vacation and so on). */
+    public static class Attendance {
+        public static final String YES = "Yes", NO = "No", AWOL = "AWOL";
+        public static final String[] STATUSES = {"Yes", "No", "AWOL", "Vacation", "Off", "Training", "D72", "Step up"};
+        /** ISO date this sheet is for ("" until first shown). */
+        public String date = "";
+        public boolean include;
+        public String notes = "";
+        public List<AttRow> rows = new ArrayList<>();
+
+        public static class AttRow {
+            public String name = "";
+            /** One of STATUSES, or "" when not answered. */
+            public String status = "";
+
+            JSONObject toJson() throws JSONException {
+                JSONObject o = new JSONObject();
+                o.put("name", name);
+                o.put("status", status);
+                return o;
+            }
+
+            static AttRow fromJson(JSONObject o) {
+                AttRow r = new AttRow();
+                r.name = o.optString("name", "");
+                r.status = o.optString("status", "");
+                return r;
+            }
+
+            public boolean isBlank() {
+                return name.isEmpty() && status.isEmpty();
+            }
+        }
+
+        /** Rows that have someone picked, in order. */
+        public List<AttRow> filled() {
+            List<AttRow> out = new ArrayList<>();
+            for (AttRow r : rows) if (!r.name.isEmpty()) out.add(r);
+            return out;
+        }
+
+        public int count(String status) {
+            int n = 0;
+            for (AttRow r : filled()) if (r.status.equals(status)) n++;
+            return n;
+        }
+
+        /** e.g. "Yes 5 · Vacation 1 · AWOL 1" in STATUSES order; "" when nothing answered. */
+        public String summary() {
+            List<String> parts = new ArrayList<>();
+            for (String s : STATUSES) {
+                int n = count(s);
+                if (n > 0) parts.add(s + " " + n);
+            }
+            return String.join(" \u00B7 ", parts);
+        }
+
+        /** Drops rows with no name and no status. */
+        public void removeEmptyRows() {
+            rows.removeIf(AttRow::isBlank);
+        }
+
+        /** New day: keep the names and notes, clear every status. */
+        public void startDay(String iso) {
+            date = iso;
+            for (AttRow r : rows) r.status = "";
+        }
+
+        /** Before showing the tab: set the date and, only when there are no rows, one per crew member with names. */
+        public void prepare(List<String> crew, String today) {
+            if (date.isEmpty()) date = today;
+            if (!rows.isEmpty()) return;
+            for (String name : crew) {
+                AttRow r = new AttRow();
+                r.name = name;
+                rows.add(r);
+            }
+            if (rows.isEmpty()) rows.add(new AttRow());
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("date", date);
+            o.put("include", include);
+            o.put("notes", notes);
+            JSONArray a = new JSONArray();
+            for (AttRow r : rows) a.put(r.toJson());
+            o.put("rows", a);
+            return o;
+        }
+
+        static Attendance fromJson(JSONObject o) {
+            Attendance t = new Attendance();
+            if (o == null) return t;
+            t.date = o.optString("date", "");
+            t.include = o.optBoolean("include", false);
+            t.notes = o.optString("notes", "");
+            JSONArray a = o.optJSONArray("rows");
+            if (a != null) {
+                for (int i = 0; i < a.length(); i++) {
+                    JSONObject r = a.optJSONObject(i);
+                    if (r != null) t.rows.add(AttRow.fromJson(r));
                 }
             }
             return t;
@@ -636,6 +754,7 @@ public final class Models {
         /** Who gets the emailed report. */
         public List<String> emails = new ArrayList<>();
         public Overtime overtime = new Overtime();
+        public Attendance attendance = new Attendance();
         /** Crew, Techs or Supervision, by name. Anyone not listed is Crew. */
         public Map<String, String> roles = new LinkedHashMap<>();
         /** People who get a text when assigned to a field. Nobody does unless ticked. */
@@ -659,7 +778,7 @@ public final class Models {
             return TECH.equals(role) ? "Techs" : MGMT.equals(role) ? "Supervision" : "Crew";
         }
 
-        /** Renames someone everywhere they appear: crew, checklists, fields, notes sent and overtime. */
+        /** Renames someone everywhere they appear: crew, checklists, fields, notes sent, overtime and attendance. */
         public void renamePerson(String from, String to) {
             if (from.equals(to)) return;
             replaceIn(crew, from, to);
@@ -675,6 +794,7 @@ public final class Models {
             for (Template x : templates) for (Task t : x.tasks) replaceIn(t.assignees, from, to);
             for (Notice n : notices) replaceIn(n.to, from, to);
             for (Overtime.OtRow row : overtime.rows) if (row.name.equals(from)) row.name = to;
+            for (Attendance.AttRow row : attendance.rows) if (row.name.equals(from)) row.name = to;
         }
 
         private static void replaceIn(List<String> list, String from, String to) {
@@ -801,6 +921,7 @@ public final class Models {
             o.put("notices", n);
             o.put("emails", toArray(emails));
             o.put("overtime", overtime.toJson());
+            o.put("attendance", attendance.toJson());
             JSONObject ro = new JSONObject();
             for (Map.Entry<String, String> e : roles.entrySet()) ro.put(e.getKey(), e.getValue());
             o.put("roles", ro);
@@ -847,6 +968,7 @@ public final class Models {
             }
             p.emails = fromArray(o.optJSONArray("emails"));
             p.overtime = Overtime.fromJson(o.optJSONObject("overtime"));
+            p.attendance = Attendance.fromJson(o.optJSONObject("attendance"));
             JSONObject ro = o.optJSONObject("roles");
             if (ro != null) {
                 Iterator<String> rk = ro.keys();

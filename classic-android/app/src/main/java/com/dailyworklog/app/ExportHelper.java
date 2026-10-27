@@ -73,6 +73,21 @@ final class ExportHelper {
                 f -> offer(f, excel ? XLSX : PDF, excel ? saveXlsx : savePdf));
     }
 
+    /** Just the Attendance tab, as a PDF or an Excel sheet, then Share / Open / Save to phone. */
+    void exportAttendance(Models.Project p, boolean excel) {
+        Store store = Store.get(activity);
+        final String by = store.me();
+        final long at = System.currentTimeMillis();
+        String name = Fmt.fileSafe("Attendance " + Fmt.logDate(p.attendance.date)
+                + (p.name.isEmpty() ? "" : " " + p.name)) + (excel ? ".xlsx" : ".pdf");
+        buildFile(excel ? "Building Excel sheet\u2026" : "Building PDF\u2026", name,
+                os -> {
+                    if (excel) AttendanceXlsx.write(p, os);
+                    else ReportPdf.writeAttendance(p, by, at, os);
+                },
+                f -> offer(f, excel ? XLSX : PDF, excel ? saveXlsx : savePdf));
+    }
+
     /** Just the Sea Can Movements tab: format is "pdf", "xlsx", "csv" or "docx". */
     void exportSeaCans(Models.Project p, String format) {
         Store store = Store.get(activity);

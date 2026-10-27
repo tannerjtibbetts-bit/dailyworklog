@@ -460,6 +460,70 @@ class Overtime {
   }
 }
 
+class AttRow {
+  String name = '';
+
+  /// One of [Attendance.statuses], or '' if not answered.
+  String status = '';
+
+  Map<String, dynamic> toJson() => {'name': name, 'status': status};
+
+  static AttRow fromJson(Map<String, dynamic> o) => AttRow()
+    ..name = _s(o, 'name')
+    ..status = _s(o, 'status');
+}
+
+/// Attendance sheet: one row per crew member with whether they're here today.
+class Attendance {
+  static const yes = 'Yes', no = 'No';
+  static const statuses = [yes, no, 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up'];
+
+  /// ISO date this sheet is for.
+  String date = '';
+  bool include = false;
+  String notes = '';
+  List<AttRow> rows = [];
+
+  /// Rows that have someone picked, in order.
+  List<AttRow> filled() => rows.where((r) => r.name.isNotEmpty).toList();
+
+  int count(String status) => filled().where((r) => r.status == status).length;
+
+  /// "Yes 5 · Vacation 1": the answers given, in the dropdown's order. Empty if none.
+  String summary() => [
+        for (final s in statuses)
+          if (count(s) > 0) '$s ${count(s)}',
+      ].join(' · ');
+
+  /// Drops rows with no name and no answer.
+  void removeEmptyRows() => rows.removeWhere((r) => r.name.isEmpty && r.status.isEmpty);
+
+  /// A new day: keep the names and notes, clear the answers.
+  void startDay(String iso) {
+    date = iso;
+    for (final r in rows) {
+      r.status = '';
+    }
+  }
+
+  Map<String, dynamic> toJson() => {
+        'date': date,
+        'include': include,
+        'notes': notes,
+        'rows': [for (final r in rows) r.toJson()],
+      };
+
+  static Attendance fromJson(dynamic m) {
+    if (m is! Map) return Attendance();
+    final o = Map<String, dynamic>.from(m);
+    return Attendance()
+      ..date = _s(o, 'date')
+      ..include = _b(o, 'include')
+      ..notes = _s(o, 'notes')
+      ..rows = _objects(o['rows'], AttRow.fromJson);
+  }
+}
+
 /// One sea can on the Sea Can Movements tab: where it was (letter, row and level), where it is now,
 /// and its weight.
 class SeaCanMove {
@@ -534,6 +598,7 @@ class Project {
   /// Who gets the emailed report.
   List<String> emails = [];
   Overtime overtime = Overtime();
+  Attendance attendance = Attendance();
 
   /// Crew, Techs or Supervision, by name. Anyone not listed is Crew.
   Map<String, String> roles = {};
@@ -553,7 +618,7 @@ class Project {
   static String roleLabel(String role) =>
       role == techRole ? 'Techs' : role == mgmtRole ? 'Supervision' : 'Crew';
 
-  /// Renames someone everywhere they appear: crew, checklists, fields, notes sent and overtime.
+  /// Renames someone everywhere they appear: crew, checklists, fields, notes sent, overtime and attendance.
   void renamePerson(String from, String to) {
     if (from == to) return;
     _replaceIn(crew, from, to);
@@ -577,6 +642,9 @@ class Project {
       _replaceIn(n.to, from, to);
     }
     for (final row in overtime.rows) {
+      if (row.name == from) row.name = to;
+    }
+    for (final row in attendance.rows) {
       if (row.name == from) row.name = to;
     }
   }
@@ -698,6 +766,7 @@ class Project {
         'notices': [for (final n in notices) n.toJson()],
         'emails': emails,
         'overtime': overtime.toJson(),
+        'attendance': attendance.toJson(),
         'roles': roles,
         'assignTexts': assignTexts.toList(),
         'notes': [for (final n in notes) n.toJson()],
@@ -716,6 +785,7 @@ class Project {
     ..phones = (_stringMap(o['phones'])..removeWhere((k, v) => v.isEmpty))
     ..emails = _strings(o['emails'])
     ..overtime = Overtime.fromJson(o['overtime'])
+    ..attendance = Attendance.fromJson(o['attendance'])
     ..roles = _stringMap(o['roles'])
     ..assignTexts = _strings(o['assignTexts']).toSet()
     ..notes = _objects(o['notes'], Note.fromJson)

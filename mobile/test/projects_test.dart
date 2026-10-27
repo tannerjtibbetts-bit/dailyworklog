@@ -4,6 +4,7 @@ import 'package:dailyworklog/data/fmt.dart';
 import 'package:dailyworklog/data/models.dart';
 import 'package:dailyworklog/data/store.dart';
 import 'package:dailyworklog/export/export.dart';
+import 'package:dailyworklog/screens/attendance_pane.dart';
 import 'package:dailyworklog/screens/note_screen.dart';
 import 'package:dailyworklog/screens/notify_screen.dart';
 import 'package:dailyworklog/screens/overtime_pane.dart';
@@ -141,6 +142,10 @@ void main() {
       final empty = Project();
       prepareOvertime(empty);
       expect(empty.overtime.rows.length, 1);
+      // A removed row doesn't come back.
+      p.overtime.rows.removeAt(1);
+      prepareOvertime(p);
+      expect(p.overtime.rows.length, 2);
     });
 
     test('yes totals count only named rows', () {
@@ -156,6 +161,57 @@ void main() {
       expect(ot.yesCount(0), 1);
       expect(ot.yesCount(1), 1);
       expect(ot.yesCount(2), 0);
+    });
+  });
+
+  group('AttendanceTest', () {
+    test('rows start with the crew names, today\'s date, and old files load', () {
+      final p = Project()..crew = ['Al', 'Bo'];
+      prepareAttendance(p);
+      expect(p.attendance.rows.map((r) => r.name), ['Al', 'Bo']);
+      expect(p.attendance.date, Fmt.todayIso());
+      p.attendance.rows[0].name = 'Old Timer';
+      expect(attendanceNames(p), ['Select…', 'Al', 'Bo', 'Old Timer']);
+      final empty = Project();
+      prepareAttendance(empty);
+      expect(empty.attendance.rows.single.name, '');
+      // Rows aren't topped up again once there are some.
+      p.attendance.rows.removeAt(1);
+      prepareAttendance(p);
+      expect(p.attendance.rows.length, 1);
+      // A file from before Attendance existed.
+      expect(Project.fromJson({'name': 'x'}).attendance.rows, isEmpty);
+    });
+
+    test('summary, save and load, clear answers, rename', () {
+      final p = Project()..crew = ['Al', 'Bo', 'Cy', 'Di'];
+      prepareAttendance(p);
+      final a = p.attendance
+        ..include = true
+        ..notes = 'Cy at medical';
+      a.rows[0].status = 'Yes';
+      a.rows[1].status = 'Yes';
+      a.rows[2].status = 'AWOL';
+      a.rows[3].status = 'Step up';
+      a.rows.add(AttRow()..status = 'Yes'); // no name: not counted
+      a.rows.add(AttRow());
+      expect(a.summary(), 'Yes 2 · AWOL 1 · Step up 1');
+      expect(Attendance().summary(), '');
+      final q = Project.fromJson(Map<String, dynamic>.from(p.toJson()));
+      expect(q.attendance.rows.length, 6);
+      expect(q.attendance.include, true);
+      expect(q.attendance.notes, 'Cy at medical');
+      q.attendance.removeEmptyRows();
+      expect(q.attendance.rows.length, 5);
+      q.renamePerson('Cy', 'Cyrus');
+      expect(q.attendance.rows[2].name, 'Cyrus');
+      q.attendance.startDay('2026-10-28');
+      expect(q.attendance.date, '2026-10-28');
+      expect(q.attendance.rows.every((r) => r.status.isEmpty), true);
+      expect(q.attendance.rows[0].name, 'Al');
+      expect(q.attendance.notes, 'Cy at medical');
+      expect(Attendance.statuses, ['Yes', 'No', 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up']);
+      expect(Fmt.longDay('2026-10-27'), 'Tue Oct 27, 2026');
     });
   });
 
@@ -288,7 +344,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('B44 Zone 2 Tool Readiness'), findsOneWidget);
-      for (final t in ['Checklists', 'Notify', 'Links', 'Overtime', 'Notes']) {
+      for (final t in ['Checklists', 'Notify', 'Links', 'Overtime', 'Attendance', 'Notes', 'Sea Can Movements']) {
         expect(find.text(t), findsOneWidget);
       }
       expect(find.text('Daily work log ${Fmt.logDate(Fmt.todayIso())}'), findsOneWidget);
@@ -335,6 +391,62 @@ void main() {
       expect(find.text('Harnesses in trailer'), findsOneWidget);
       expect(find.text('Clear all notes'), findsOneWidget);
       expect(find.text('By Tanner'), findsNWidgets(2));
+    });
+
+    testWidgets('attendance tab: names, Here? answers, remove one row', (tester) async {
+      final p = sample()..crew = ['Al Smith', 'Bo Jones', 'Cy Lee'];
+      Store.instance.projects.add(p);
+      await tester.binding.setSurfaceSize(const Size(420, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.attendance)));
+      await tester.pump();
+      expect(find.text('Here?'), findsOneWidget);
+      expect(find.text('Date: ${Fmt.longDay(Fmt.todayIso())}'), findsOneWidget);
+      expect(find.text('Nobody marked yet'), findsOneWidget);
+      expect(find.text('Bo Jones'), findsOneWidget);
+
+      // Pick "Vacation" for Bo.
+      await tester.tap(find.text('–').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Vacation').last);
+      await tester.pumpAndSettle();
+      expect(p.attendance.rows[1].status, 'Vacation');
+      expect(find.text('Vacation 1'), findsOneWidget);
+
+      // Remove Bo's row: asks first, the crew list stays.
+      await tester.tap(find.byTooltip('Remove row').at(1));
+      await tester.pumpAndSettle();
+      expect(find.text("Bo Jones comes off this sheet. Your crew list doesn't change."), findsOneWidget);
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+      expect(p.attendance.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+      expect(p.crew, contains('Bo Jones'));
+
+      // An empty row goes without asking.
+      await tester.tap(find.text('+  Add a row'));
+      await tester.pumpAndSettle();
+      expect(p.attendance.rows.length, 3);
+      await tester.tap(find.byTooltip('Remove row').last);
+      await tester.pumpAndSettle();
+      expect(p.attendance.rows.length, 2);
+    });
+
+    testWidgets('overtime tab: remove one row from the middle', (tester) async {
+      final p = sample()..crew = ['Al Smith', 'Bo Jones', 'Cy Lee'];
+      prepareOvertime(p);
+      for (var i = 0; i < 3; i++) {
+        p.overtime.rows[i].name = p.crew[i];
+      }
+      Store.instance.projects.add(p);
+      await tester.binding.setSurfaceSize(const Size(420, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.overtime)));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Remove row').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+      expect(p.overtime.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
     });
 
     testWidgets('Clear all notes removes notes after confirming', (tester) async {

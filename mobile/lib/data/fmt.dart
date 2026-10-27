@@ -53,6 +53,12 @@ class Fmt {
 
   static String todayIso() => isoOf(DateTime.now());
 
+  /// "Tue Oct 27, 2026" (the text as given if it isn't a date).
+  static String longDay(String iso) {
+    final d = _parseIso(iso);
+    return d == null ? iso : DateFormat('EEE MMM d, yyyy', 'en_US').format(d);
+  }
+
   static String initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts[0].isEmpty) return '?';

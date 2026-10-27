@@ -118,6 +118,7 @@ final class ReportPdf {
         }
         drawExtras(log, photoDir);
         drawOvertime(p, false);
+        drawAttendance(p, false);
         drawSeaCans(p, false);
         finishPage();
     }
@@ -191,7 +192,64 @@ final class ReportPdf {
         y += rowH;
     }
 
-    /** Weekend overtime table, when ticked for reports. */
+    /** Just the Attendance tab as its own PDF, to send on its own. */
+    static void writeAttendance(Models.Project p, String generatedBy, long generatedAt, OutputStream out) throws IOException {
+        ReportPdf r = new ReportPdf("Attendance" + (p.name.isEmpty() ? "" : " - " + p.name));
+        try {
+            Models.Attendance at = p.attendance;
+            r.newPage();
+            float w = W - 2 * M;
+            r.text("Attendance", r.title, M, w, 6);
+            r.text((p.name.isEmpty() ? "" : p.name + " \u00B7 ") + Fmt.longDay(at.date), r.meta, M, w, 2);
+            r.text("Generated " + Fmt.longStamp(generatedAt) + " by " + generatedBy, r.meta, M, w, 10);
+            if (at.filled().isEmpty() && at.notes.trim().isEmpty()) r.text("Nobody marked yet.", r.body, M, w, 4);
+            else r.drawAttendance(p, true);
+            r.finishPage();
+            r.doc.writeTo(out);
+        } finally {
+            r.doc.close();
+        }
+    }
+
+    /** Attendance table. In the daily report only when ticked and someone is on it; force draws it regardless. */
+    private void drawAttendance(Models.Project p, boolean force) {
+        Models.Attendance at = p.attendance;
+        List<Models.Attendance.AttRow> rows = at.filled();
+        String notes = at.notes.trim();
+        if (!force && (!at.include || rows.isEmpty())) return;
+        float w = W - 2 * M, rowH = 20, nameW = w * 0.65f, statusW = w - nameW;
+        ensure(70 + rowH * 2);
+        if (!force) {
+            y += 6;
+            text("Attendance " + Fmt.longDay(at.date), heading, M, w, 8);
+        }
+        if (!rows.isEmpty()) {
+            TextPaint bold = text(9.5f, 0xFF14233A, true);
+            TextPaint yes = text(9.5f, 0xFF148A3A, true);
+            TextPaint no = text(9.5f, 0xFFC9353A, true);
+            c.drawRect(M, y, M + w, y + rowH, barTrack);
+            c.drawText("Name", M + 6, y + 13.5f, bold);
+            c.drawText("Here?", M + nameW + (statusW - bold.measureText("Here?")) / 2f, y + 13.5f, bold);
+            y += rowH;
+            for (Models.Attendance.AttRow r : rows) {
+                ensure(rowH);
+                c.drawLine(M, y, M + w, y, line);
+                c.drawText(r.name, M + 6, y + 13.5f, body);
+                String s = r.status.isEmpty() ? "-" : r.status;
+                TextPaint tp = Models.Attendance.YES.equals(r.status) ? yes
+                        : Models.Attendance.NO.equals(r.status) || Models.Attendance.AWOL.equals(r.status) ? no
+                        : r.status.isEmpty() ? small : body;
+                c.drawText(s, M + nameW + (statusW - tp.measureText(s)) / 2f, y + 13.5f, tp);
+                y += rowH;
+            }
+            c.drawLine(M, y, M + w, y, line);
+            y += 6;
+            String sum = at.summary();
+            text(sum.isEmpty() ? "Nobody marked yet" : sum, bold, M, w, 10);
+        }
+        drawOvertimeNotes(notes, w);
+    }
+
     /** Just the Overtime tab as its own PDF, to send on its own. */
     static void writeOvertime(Models.Project p, String generatedBy, long generatedAt, OutputStream out) throws IOException {
         ReportPdf r = new ReportPdf("Weekend overtime" + (p.name.isEmpty() ? "" : " - " + p.name));
