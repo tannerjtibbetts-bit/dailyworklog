@@ -1,10 +1,12 @@
 // Taking and picking photos into the app's photo folder. Photos are kept at full resolution;
 // only a sideways camera photo is turned upright (and then saved again as a high-quality JPEG).
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -62,7 +64,23 @@ class Photos {
     }
   }
 
+  static const _gallery = MethodChannel('dailyworklog/gallery');
+
+  /// Album that photos taken in the app are copied to in the phone's gallery.
+  static const galleryAlbum = 'Daily Work Log';
+
+  /// Puts a copy of a photo in the phone's gallery. It's a separate copy: deleting it from the
+  /// gallery leaves the app's photo, and deleting in the app leaves the gallery copy.
+  static Future<bool> saveToGallery(String path) async {
+    try {
+      return await _gallery.invokeMethod<bool>('save', {'path': path, 'album': galleryAlbum}) ?? false;
+    } catch (_) {
+      return false; // no gallery here (tests), or not allowed
+    }
+  }
+
   /// Takes a photo with the camera; returns the saved file name, or null.
+  /// A copy also goes in the phone's gallery, in the "Daily Work Log" album.
   static Future<String?> take(BuildContext context) async {
     XFile? x;
     try {
@@ -74,6 +92,7 @@ class Photos {
     if (x == null) return null;
     final name = await save(await x.readAsBytes());
     _cleanup(x);
+    if (name != null) unawaited(saveToGallery(Store.instance.photoFile(name).path));
     if (name == null && context.mounted) toast(context, "Couldn't save that photo");
     return name;
   }

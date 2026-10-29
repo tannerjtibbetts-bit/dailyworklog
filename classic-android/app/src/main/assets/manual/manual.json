@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-10-27",
+  "updated": "2026-10-29",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -1491,6 +1491,64 @@
           "type": "see",
           "id": "tips",
           "text": "Related: Photo problems"
+        },
+        {
+          "type": "see",
+          "id": "photos-in-gallery",
+          "text": "Related: Your photos in the phone's gallery"
+        }
+      ]
+    },
+    {
+      "id": "photos-in-gallery",
+      "title": "Your photos in the phone's gallery",
+      "group": "Fields",
+      "summary": "Photos you take in the app are also saved to a \"Daily Work Log\" album in your gallery. Deleting one there doesn't delete it from the app.",
+      "keywords": [
+        "gallery",
+        "camera roll",
+        "photos app",
+        "album",
+        "daily work log album",
+        "save photo",
+        "delete photo",
+        "backup photos",
+        "google photos"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Every photo you take with the camera in the app (on a field, a note or a Notify message) is also saved to your phone's gallery, in an album called \"Daily Work Log\"."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Android: open your Gallery or Google Photos app and look for the \"Daily Work Log\" album (under Albums, or Pictures/Daily Work Log).",
+            "iPhone: open the Photos app, tap \"Albums\", then \"Daily Work Log\". The first time, the app asks to use your photos. Tap \"Allow Full Access\" so it can make the album. With limited access, the photos go in Recents instead."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The gallery copy is separate from the app's copy:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Deleting a photo from your gallery does not remove it from the app or your reports.",
+            "Removing a photo in the app does not delete the copy in your gallery.",
+            "Photos you pick from your gallery aren't copied again, so you won't get doubles."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Photos you took before this update aren't in the album. Only new photos are copied."
+        },
+        {
+          "type": "see",
+          "id": "field-photos",
+          "text": "Related: Photos and Photos Required"
         }
       ]
     },

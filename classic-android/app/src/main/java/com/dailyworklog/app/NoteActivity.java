@@ -79,7 +79,7 @@ public class NoteActivity extends AppCompatActivity {
                 return;
             }
             PhotoUtil.BG.execute(() -> {
-                boolean good = PhotoUtil.normalize(f);
+                boolean good = PhotoUtil.fromCamera(this, f);
                 runOnUiThread(() -> {
                     if (good) addPhotos(java.util.Collections.singletonList(f.getName()));
                 });

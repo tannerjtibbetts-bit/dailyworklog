@@ -562,7 +562,7 @@ public class LogActivity extends AppCompatActivity {
             return;
         }
         PhotoUtil.BG.execute(() -> {
-            boolean good = PhotoUtil.normalize(f);
+            boolean good = PhotoUtil.fromCamera(this, f);
             runOnUiThread(() -> {
                 Models.Task t = log.findTask(taskId);
                 if (!good || t == null) {

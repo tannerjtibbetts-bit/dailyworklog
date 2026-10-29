@@ -80,7 +80,7 @@ public class NotifyActivity extends AppCompatActivity {
                 return;
             }
             PhotoUtil.BG.execute(() -> {
-                boolean good = PhotoUtil.normalize(f);
+                boolean good = PhotoUtil.fromCamera(this, f);
                 runOnUiThread(() -> {
                     if (good) {
                         photoFiles.add(f.getName());

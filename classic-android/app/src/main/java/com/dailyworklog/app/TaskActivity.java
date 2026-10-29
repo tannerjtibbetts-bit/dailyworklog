@@ -511,7 +511,7 @@ public class TaskActivity extends AppCompatActivity {
             return;
         }
         PhotoUtil.BG.execute(() -> {
-            boolean good = PhotoUtil.normalize(f);
+            boolean good = PhotoUtil.fromCamera(this, f);
             runOnUiThread(() -> {
                 if (good) addPhoto(f);
                 else Toast.makeText(this, "Couldn't save that photo", Toast.LENGTH_SHORT).show();

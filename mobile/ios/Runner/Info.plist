@@ -29,7 +29,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>The camera is used to take photos of your work and of task lists.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Your photos are used when you add pictures to a field, note or task list.</string>
+	<string>Your photos are used when you add pictures to a field, note or task list, and photos you take in the app are saved to a "Daily Work Log" album.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Photos you take in the app are also saved to a "Daily Work Log" album in Photos.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>sms</string>

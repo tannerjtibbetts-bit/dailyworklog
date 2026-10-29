@@ -1,6 +1,14 @@
 package com.dailyworklog.app;
 
+import android.Manifest;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.media.MediaScannerConnection;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
@@ -57,6 +65,69 @@ final class PhotoUtil {
             return true;
         } catch (Exception e) {
             return f.exists() && f.length() > 0;
+        }
+    }
+
+    /** Album the app's camera photos are copied to in the phone's gallery. */
+    static final String GALLERY_ALBUM = "Daily Work Log";
+
+    /**
+     * A photo just taken with the camera: straighten and shrink it, then put a copy in the
+     * phone's gallery. The copy is separate, so deleting it from the gallery leaves the app's
+     * photo alone (and deleting in the app leaves the gallery copy). Background thread.
+     */
+    static boolean fromCamera(Context c, File f) {
+        boolean good = normalize(f);
+        if (good) saveToGallery(c, f);
+        return good;
+    }
+
+    /** Copies a photo into Pictures/Daily Work Log. Quietly does nothing if it can't. */
+    static boolean saveToGallery(Context c, File f) {
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentResolver r = c.getContentResolver();
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.Images.Media.DISPLAY_NAME, f.getName());
+                v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                v.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/" + GALLERY_ALBUM);
+                v.put(MediaStore.Images.Media.IS_PENDING, 1);
+                Uri u = r.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+                if (u == null) return false;
+                try (OutputStream out = r.openOutputStream(u)) {
+                    if (out == null) throw new IOException("no stream");
+                    copy(f, out);
+                } catch (IOException e) {
+                    r.delete(u, null, null);
+                    return false;
+                }
+                v.clear();
+                v.put(MediaStore.Images.Media.IS_PENDING, 0);
+                r.update(u, v, null, null);
+                return true;
+            }
+            // Android 9 and older need the storage permission; without it, skip.
+            if (c.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), GALLERY_ALBUM);
+            if (!dir.isDirectory() && !dir.mkdirs()) return false;
+            File dest = new File(dir, f.getName());
+            try (OutputStream out = new FileOutputStream(dest)) {
+                copy(f, out);
+            }
+            MediaScannerConnection.scanFile(c, new String[]{dest.getAbsolutePath()}, new String[]{"image/jpeg"}, null);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void copy(File f, OutputStream out) throws IOException {
+        try (InputStream in = new java.io.FileInputStream(f)) {
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         }
     }
 
