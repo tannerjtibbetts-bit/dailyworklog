@@ -44,6 +44,17 @@ public class LogsActivity extends AppCompatActivity {
     private int mode = MODE_LOGS;
     private String query = "";
     private final List<Object> rows = new ArrayList<>();
+    /** While searching: the match lines for each checklist shown. */
+    private final java.util.Map<Models.DailyLog, List<String>> hitLines = new java.util.HashMap<>();
+
+    /** The Sea Can Movements card at the top of the search results. */
+    private static final class SeaCanHits {
+        final List<String> lines;
+
+        SeaCanHits(List<String> lines) {
+            this.lines = lines;
+        }
+    }
     private RowAdapter adapter;
     private TextView empty, title, location, pillLogs, pillOvertime, pillAttendance, pillLinks, pillNotify, pillNotes, pillSeaCans;
     private EditText search;
@@ -214,11 +225,12 @@ public class LogsActivity extends AppCompatActivity {
             return;
         }
         search.setHint(mode == MODE_NOTIFY ? "Search sent notes" : mode == MODE_NOTES ? "Search notes" : mode == MODE_LINKS ? "Search links"
-                : mode == MODE_TEMPLATES ? "Search templates" : "Search checklists");
+                : mode == MODE_TEMPLATES ? "Search templates" : "Search all days: fields, notes, sea cans");
         findViewById(R.id.fab).setContentDescription(mode == MODE_NOTIFY ? "New note to crew"
                 : mode == MODE_NOTES ? "New note"
                 : mode == MODE_LINKS ? "Add link" : "New daily log");
         rows.clear();
+        hitLines.clear();
         if (mode == MODE_NOTIFY) {
             for (Models.Notice n : project.notices) {
                 if (query.isEmpty() || n.note.toLowerCase(Locale.ROOT).contains(query)
@@ -237,13 +249,16 @@ public class LogsActivity extends AppCompatActivity {
             for (Models.Template t : project.templates) {
                 if (query.isEmpty() || t.name.toLowerCase(Locale.ROOT).contains(query)) rows.add(t);
             }
+        } else if (!query.isEmpty()) {
+            // Search every day: sea cans first, then each checklist with where the word was found.
+            ProjectSearch.Result res = ProjectSearch.run(project, query);
+            if (!res.seaCans.isEmpty()) rows.add(new SeaCanHits(res.seaCans));
+            for (ProjectSearch.DayHit d : res.days) {
+                rows.add(d.log);
+                hitLines.put(d.log, d.lines);
+            }
         } else {
-            List<Models.DailyLog> logs = new ArrayList<>(project.logs);
-            logs.sort((a, b) -> {
-                int c = b.date.compareTo(a.date);
-                return c != 0 ? c : Long.compare(b.createdAt, a.createdAt);
-            });
-            for (Models.DailyLog l : logs) if (matches(l)) rows.add(l);
+            rows.addAll(ProjectSearch.sortedLogs(project));
         }
         adapter.notifyDataSetChanged();
         if (rows.isEmpty()) {
@@ -259,14 +274,38 @@ public class LogsActivity extends AppCompatActivity {
         }
     }
 
-    private boolean matches(Models.DailyLog l) {
-        if (query.isEmpty()) return true;
-        if (l.displayTitle().toLowerCase(Locale.ROOT).contains(query)) return true;
-        for (Models.Task t : l.tasks) {
-            if (t.title.toLowerCase(Locale.ROOT).contains(query)
-                    || t.notes.toLowerCase(Locale.ROOT).contains(query)) return true;
+    /** Grey match lines under a search result card, then "+N more". */
+    private void fillMatches(LinearLayout box, List<String> lines, int max) {
+        box.removeAllViews();
+        if (lines == null || lines.isEmpty()) {
+            box.setVisibility(View.GONE);
+            return;
         }
-        return false;
+        box.setVisibility(View.VISIBLE);
+        for (int i = 0; i < Math.min(max, lines.size()); i++) box.addView(matchLine(lines.get(i)));
+        if (lines.size() > max) box.addView(matchLine("+" + (lines.size() - max) + " more"));
+    }
+
+    private TextView matchLine(String s) {
+        TextView t = new TextView(this);
+        t.setText(s);
+        t.setTextSize(15);
+        t.setTextColor(getColor(R.color.grey));
+        t.setMaxLines(2);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        t.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 2));
+        return t;
+    }
+
+    /** Search result card: open the Sea Can Movements tab, unless it's hidden. */
+    private void openSeaCans() {
+        if (store.hiddenTabs.contains("seacans")) {
+            android.widget.Toast.makeText(this, "The Sea Can Movements tab is hidden. Turn it on in Show or hide tabs.",
+                    android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        search.setText("");
+        setMode(MODE_SEACANS);
     }
 
     // ----- creating logs -----
@@ -388,6 +427,7 @@ public class LogsActivity extends AppCompatActivity {
         items.add(new Ui.SheetItem(R.drawable.ic_send, "Email report", () -> exporter.email(project, l)));
         items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export to PDF", () -> exporter.export(project, l, false)));
         items.add(new Ui.SheetItem(R.drawable.ic_word, "Export to Word", () -> exporter.export(project, l, true)));
+        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export to Excel", () -> exporter.exportExcel(project, l)));
         items.add(new Ui.SheetItem(R.drawable.ic_edit, "Rename Checklist", () ->
                 Ui.prompt(this, "Rename checklist", "Checklist name", l.displayTitle(), "Save", n -> {
                     l.name = n;
@@ -856,10 +896,11 @@ public class LogsActivity extends AppCompatActivity {
             final ImageView icon;
             final TextView title, sub;
             final CheckBox include;
-            final LinearLayout badges;
+            final LinearLayout badges, matches;
 
             VH(View v) {
                 super(v);
+                matches = v.findViewById(R.id.matches);
                 ring = v.findViewById(R.id.ring);
                 icon = v.findViewById(R.id.icon);
                 title = v.findViewById(R.id.title);
@@ -948,6 +989,21 @@ public class LogsActivity extends AppCompatActivity {
                 return;
             }
             VH h = (VH) holder;
+            h.sub.setVisibility(View.VISIBLE);
+            fillMatches(h.matches, null, 0);
+            if (row instanceof SeaCanHits) {
+                h.ring.setVisibility(View.GONE);
+                h.include.setVisibility(View.GONE);
+                h.include.setOnCheckedChangeListener(null);
+                h.icon.setVisibility(View.VISIBLE);
+                h.title.setText("Sea Can Movements");
+                h.sub.setVisibility(View.GONE);
+                h.badges.removeAllViews();
+                fillMatches(h.matches, ((SeaCanHits) row).lines, 5);
+                h.itemView.setOnClickListener(v -> openSeaCans());
+                h.itemView.setOnLongClickListener(null);
+                return;
+            }
             if (row instanceof Models.DailyLog) {
                 Models.DailyLog l = (Models.DailyLog) row;
                 int done = l.doneCount(), total = l.tasks.size();
@@ -960,6 +1016,7 @@ public class LogsActivity extends AppCompatActivity {
                 h.title.setText(l.displayTitle());
                 h.sub.setText(done + "/" + total + " fields completed");
                 Ui.fillBadges(h.badges, l.people(), 44, 2);
+                fillMatches(h.matches, hitLines.get(l), 3);
                 h.itemView.setOnClickListener(v -> open(l));
                 h.itemView.setOnLongClickListener(v -> {
                     logMenu(l);

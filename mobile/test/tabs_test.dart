@@ -45,7 +45,7 @@ void main() {
     expect(find.text('Links'), findsNothing);
     expect(find.text('Sea Can Movements'), findsNothing);
     // The Sea Can tab was open, so it went back to Checklists.
-    expect(find.text('Search checklists'), findsOneWidget);
+    expect(find.text('Search all days: fields, notes, sea cans'), findsOneWidget);
     expect(find.text('Notify'), findsOneWidget);
   });
 }

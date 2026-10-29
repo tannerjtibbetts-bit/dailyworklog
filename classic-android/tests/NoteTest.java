@@ -344,3 +344,103 @@ class DoneTextTest { public static void main(String[] a) throws Exception {
   Models.Task q = Models.Task.fromJson(t.toJson());
   NoteTest.check(q.doneTextName.equals("Tanner") && q.doneTextPhone.equals("1-226-668-8639") && t.carryCopy().doneTextName.equals("Tanner"), "saved and carried");
   System.out.println("DONETEXT PASS"); } }
+class SearchTest { public static void main(String[] a) throws Exception {
+  Models.Project p = new Models.Project();
+  java.util.Calendar cal = java.util.Calendar.getInstance(); cal.set(2026, 9, 20, 10, 15); long day20 = cal.getTimeInMillis();
+  Models.DailyLog older = new Models.DailyLog(); older.date = "2026-10-20"; older.createdAt = 1; p.logs.add(older);
+  Models.DailyLog newer = new Models.DailyLog(); newer.date = "2026-10-21"; newer.createdAt = 2; newer.name = "Pump day"; p.logs.add(newer);
+  Models.DailyLog none = new Models.DailyLog(); none.date = "2026-10-22"; p.logs.add(none);
+  Models.Task t1 = new Models.Task(); t1.title = "Move pump 3"; t1.notes = "Pump 3 is leaking"; t1.assignees.add("Pumpkin Joe"); older.tasks.add(t1);
+  Models.Task t2 = new Models.Task(); t2.title = ""; t2.completedBy = "Sam"; t2.securedBy = "Sam"; t2.notes = "x"; older.tasks.add(t2);
+  String longNote = "Started the shift with a safety talk and then we went out to the laydown yard where the PUMP was waiting for us all day long in the rain and the wind";
+  Models.Task t3 = new Models.Task(); t3.title = "Laydown"; t3.notes = longNote; newer.tasks.add(t3);
+  Models.Extra e1 = new Models.Extra(); e1.type = Models.Extra.LINK; e1.title = "Pump manual"; e1.detail = "https://x"; older.extras.add(e1);
+  Models.Extra e2 = new Models.Extra(); e2.type = Models.Extra.NOTE; e2.title = "Tanner"; e2.detail = "check the pump seals"; older.extras.add(e2);
+  Models.Notice n = new Models.Notice(); n.to.add("Al"); n.note = "Bring the pump key"; n.sentAt = day20; p.notices.add(n);
+  Models.Notice n2 = new Models.Notice(); n2.to.add("Pumper"); n2.note = "Hi"; n2.sentAt = day20; p.notices.add(n2);
+  Models.Notice n3 = new Models.Notice(); n3.to.add("Al"); n3.note = "pump other day"; n3.sentAt = day20 + 5L * 86400000L; p.notices.add(n3);
+  Models.Note nt = new Models.Note(); nt.text = "Pump\n\n  hose   cracked"; nt.createdAt = day20; p.notes.add(nt);
+  Models.SeaCanMove m = new Models.SeaCanMove(); m.can = "TCLU 317503"; m.fromLetter = "D"; m.fromRow = "33"; m.weight = "14"; p.seaCans.add(m);
+  Models.SeaCanMove m2 = new Models.SeaCanMove(); m2.fromLetter = "D"; p.seaCans.add(m2);   // no can number
+  NoteTest.check(ProjectSearch.run(p, "  ").isEmpty(), "empty query");
+  ProjectSearch.Result r = ProjectSearch.run(p, "PUMP");
+  NoteTest.check(r.days.size() == 2 && r.days.get(0).log == newer && r.days.get(1).log == older, "newest first, only hits");
+  java.util.List<String> d = r.days.get(1).lines;
+  System.out.println(d);
+  NoteTest.check(d.equals(java.util.Arrays.asList("Field: Move pump 3", "Notes on Move pump 3: Pump 3 is leaking", "Move pump 3: Pumpkin Joe",
+      "Also today: Link used: Pump manual", "Also today: Note by Tanner: check the pump seals", "Sent note: Bring the pump key", "Sent note: Hi",
+      "Note: Pump hose cracked")), "line order " + d);
+  java.util.List<String> d0 = r.days.get(0).lines;
+  NoteTest.check(d0.get(0).equals("Checklist: Pump day") && d0.get(1).startsWith("Notes on Laydown: …") && d0.get(1).endsWith("…"), "snippet " + d0);
+  NoteTest.check(ProjectSearch.snippet(longNote, "pump").length() == 62 && ProjectSearch.snippet(longNote, "pump").contains("PUMP"), "snippet window");
+  NoteTest.check(ProjectSearch.snippet("Started the shift with a safety talk and then we went out to the laydown", "started").endsWith("…")
+      && !ProjectSearch.snippet("Started the shift with a safety talk and then we went out to the laydown", "started").startsWith("…"), "snippet start");
+  java.util.List<String> sam = ProjectSearch.run(p, "sam").days.get(0).lines;
+  NoteTest.check(sam.equals(java.util.Arrays.asList("(Untitled field): Sam")), "first name only, untitled " + sam);
+  NoteTest.check(ProjectSearch.run(p, "pump").seaCans.isEmpty(), "no sea can for pump");
+  ProjectSearch.Result c = ProjectSearch.run(p, "d33");
+  NoteTest.check(c.seaCans.equals(java.util.Arrays.asList("TCLU 317503 · D33 to – · 14")) && c.days.isEmpty(), "sea can line " + c.seaCans);
+  NoteTest.check(ProjectSearch.run(p, "3175").seaCans.size() == 1 && ProjectSearch.run(p, "zzz").isEmpty(), "can number / nothing");
+  System.out.println("SEARCH PASS"); } }
+class ReportXlsxTest {
+  static java.util.Map<String,String> parts(Models.Project p, Models.DailyLog l) throws Exception {
+    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+    ReportXlsx.write(p, l, "Tanner", 0L, bo);
+    java.util.Map<String,String> m = new java.util.HashMap<>();
+    try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bo.toByteArray()))) {
+      for (java.util.zip.ZipEntry e; (e = z.getNextEntry()) != null; ) m.put(e.getName(), new String(z.readAllBytes(), "UTF-8"));
+    }
+    javax.xml.parsers.DocumentBuilderFactory f = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+    for (String k : m.keySet()) f.newDocumentBuilder().parse(new java.io.ByteArrayInputStream(m.get(k).getBytes("UTF-8")));
+    return m;
+  }
+  static String t(String s) { return "<is><t xml:space=\"preserve\">" + s + "</t></is>"; }
+  public static void main(String[] a) throws Exception {
+  Models.Project p = new Models.Project(); p.name = "B44"; p.location = "Site 2";
+  Models.DailyLog l = new Models.DailyLog(); l.date = "2026-10-27"; p.logs.add(l);
+  Models.Task t1 = new Models.Task(); t1.title = "Pack up sea can"; t1.side = "south"; t1.done = true; t1.completedBy = "Sam"; t1.completedAt = 1000; t1.nextShift = true;
+  t1.loadSecured = true; t1.securedBy = "Al"; Models.Photo ph = new Models.Photo(); ph.file = "a.jpg"; t1.photos.add(ph); t1.photos.add(ph); l.tasks.add(t1);
+  Models.Task t2 = new Models.Task(); t2.title = "Clean crib & <b>"; t2.side = "north"; t2.photosRequired = true; t2.notes = " wipe down "; t2.assignees.add("Jo"); t2.assignees.add("Al"); l.tasks.add(t2);
+  java.util.Map<String,String> m = parts(p, l);
+  NoteTest.check(m.keySet().containsAll(java.util.Arrays.asList("[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/styles.xml", "xl/worksheets/sheet1.xml")), "zip parts");
+  NoteTest.check(m.get("xl/workbook.xml").contains("name=\"Daily report\""), "sheet name");
+  NoteTest.check(m.get("xl/styles.xml").contains("cellXfs count=\"11\""), "11 styles");
+  String s = m.get("xl/worksheets/sheet1.xml");
+  System.out.println(s.substring(0, Math.min(1800, s.length())));
+  NoteTest.check(s.contains("<row r=\"1\" ht=\"24\" customHeight=\"1\"><c r=\"A1\" t=\"inlineStr\" s=\"2\">" + t("Daily work log 27/10/2026")), "title row");
+  NoteTest.check(s.contains("<c r=\"A2\" t=\"inlineStr\" s=\"3\">" + t("B44 · Site 2")) && s.contains(t("Generated " + Fmt.longStamp(0) + " by Tanner"))
+      && s.contains("<c r=\"A4\" t=\"inlineStr\" s=\"1\">" + t("1/2 fields completed")) && s.contains("<c r=\"A5\" t=\"inlineStr\" s=\"3\">" + t("Crew: Jo, Al")), "meta rows");
+  NoteTest.check(s.contains("<c r=\"A7\" t=\"inlineStr\" s=\"4\">" + t("Area")) && s.contains("<c r=\"J7\" t=\"inlineStr\" s=\"4\">" + t("Photos")), "header row 7");
+  NoteTest.check(s.contains("<c r=\"A8\" t=\"inlineStr\" s=\"10\">" + t("South")) && s.contains("<c r=\"A9\" t=\"inlineStr\" s=\"10\">" + t("North")), "area labels");
+  NoteTest.check(s.contains("<c r=\"C8\" t=\"inlineStr\" s=\"6\">" + t("Done")) && s.contains("<c r=\"C9\" t=\"inlineStr\" s=\"7\">" + t("Not done")), "done styles");
+  NoteTest.check(s.contains("<c r=\"G8\" t=\"inlineStr\" s=\"5\">" + t("Yes, Al")) && s.contains("<c r=\"H8\" t=\"inlineStr\" s=\"9\">" + t("Yes"))
+      && s.contains("<c r=\"J8\" s=\"9\"><v>2</v></c>") && s.contains("<c r=\"E8\" t=\"inlineStr\" s=\"5\">" + t(Fmt.stamp(1000))), "done row");
+  NoteTest.check(s.contains("<c r=\"J9\" t=\"inlineStr\" s=\"7\">" + t("Required, none")) && s.contains(t("Clean crib &amp; &lt;b&gt;"))
+      && s.contains("<c r=\"I9\" t=\"inlineStr\" s=\"5\">" + t("wipe down")) && s.contains("<c r=\"D9\" s=\"5\"/>"), "not done row");
+  NoteTest.check(!s.contains("Also today") && !s.contains("Weekend overtime") && !s.contains(">Attendance") && !s.contains("Sea can movements"), "no sections when not included");
+  // Sections only when ticked and filled
+  Models.Extra e = new Models.Extra(); e.type = Models.Extra.TEMPLATE; e.title = "Daily"; e.detail = "3 fields"; e.include = true; l.extras.add(e);
+  Models.Overtime.OtRow o = new Models.Overtime.OtRow(); o.name = "Sam"; o.fri = "Yes"; o.sat = "No"; o.hours = "8"; p.overtime.rows.add(o);
+  Models.Attendance.AttRow ar = new Models.Attendance.AttRow(); ar.name = "Jo"; ar.status = "AWOL"; ar.comment = "no call"; p.attendance.rows.add(ar); p.attendance.date = "2026-10-27";
+  Models.SeaCanMove sc = new Models.SeaCanMove(); sc.can = "TCLU 1"; sc.toLetter = "B"; sc.toRow = "7"; sc.weight = "4.5"; p.seaCans.add(sc);
+  s = parts(p, l).get("xl/worksheets/sheet1.xml");
+  NoteTest.check(s.contains("<c r=\"A11\" t=\"inlineStr\" s=\"8\">" + t("Also today")) && s.contains("<c r=\"C12\" t=\"inlineStr\" s=\"4\">" + t("Details"))
+      && s.contains("<c r=\"B13\" t=\"inlineStr\" s=\"5\">" + t("Template used: Daily")) && s.contains("<c r=\"C13\" s=\"5\"/>"), "also today, template detail empty");
+  NoteTest.check(!s.contains("Weekend overtime") && !s.contains("Attendance Tue") && !s.contains("Sea can movements"), "not ticked yet");
+  p.overtime.include = true; p.overtime.notes = "Bring harness"; p.attendance.include = true; p.seaCanInclude = true;
+  s = parts(p, l).get("xl/worksheets/sheet1.xml");
+  System.out.println(s.substring(s.indexOf("<row r=\"15\"")));
+  NoteTest.check(s.contains("<c r=\"A15\" t=\"inlineStr\" s=\"8\">" + t("Weekend overtime")) && s.contains("<c r=\"E16\" t=\"inlineStr\" s=\"4\">" + t("Hours"))
+      && s.contains("<c r=\"B17\" t=\"inlineStr\" s=\"6\">" + t("Yes")) && s.contains("<c r=\"C17\" t=\"inlineStr\" s=\"7\">" + t("No")) && s.contains("<c r=\"D17\" s=\"9\"/>")
+      && s.contains("<c r=\"E17\" s=\"9\"><v>8</v></c>") && s.contains("<c r=\"A18\" t=\"inlineStr\" s=\"1\">" + t("Yes total")) && s.contains("<c r=\"B18\" s=\"9\"><v>1</v></c>")
+      && s.contains("<c r=\"A19\" t=\"inlineStr\">" + t("Notes: Bring harness")), "overtime section");
+  NoteTest.check(s.contains("<c r=\"A21\" t=\"inlineStr\" s=\"8\">" + t("Attendance Tue Oct 27, 2026")) && s.contains("<c r=\"C22\" t=\"inlineStr\" s=\"4\">" + t("Comment"))
+      && s.contains("<c r=\"B23\" t=\"inlineStr\" s=\"7\">" + t("AWOL")) && s.contains("<c r=\"C23\" t=\"inlineStr\" s=\"5\">" + t("no call"))
+      && s.contains("<c r=\"A24\" t=\"inlineStr\" s=\"1\">" + t("AWOL 1")), "attendance section");
+  NoteTest.check(s.contains("<c r=\"A26\" t=\"inlineStr\" s=\"8\">" + t("Sea can movements")) && s.contains("<c r=\"A28\" s=\"9\"><v>1</v></c>")
+      && s.contains("<c r=\"C28\" t=\"inlineStr\" s=\"9\">" + t("–")) && s.contains("<c r=\"D28\" t=\"inlineStr\" s=\"9\">" + t("B7")) && s.contains("<c r=\"E28\" s=\"9\"><v>4.5</v></c>"), "sea can section");
+  Models.DailyLog empty = new Models.DailyLog(); empty.date = "2026-10-28";
+  Models.Project bare = new Models.Project();
+  String es = parts(bare, empty).get("xl/worksheets/sheet1.xml");
+  NoteTest.check(es.contains("<c r=\"B8\" t=\"inlineStr\" s=\"5\">" + t("No fields")) && es.contains("<c r=\"A8\" s=\"5\"/>") && es.contains("<row r=\"2\"></row>"), "no fields");
+  System.out.println("REPORTXLSX PASS"); } }

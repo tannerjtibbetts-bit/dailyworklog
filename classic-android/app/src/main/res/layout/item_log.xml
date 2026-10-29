@@ -56,6 +56,15 @@
             android:layout_marginTop="4dp"
             android:textColor="@color/grey"
             android:textSize="16sp" />
+
+        <!-- Search: where the word was found on this day -->
+        <LinearLayout
+            android:id="@+id/matches"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical"
+            android:visibility="gone" />
         <CheckBox
             android:id="@+id/include"
             android:layout_width="wrap_content"

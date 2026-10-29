@@ -165,6 +165,16 @@ final class ExportHelper {
         build(p, log, word, f -> choose(f, word, p, log));
     }
 
+    /** The daily report as an Excel sheet, then Share / Open / Save to phone. */
+    void exportExcel(Models.Project p, Models.DailyLog log) {
+        Store store = Store.get(activity);
+        final String by = store.me();
+        final long at = System.currentTimeMillis();
+        buildFile("Building Excel sheet\u2026", Fmt.fileSafe(log.displayTitle()) + ".xlsx",
+                os -> ReportXlsx.write(p, log, by, at, os),
+                f -> offer(f, XLSX, saveXlsx));
+    }
+
     /** Builds the PDF, then opens your email app addressed to the project's report list. */
     void email(Models.Project p, Models.DailyLog log) {
         if (p.emails.isEmpty()) {

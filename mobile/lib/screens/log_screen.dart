@@ -318,6 +318,7 @@ class _LogScreenState extends State<LogScreen> {
       SheetItem(Icons.send_outlined, 'Email report', () => Export.email(context, p, l)),
       SheetItem(Icons.picture_as_pdf_outlined, 'Export to PDF', () => Export.report(context, p, l, word: false)),
       SheetItem(Icons.description_outlined, 'Export to Word', () => Export.report(context, p, l, word: true)),
+      SheetItem(Icons.grid_on, 'Export to Excel', () => Export.report(context, p, l, excel: true)),
       SheetItem(Icons.bookmark_add_outlined, 'Save Checklist as Template', () async {
         final n = await prompt(context, 'Save as template', 'Template name', 'Daily fields', 'Save');
         if (n == null) return;

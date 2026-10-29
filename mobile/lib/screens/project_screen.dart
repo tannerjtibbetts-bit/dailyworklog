@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/project_search.dart';
 import '../data/store.dart';
 import '../export/export.dart';
 import '../services/form_prefill.dart';
@@ -121,13 +122,6 @@ List<DailyLog> sortedLogs(Project p) => List.of(p.logs)
     final c = b.date.compareTo(a.date);
     return c != 0 ? c : b.createdAt.compareTo(a.createdAt);
   });
-
-/// Search on the Checklists tab: title, field titles and field notes.
-bool logMatches(DailyLog l, String query) {
-  if (query.isEmpty) return true;
-  if (l.displayTitle().toLowerCase().contains(query)) return true;
-  return l.tasks.any((t) => t.title.toLowerCase().contains(query) || t.notes.toLowerCase().contains(query));
-}
 
 /// New checklist for [iso]. [source] fields are copied (only unfinished ones, keeping notes, when
 /// [unfinishedOnly]); the crew comes from the latest checklist. Using a template is noted on it.
@@ -329,6 +323,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       SheetItem(Icons.send_outlined, 'Email report', () => Export.email(context, p, l)),
       SheetItem(Icons.picture_as_pdf_outlined, 'Export to PDF', () => Export.report(context, p, l, word: false)),
       SheetItem(Icons.article_outlined, 'Export to Word', () => Export.report(context, p, l, word: true)),
+      SheetItem(Icons.grid_on, 'Export to Excel', () => Export.report(context, p, l, excel: true)),
       SheetItem(Icons.edit_outlined, 'Rename Checklist', () async {
         final n = await prompt(context, 'Rename checklist', 'Checklist name', l.displayTitle(), 'Save');
         if (n == null) return;
@@ -680,7 +675,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
     );
   }
 
-  Widget _logRow(DailyLog l) {
+  /// A checklist card; [hits] are the search matches shown under it.
+  Widget _logRow(DailyLog l, {List<String> hits = const []}) {
     final done = l.doneCount(), total = l.tasks.length;
     return _card(
       bottom: 14,
@@ -704,6 +700,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text('$done/$total fields completed', style: const TextStyle(color: C.grey, fontSize: 16)),
+                    ..._hitLines(hits, 3),
                   ],
                 ),
               ),
@@ -716,6 +713,59 @@ class _ProjectScreenState extends State<ProjectScreen> {
       ),
     );
   }
+
+  /// Up to [max] search matches, then "+N more".
+  List<Widget> _hitLines(List<String> hits, int max) => [
+    if (hits.isNotEmpty) const SizedBox(height: 6),
+    for (final h in hits.take(max))
+      Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text(h, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.grey, fontSize: 15)),
+      ),
+    if (hits.length > max)
+      Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text('+${hits.length - max} more', style: const TextStyle(color: C.greyLight, fontSize: 15)),
+      ),
+  ];
+
+  /// Sea cans that match the search; tapping opens the Sea Can Movements tab.
+  Widget _seaCanHits(List<String> lines) => _card(
+    bottom: 14,
+    onTap: () {
+      if (!visibleTabs(store.hiddenTabs).contains(ProjectTab.seaCans)) {
+        toast(context, 'The Sea Can Movements tab is hidden. Turn it on in Show or hide tabs.');
+        return;
+      }
+      search.clear();
+      setState(() {
+        query = '';
+        mode = ProjectTab.seaCans;
+      });
+    },
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 14, 18),
+      child: Row(
+        children: [
+          _iconBox(Icons.local_shipping_outlined),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Sea Can Movements',
+                  style: TextStyle(color: C.navy, fontSize: 21, fontWeight: FontWeight.bold),
+                ),
+                ..._hitLines(lines, 5),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: C.navy, size: 28),
+        ],
+      ),
+    ),
+  );
 
   Widget _linkRow(Link l) => _card(
     onTap: () => _openLink(l),
@@ -864,9 +914,12 @@ class _ProjectScreenState extends State<ProjectScreen> {
               _linkRow(l),
         ];
       default:
+        if (query.isEmpty) return [for (final l in sortedLogs(p)) _logRow(l)];
+        // Searching: every day the word appears on, plus matching sea cans.
+        final r = ProjectSearch.run(p, query);
         return [
-          for (final l in sortedLogs(p))
-            if (logMatches(l, query)) _logRow(l),
+          if (r.seaCans.isNotEmpty) _seaCanHits(r.seaCans),
+          for (final d in r.days) _logRow(d.log, hits: d.lines),
         ];
     }
   }
@@ -889,7 +942,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ProjectTab.notify => 'Search sent notes',
     ProjectTab.notes => 'Search notes',
     ProjectTab.links => 'Search links',
-    _ => 'Search checklists',
+    _ => 'Search all days: fields, notes, sea cans',
   };
 
   String get _fabLabel => switch (mode) {

@@ -16,6 +16,7 @@ import '../data/store.dart';
 import '../ui/common.dart';
 import 'attendance_xlsx.dart';
 import 'overtime_xlsx.dart';
+import 'report_xlsx.dart';
 import 'report_docx.dart';
 import 'report_pdf.dart';
 import 'seacan_xlsx.dart';
@@ -29,12 +30,20 @@ class Export {
   static const csv = 'text/csv';
 
   /// The day's report as a PDF ([word] false) or Word document ([word] true), then the share sheet.
-  static Future<void> report(BuildContext context, Project project, DailyLog log, {required bool word}) async {
-    final f = await _buildReport(context, project, log, word);
+  /// The daily report as PDF, Word ([word]) or Excel ([excel]).
+  static Future<void> report(
+    BuildContext context,
+    Project project,
+    DailyLog log, {
+    bool word = false,
+    bool excel = false,
+  }) async {
+    final format = excel ? 'xlsx' : word ? 'docx' : 'pdf';
+    final f = await _buildReport(context, project, log, format);
     if (f == null || !context.mounted) return;
-    final mime = word ? docx : pdf;
+    final mime = excel ? xlsx : word ? docx : pdf;
     await menu(context, '${_name(f)} is ready', [
-      if (!word)
+      if (format == 'pdf')
         SheetItem(
           Icons.send,
           project.emails.isEmpty ? 'Email to report list (set up)' : 'Email to report list (${project.emails.length})',
@@ -57,7 +66,7 @@ class Export {
       await editEmailList(context, project);
       if (project.emails.isEmpty || !context.mounted) return;
     }
-    final f = await _buildReport(context, project, log, false);
+    final f = await _buildReport(context, project, log, 'pdf');
     if (f == null || !context.mounted) return;
     await _sendEmail(context, f, project, log);
   }
@@ -209,7 +218,8 @@ class Export {
       '${emailSubject(p, log)}: ${log.doneCount()}/${log.tasks.length} fields completed.\nReport attached.\n\n$me';
 
   /// Report file name, e.g. "Daily work log 05-10-2026.pdf".
-  static String reportFileName(DailyLog log, bool word) => Fmt.fileSafe(log.displayTitle()) + (word ? '.docx' : '.pdf');
+  static String reportFileName(DailyLog log, bool word, {bool excel = false}) =>
+      Fmt.fileSafe(log.displayTitle()) + (excel ? '.xlsx' : word ? '.docx' : '.pdf');
 
   // ----- building -----
 
@@ -222,13 +232,18 @@ class Export {
     ..seaCans = p.seaCans
     ..seaCanInclude = p.seaCanInclude;
 
-  static Future<File?> _buildReport(BuildContext context, Project p, DailyLog log, bool word) {
+  /// [format] is 'pdf', 'docx' or 'xlsx'.
+  static Future<File?> _buildReport(BuildContext context, Project p, DailyLog log, String format) {
     final store = Store.instance;
-    final job = _ReportJob(_slim(p), log, store.me(), nowMs(), store.photoDir.path, word);
+    final job = _ReportJob(_slim(p), log, store.me(), nowMs(), store.photoDir.path, format);
     return _build(
       context,
-      word ? 'Building Word report…' : 'Building PDF report…',
-      reportFileName(log, word),
+      switch (format) {
+        'docx' => 'Building Word report…',
+        'xlsx' => 'Building Excel sheet…',
+        _ => 'Building PDF report…',
+      },
+      reportFileName(log, format == 'docx', excel: format == 'xlsx'),
       'Couldn\'t build the report. Please try again.',
       () => compute(_reportJob, job),
     );
@@ -340,9 +355,9 @@ class _ReportJob {
   final String by;
   final int at;
   final String photoDir;
-  final bool word;
+  final String format;
 
-  _ReportJob(this.project, this.log, this.by, this.at, this.photoDir, this.word);
+  _ReportJob(this.project, this.log, this.by, this.at, this.photoDir, this.format);
 }
 
 class _OtJob {
@@ -363,9 +378,11 @@ class _CanJob {
   _CanJob(this.project, this.by, this.at, this.format);
 }
 
-Future<Uint8List> _reportJob(_ReportJob j) async => j.word
-    ? ReportDocx.write(j.project, j.log, j.by, j.at, j.photoDir)
-    : await ReportPdf.write(j.project, j.log, j.by, j.at, j.photoDir);
+Future<Uint8List> _reportJob(_ReportJob j) async => switch (j.format) {
+  'docx' => ReportDocx.write(j.project, j.log, j.by, j.at, j.photoDir),
+  'xlsx' => ReportXlsx.write(j.project, j.log, j.by, j.at),
+  _ => await ReportPdf.write(j.project, j.log, j.by, j.at, j.photoDir),
+};
 
 Future<Uint8List> _overtimeJob(_OtJob j) async =>
     j.excel ? OvertimeXlsx.write(j.project, j.by, j.at) : await ReportPdf.writeOvertime(j.project, j.by, j.at);

@@ -675,7 +675,7 @@
         },
         {
           "type": "text",
-          "text": "Tap a tab to switch. On Checklists, Notify, Links and Notes there is a search box. Type a word to find a checklist, field, note or link."
+          "text": "Tap a tab to switch. On Checklists, Notify, Links and Notes there is a search box. On Checklists it searches every day of the project, including sea can numbers."
         },
         {
           "type": "tip",
@@ -684,6 +684,11 @@
         {
           "type": "text",
           "text": "The big \"+\" at the bottom adds something new to the tab you are on."
+        },
+        {
+          "type": "see",
+          "id": "search-all-days",
+          "text": "Related: Searching all days"
         },
         {
           "type": "see",
@@ -699,6 +704,64 @@
           "type": "see",
           "id": "starting-a-daily-log",
           "text": "Related: Starting a daily log"
+        }
+      ]
+    },
+    {
+      "id": "search-all-days",
+      "title": "Searching all days",
+      "group": "Projects & checklists",
+      "summary": "Type a word, like a sea can number or a tool name, to find every day it was on.",
+      "keywords": [
+        "search",
+        "find",
+        "keyword",
+        "sea can number",
+        "tool",
+        "all days",
+        "which day",
+        "look up",
+        "history"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The search box on the \"Checklists\" tab looks through every day in the project. Use it to find a sea can number, a tool, a person or anything else you wrote down."
+        },
+        {
+          "type": "image",
+          "file": "search.png",
+          "caption": "Searching for a sea can number"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project. Stay on \"Checklists\".",
+            "Tap the box that says \"Search all days: fields, notes, sea cans\".",
+            "Type a word or number, for example \"201006\" or \"Hilti\".",
+            "Every day that has it is listed, newest first. Under each day you see where it was found, like \"Field: …\" or \"Notes on …\".",
+            "Tap a day to open that checklist."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "It looks in field titles and notes, who was assigned or completed a field, \"Also today\" items, notes sent with Notify that day, and your notes from that day.",
+            "If a sea can on the \"Sea Can Movements\" tab matches, a \"Sea Can Movements\" card shows at the top with where it came from and where it is now. Tap it to open that tab.",
+            "If a day has more matches than fit, you see \"+2 more\" (or similar).",
+            "Capitals don't matter. Delete the word to see all your checklists again."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "If you see \"Nothing matches\", try part of the word or number, like \"2010\" instead of the whole sea can number."
+        },
+        {
+          "type": "see",
+          "id": "checklist-screen",
+          "text": "Related: Reading a checklist"
         }
       ]
     },
@@ -968,7 +1031,7 @@
         {
           "type": "see",
           "id": "exporting-a-report",
-          "text": "Related: Exporting a report"
+          "text": "Related: Exporting a report (PDF, Word or Excel)"
         }
       ]
     },
@@ -2721,9 +2784,9 @@
     },
     {
       "id": "exporting-a-report",
-      "title": "Exporting a report (PDF or Word)",
+      "title": "Exporting a report (PDF, Word or Excel)",
       "group": "Reports",
-      "summary": "Make the day's report as a PDF or Word file, then share, email or save it.",
+      "summary": "Make the day's report as a PDF, Word or Excel file, then share, email or save it.",
       "keywords": [
         "report",
         "export",
@@ -2733,7 +2796,10 @@
         "share",
         "save",
         "print",
-        "download"
+        "download",
+        "excel",
+        "xlsx",
+        "spreadsheet"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2742,8 +2808,8 @@
           "type": "steps",
           "items": [
             "Open the checklist and tap the three dots (⋮). Or press and hold the checklist on the \"Checklists\" tab.",
-            "Tap \"Export to PDF\" or \"Export to Word\".",
-            "Wait while it says \"Building PDF report…\" or \"Building Word report…\".",
+            "Tap \"Export to PDF\", \"Export to Word\" or \"Export to Excel\".",
+            "Wait while it says \"Building PDF report…\", \"Building Word report…\" or \"Building Excel sheet…\".",
             "When it says the file is ready, pick what to do."
           ]
         },
@@ -2755,6 +2821,14 @@
             "\"Save to phone\": saves the file where you choose.",
             "\"Open\" (classic app only): opens the file to look at it."
           ]
+        },
+        {
+          "type": "text",
+          "text": "The Excel sheet looks like the PDF: the title, how many fields are done, the crew, then a table with one row per field (Area, Field, Status, Completed by, Completed at, Assigned, Load secured, Next shift, Notes and Photos). \"Done\" is green and \"Not done\" is red. Below it come \"Also today\", and overtime, attendance and sea cans when they are ticked for your reports."
+        },
+        {
+          "type": "tip",
+          "text": "Photos can't be placed in Excel the way they are in the PDF, so the \"Photos\" column shows how many each field has. Use the PDF or Word report to see the pictures."
         },
         {
           "type": "text",

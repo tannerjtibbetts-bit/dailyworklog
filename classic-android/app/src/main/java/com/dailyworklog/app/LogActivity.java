@@ -600,6 +600,7 @@ public class LogActivity extends AppCompatActivity {
         items.add(new Ui.SheetItem(R.drawable.ic_send, "Email report", () -> exporter.email(project, log)));
         items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export to PDF", () -> exporter.export(project, log, false)));
         items.add(new Ui.SheetItem(R.drawable.ic_word, "Export to Word", () -> exporter.export(project, log, true)));
+        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export to Excel", () -> exporter.exportExcel(project, log)));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "Save Checklist as Template", () ->
                 Ui.prompt(this, "Save as template", "Template name", "Daily fields", "Save", n -> {
                     Models.Template t = new Models.Template();

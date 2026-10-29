@@ -270,17 +270,6 @@ void main() {
       expect(sortedLogs(p).first, fromT);
     });
 
-    test('search matches titles and field notes', () {
-      final l = DailyLog()..date = '2026-10-01';
-      l.tasks.add(Task()
-        ..title = 'Torque'
-        ..notes = 'Bay 3 done');
-      expect(logMatches(l, ''), true);
-      expect(logMatches(l, 'daily work log'), true);
-      expect(logMatches(l, 'bay 3'), true);
-      expect(logMatches(l, 'pump'), false);
-    });
-
     test('notice is recorded on the project and today\'s checklist, not ticked', () {
       final p = sample();
       final n = recordNotice(p, ['Al Smith', 'Bo Jones'], 'Bring harnesses', ['x.jpg'], 'Tanner', 5);
@@ -358,7 +347,7 @@ void main() {
       }
       expect(find.text('Daily work log ${Fmt.logDate(Fmt.todayIso())}'), findsOneWidget);
       expect(find.text('1/2 fields completed'), findsOneWidget);
-      expect(find.text('Search checklists'), findsOneWidget);
+      expect(find.text('Search all days: fields, notes, sea cans'), findsOneWidget);
 
       await tester.tap(find.text('Notify'));
       await tester.pump();
@@ -383,7 +372,7 @@ void main() {
       expect(find.text('Export'), findsOneWidget);
       expect(find.text('Yes total'), findsOneWidget);
       expect(p.overtime.rows.length, 2);
-      expect(find.text('Search checklists'), findsNothing);
+      expect(find.text('Search all days: fields, notes, sea cans'), findsNothing);
       await tester.ensureVisible(find.text('+  Add a row'));
       await tester.tap(find.text('+  Add a row'));
       await tester.pumpAndSettle();
@@ -511,6 +500,17 @@ void main() {
       await tester.enterText(find.byType(TextField), 'pump 3');
       await tester.pump();
       expect(find.text('1/2 fields completed'), findsOneWidget);
+      // Where it was found shows under the day.
+      expect(find.text('Field: Pump 3 seal'), findsOneWidget);
+      expect(find.text('Note: Pump 3 leaking'), findsOneWidget);
+      // A sea can number finds the Sea Can Movements tab.
+      p.seaCans = [SeaCanMove()..can = 'BPPU 201006-1'..toLetter = 'E'..toRow = '34'];
+      await tester.enterText(find.byType(TextField), '201006');
+      await tester.pump();
+      expect(find.text('BPPU 201006-1 · – to E34'), findsOneWidget);
+      await tester.tap(find.text('Sea Can Movements').last);
+      await tester.pumpAndSettle();
+      expect(find.text('BPPU 201006-1'), findsWidgets);
     });
 
     testWidgets('note screen: new note is kept once written and can be ticked', (tester) async {
