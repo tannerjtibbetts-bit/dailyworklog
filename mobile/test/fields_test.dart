@@ -12,6 +12,7 @@ import 'package:dailyworklog/services/sms.dart';
 import 'package:dailyworklog/ui/common.dart';
 import 'package:dailyworklog/ui/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
@@ -355,6 +356,7 @@ void main() {
     late DailyLog l;
 
     setUp(() async {
+      FlutterSecureStorage.setMockInitialValues({});
       dir = Directory.systemTemp.createTempSync('fields_screens');
       final s = await Store.open(dir);
       s.userName = 'Tanner';
@@ -494,10 +496,32 @@ void main() {
 
       await tester.ensureVisible(find.text('Load securement completed'));
       await tester.pumpAndSettle();
+      // Tapping opens the Load securement pop-up; Done with no photos just ticks it.
       await tester.tap(find.text('Load securement completed'));
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Load securement'), findsOneWidget);
+      expect(find.text('To: Not set'), findsOneWidget);
+      expect(find.text('Load securement - North one'), findsOneWidget);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
       expect(t.loadSecured, isTrue);
       expect(t.securedBy, 'Tanner');
+      expect(t.securedPhotos, isEmpty);
+      // Open again: it can be unticked.
+      await tester.tap(find.text('Load securement completed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mark not secured'));
+      await tester.pumpAndSettle();
+      expect(t.loadSecured, isFalse);
+      // Photos already on the field show under it, with the report tick.
+      t.securedPhotos.add(Photo(file: 'x.jpg', addedBy: 'Tanner', addedAt: 1));
+      Store.instance.save();
+      await tester.pumpAndSettle();
+      expect(find.text('Load securement photos (1)'), findsOneWidget);
+      await tester.ensureVisible(find.text('Put load securement photos in the report'));
+      await tester.tap(find.text('Put load securement photos in the report'));
+      await tester.pump();
+      expect(t.securedPhotosInReport, isFalse);
 
       await tester.enterText(find.byType(TextField).first, 'North one, bay 2');
       await tester.pumpAndSettle();

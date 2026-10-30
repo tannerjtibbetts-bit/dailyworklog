@@ -29,6 +29,10 @@ public final class Store {
     public String userName = "";
     /** Number the crew should call or text you on; added under your name in texts. */
     public String contactPhone = "";
+    /** Who load securement photos are emailed to, as typed (commas between several). App-wide. */
+    public String loadEmailTo = "";
+    /** The Gmail address the app sends from. The app password is kept apart (see mailPassword). */
+    public String mailFrom = "";
     /** Your profile: the task colours on the zone sheet that are your trade's (dark blue by default). */
     public final java.util.Set<String> myColours = new java.util.LinkedHashSet<>(java.util.Collections.singletonList(ZoneSheet.BLUE));
     /** Your usual answers for the Observation & Coaching form (Formstack links). */
@@ -36,6 +40,7 @@ public final class Store {
     /** Project tabs this person has hidden ("notify", "links", "overtime", "attendance", "notes", "seacans"). */
     public final java.util.Set<String> hiddenTabs = new java.util.LinkedHashSet<>();
 
+    private final Context app;
     private final File dataFile;
     private final File photoDir;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -46,6 +51,7 @@ public final class Store {
     }
 
     private Store(Context c) {
+        app = c;
         dataFile = new File(c.getFilesDir(), "worklog.json");
         photoDir = new File(c.getFilesDir(), "photos");
         //noinspection ResultOfMethodCallIgnored
@@ -81,6 +87,7 @@ public final class Store {
 
     public void deletePhotos(Models.Task t) {
         for (Models.Photo p : t.photos) deletePhoto(p);
+        for (Models.Photo p : t.securedPhotos) deletePhoto(p);
     }
 
     public void deletePhotos(Models.DailyLog l) {
@@ -101,12 +108,71 @@ public final class Store {
         for (Models.Photo p : n.photos) deletePhoto(p);
     }
 
+    // ----- email sending: the Gmail app password, encrypted with a key kept in the phone's key store -----
+
+    private static final String MAIL_KEY = "dwl_mail";
+
+    public String mailPassword() {
+        String w = app.getSharedPreferences("mail", Context.MODE_PRIVATE).getString("appPassword", "");
+        if (w.isEmpty()) return "";
+        try {
+            byte[] all = java.util.Base64.getDecoder().decode(w);
+            javax.crypto.Cipher ci = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+            ci.init(javax.crypto.Cipher.DECRYPT_MODE, mailKey(), new javax.crypto.spec.GCMParameterSpec(128, all, 0, 12));
+            return new String(ci.doFinal(all, 12, all.length - 12), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Spaces are dropped: Google shows the app password in groups of four. */
+    public boolean setMailPassword(String password) {
+        String p = password.replaceAll("\\s", "");
+        try {
+            String w = "";
+            if (!p.isEmpty()) {
+                javax.crypto.Cipher ci = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+                ci.init(javax.crypto.Cipher.ENCRYPT_MODE, mailKey());
+                byte[] iv = ci.getIV();
+                byte[] ct = ci.doFinal(p.getBytes(StandardCharsets.UTF_8));
+                byte[] all = new byte[iv.length + ct.length];
+                System.arraycopy(iv, 0, all, 0, iv.length);
+                System.arraycopy(ct, 0, all, iv.length, ct.length);
+                w = java.util.Base64.getEncoder().encodeToString(all);
+            }
+            app.getSharedPreferences("mail", Context.MODE_PRIVATE).edit().putString("appPassword", w).apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean hasMailSetup() {
+        return !mailFrom.trim().isEmpty() && !mailPassword().isEmpty();
+    }
+
+    private static javax.crypto.SecretKey mailKey() throws Exception {
+        java.security.KeyStore ks = java.security.KeyStore.getInstance("AndroidKeyStore");
+        ks.load(null);
+        if (ks.containsAlias(MAIL_KEY)) return (javax.crypto.SecretKey) ks.getKey(MAIL_KEY, null);
+        javax.crypto.KeyGenerator g = javax.crypto.KeyGenerator.getInstance(
+                android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        g.init(new android.security.keystore.KeyGenParameterSpec.Builder(MAIL_KEY,
+                android.security.keystore.KeyProperties.PURPOSE_ENCRYPT | android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+                .build());
+        return g.generateKey();
+    }
+
     private void load() {
         if (!dataFile.exists()) return;
         try {
             JSONObject o = new JSONObject(read(dataFile));
             userName = o.optString("userName", "");
             contactPhone = o.optString("contactPhone", "");
+            loadEmailTo = o.optString("loadEmailTo", "");
+            mailFrom = o.optString("mailFrom", "");
             JSONArray mc = o.optJSONArray("myColours");
             if (mc != null) {
                 myColours.clear();
@@ -161,6 +227,8 @@ public final class Store {
             o.put("version", 2);
             o.put("userName", userName);
             o.put("contactPhone", contactPhone);
+            o.put("loadEmailTo", loadEmailTo);
+            o.put("mailFrom", mailFrom);
             JSONArray mc = new JSONArray();
             for (String c : myColours) mc.put(c);
             o.put("myColours", mc);

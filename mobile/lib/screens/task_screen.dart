@@ -15,6 +15,7 @@ import '../services/sms.dart';
 import '../ui/common.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
+import 'load_secure_sheet.dart';
 import 'field_widgets.dart';
 import 'log_screen.dart' show toggleDone;
 
@@ -348,9 +349,9 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
 
   Future<void> _photoSource() async => _addPhotos(await Photos.choose(context));
 
-  void _removePhoto(Task t, Photo p) =>
+  void _removePhoto(Task t, Photo p, {bool secured = false}) =>
       confirm(context, 'Remove this photo?', 'It will be deleted from this field.', 'Remove', () {
-        t.photos.remove(p);
+        (secured ? t.securedPhotos : t.photos).remove(p);
         store.deletePhoto(p);
         store.save();
       });
@@ -637,16 +638,49 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     ),
     const SizedBox(height: 22),
     _divider,
+    // Opens the Load securement pop-up: photos, subject, and Done emails them.
     _tickRow(
       t.loadSecured,
       () {
-        toggleSecured(t, store.me(), nowMs());
-        store.save();
-        HapticFeedback.selectionClick();
+        final p = project, l = log;
+        if (p != null && l != null) openLoadSecurement(context, p, l, t);
       },
       'Load securement completed',
-      t.loadSecured ? _stamp('${t.securedBy}, ${Fmt.stamp(t.securedAt)}', 15) : null,
+      t.loadSecured
+          ? _stamp('${t.securedBy}, ${Fmt.stamp(t.securedAt)}', 15)
+          : const Text('Tap to take load securement photos and email them',
+              style: TextStyle(color: C.greyLight, fontSize: 15)),
     ),
+    if (t.securedPhotos.isNotEmpty) ...[
+      Text('Load securement photos (${t.securedPhotos.length})',
+          style: const TextStyle(color: C.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        child: Row(children: [for (final ph in t.securedPhotos) _photoCell(t, ph, secured: true)]),
+      ),
+      InkWell(
+        onTap: () {
+          t.securedPhotosInReport = !t.securedPhotosInReport;
+          store.save();
+        },
+        child: Row(
+          children: [
+            Checkbox(
+              value: t.securedPhotosInReport,
+              onChanged: (v) {
+                t.securedPhotosInReport = v ?? false;
+                store.save();
+              },
+            ),
+            const Expanded(
+              child: Text('Put load securement photos in the report', style: TextStyle(fontSize: 17, color: C.text)),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 8),
+    ],
     _divider,
     _tickRow(
       t.nextShift,
@@ -785,7 +819,8 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     ),
   );
 
-  Widget _photoCell(Task t, Photo ph) {
+  /// [secured] is for load securement photos (removed from that list instead).
+  Widget _photoCell(Task t, Photo ph, {bool secured = false}) {
     final f = store.photoFile(ph.file);
     return Padding(
       padding: const EdgeInsets.only(right: 14),
@@ -813,7 +848,7 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            Positioned(right: -7, top: 0, child: _redCircle('Remove photo', () => _removePhoto(t, ph))),
+            Positioned(right: -7, top: 0, child: _redCircle('Remove photo', () => _removePhoto(t, ph, secured: secured))),
           ],
         ),
       ),

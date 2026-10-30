@@ -444,3 +444,104 @@ class ReportXlsxTest {
   String es = parts(bare, empty).get("xl/worksheets/sheet1.xml");
   NoteTest.check(es.contains("<c r=\"B8\" t=\"inlineStr\" s=\"5\">" + t("No fields")) && es.contains("<c r=\"A8\" s=\"5\"/>") && es.contains("<row r=\"2\"></row>"), "no fields");
   System.out.println("REPORTXLSX PASS"); } }
+class MailTest {
+  /** A tiny SMTP server for one connection: replies from the script, records what it was sent. */
+  static java.net.ServerSocket fake(java.util.List<String> got, boolean badPassword, boolean badRcpt) throws Exception {
+    java.net.ServerSocket ss = new java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress());
+    Thread th = new Thread(() -> {
+      try (java.net.Socket s = ss.accept()) {
+        java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(s.getInputStream(), "UTF-8"));
+        java.io.Writer out = new java.io.OutputStreamWriter(s.getOutputStream(), "UTF-8");
+        java.util.function.Consumer<String> say = r -> { try { out.write(r + "\r\n"); out.flush(); } catch (Exception e) { throw new RuntimeException(e); } };
+        say.accept("220 fake ESMTP");
+        int step = 0; String line;
+        while ((line = in.readLine()) != null) {
+          got.add(line);
+          if (step == 6) {  // inside DATA
+            if (line.equals(".")) { say.accept("250 2.0.0 OK queued"); step = 7; }
+            continue;
+          }
+          if (line.startsWith("EHLO")) { say.accept("250-fake at your service"); say.accept("250-AUTH LOGIN PLAIN"); say.accept("250 SMTPUTF8"); }
+          else if (line.equals("AUTH LOGIN")) { say.accept("334 VXNlcm5hbWU6"); step = 1; }
+          else if (step == 1) { say.accept("334 UGFzc3dvcmQ6"); step = 2; }
+          else if (step == 2) { if (badPassword) { say.accept("535-5.7.8 Username and Password not accepted."); say.accept("535 5.7.8 Learn more"); } else say.accept("235 2.7.0 Accepted"); step = 3; }
+          else if (line.startsWith("MAIL FROM")) say.accept("250 2.1.0 OK");
+          else if (line.startsWith("RCPT TO")) say.accept(badRcpt ? "550 5.1.1 No such user" : "250 2.1.5 OK");
+          else if (line.equals("DATA")) { say.accept("354 Go ahead"); step = 6; }
+          else if (line.equals("QUIT")) { say.accept("221 bye"); break; }
+          else say.accept("502 what");
+        }
+      } catch (Exception e) { /* client closed */ }
+    });
+    th.setDaemon(true); th.start();
+    return ss;
+  }
+  public static void main(String[] a) throws Exception {
+    java.util.List<String> to = java.util.Arrays.asList("boss@aecon.com", "b@y.com");
+    byte[] img = new byte[200]; for (int i = 0; i < img.length; i++) img[i] = (byte) i;
+    java.util.Calendar cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")); cal.set(2026, 9, 30, 14, 5, 9);
+    String m = Mailer.buildMessage("Tanner", "t@gmail.com", to, "Load securement - Pack up", "Line 1\nLine 2",
+        java.util.Arrays.asList(new Mailer.Attachment("IMG_1.jpg", img)), "dwl-abc", cal.getTime());
+    NoteTest.check(m.startsWith("From: \"Tanner\" <t@gmail.com>\r\nTo: boss@aecon.com, b@y.com\r\nSubject: Load securement - Pack up\r\nDate: Fri, 30 Oct 2026 14:05:09 +0000\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"dwl-abc\"\r\n\r\n--dwl-abc\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"), "headers\n" + m.substring(0, 300));
+    NoteTest.check(m.contains(java.util.Base64.getEncoder().encodeToString("Line 1\r\nLine 2".getBytes("UTF-8")) + "\r\n"), "body base64 with CRLF");
+    NoteTest.check(m.contains("--dwl-abc\r\nContent-Type: image/jpeg; name=\"IMG_1.jpg\"\r\nContent-Disposition: attachment; filename=\"IMG_1.jpg\"\r\nContent-Transfer-Encoding: base64\r\n\r\n") && m.endsWith("--dwl-abc--\r\n"), "attachment part and closing boundary");
+    String b64 = java.util.Base64.getEncoder().encodeToString(img);
+    String lines = Mailer.base64Lines(img);
+    String[] ls = lines.split("\r\n");
+    NoteTest.check(ls.length == 4 && ls[0].length() == 76 && ls[3].length() <= 76 && String.join("", ls).equals(b64) && m.contains(lines), "76-char lines");
+    for (String l : m.split("\r\n")) NoteTest.check(l.length() <= 998 && l.chars().allMatch(ch -> ch < 128), "7-bit line");
+    String u = Mailer.buildMessage("Zoë", "t@gmail.com", to, "Sécurité", "x", null, "b", cal.getTime());
+    NoteTest.check(u.contains("Subject: =?UTF-8?B?" + java.util.Base64.getEncoder().encodeToString("Sécurité".getBytes("UTF-8")) + "?=\r\n")
+        && u.contains("From: =?UTF-8?B?" + java.util.Base64.getEncoder().encodeToString("Zoë".getBytes("UTF-8")) + "?= <t@gmail.com>"), "RFC 2047");
+    NoteTest.check(Mailer.encodeHeader("plain").equals("plain") && Mailer.buildMessage("", "t@gmail.com", to, "s", "x", null, "b", null).startsWith("From: <t@gmail.com>"), "plain header, no name");
+    // addresses
+    NoteTest.check(Mailer.addresses(" a@x.com, b@y.com;c@z.ca ").equals(java.util.Arrays.asList("a@x.com", "b@y.com", "c@z.ca")) && Mailer.validList("a@x.com, b@y.com")
+        && !Mailer.validList("a@x") && !Mailer.validList(" ") && !Mailer.validList("a@x.com, nope"), "addresses");
+    // groups of at most 18 MB
+    java.util.List<Mailer.Attachment> big = new java.util.ArrayList<>();
+    for (int i = 0; i < 5; i++) big.add(new Mailer.Attachment("p" + i, new byte[7 * 1024 * 1024]));
+    java.util.List<java.util.List<Mailer.Attachment>> g = Mailer.groups(big, Mailer.MAX_GROUP_BYTES);
+    NoteTest.check(g.size() == 3 && g.get(0).size() == 2 && g.get(1).size() == 2 && g.get(2).size() == 1, "18 MB groups");
+    NoteTest.check(Mailer.groups(java.util.Arrays.asList(new Mailer.Attachment("huge", new byte[20 * 1024 * 1024])), Mailer.MAX_GROUP_BYTES).size() == 1
+        && Mailer.groups(new java.util.ArrayList<>(), 10).isEmpty(), "big photo alone");
+    // SMTP dialogue
+    java.util.List<String> got = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    java.net.ServerSocket ss = fake(got, false, false);
+    String msg = ".starts with a dot\r\n" + m;
+    Mailer.send("127.0.0.1", ss.getLocalPort(), false, "t@gmail.com", "abcd efgh", to, msg, 5000);
+    Thread.sleep(200);
+    NoteTest.check(got.get(0).equals("EHLO dailyworklog") && got.get(1).equals("AUTH LOGIN")
+        && got.get(2).equals(java.util.Base64.getEncoder().encodeToString("t@gmail.com".getBytes())) && got.get(3).equals(java.util.Base64.getEncoder().encodeToString("abcd efgh".getBytes()))
+        && got.get(4).equals("MAIL FROM:<t@gmail.com>") && got.get(5).equals("RCPT TO:<boss@aecon.com>") && got.get(6).equals("RCPT TO:<b@y.com>") && got.get(7).equals("DATA"), "dialogue " + got.subList(0, 8));
+    NoteTest.check(got.get(8).equals("..starts with a dot") && got.get(9).startsWith("From: ") && got.contains(".") && got.get(got.size() - 1).equals("QUIT"), "data, dot-stuffing, QUIT");
+    // 535 -> plain words
+    java.net.ServerSocket s2 = fake(new java.util.ArrayList<>(), true, false);
+    String err = null;
+    try { Mailer.send("127.0.0.1", s2.getLocalPort(), false, "t@gmail.com", "x", to, m, 5000); } catch (Mailer.MailException e) { err = e.getMessage(); }
+    NoteTest.check("Gmail didn't accept the address or app password. Check them in Email sending.".equals(err), "535 " + err);
+    java.net.ServerSocket s3 = fake(new java.util.ArrayList<>(), false, true);
+    err = null;
+    try { Mailer.send("127.0.0.1", s3.getLocalPort(), false, "t@gmail.com", "x", to, m, 5000); } catch (Mailer.MailException e) { err = e.getMessage(); }
+    NoteTest.check("Gmail wouldn't send to boss@aecon.com.".equals(err), "550 " + err);
+    // nobody listening
+    java.net.ServerSocket s4 = new java.net.ServerSocket(0); int dead = s4.getLocalPort(); s4.close();
+    err = null;
+    try { Mailer.send("127.0.0.1", dead, false, "t@gmail.com", "x", to, m, 2000); } catch (Mailer.MailException e) { err = e.getMessage(); }
+    NoteTest.check(Mailer.OFFLINE.equals(err), "offline " + err);
+    // the email body
+    Models.Project p = new Models.Project(); p.name = "B44";
+    Models.DailyLog l = new Models.DailyLog(); l.date = "2026-10-30";
+    Models.Task t = new Models.Task(); t.title = " ";
+    NoteTest.check(LoadEmail.defaultSubject(t).equals("Load securement - (Untitled field)"), "default subject");
+    t.title = "Pack up sea can";
+    NoteTest.check(LoadEmail.body(p, l, t, "Tanner", 0L, 3).equals("Load securement photos\nField: Pack up sea can\nChecklist: Daily work log 30/10/2026 (B44)\nSecured by Tanner, "
+        + Fmt.stamp(0L) + "\n3 photos attached.\n\nSent from Daily Work Log"), "body");
+    // Task JSON
+    Models.Photo ph = new Models.Photo(); ph.file = "IMG_L.jpg"; ph.addedBy = "Tanner"; t.securedPhotos.add(ph); t.securedPhotosInReport = false;
+    Models.Task q = Models.Task.fromJson(t.toJson());
+    NoteTest.check(q.securedPhotos.size() == 1 && q.securedPhotos.get(0).file.equals("IMG_L.jpg") && !q.securedPhotosInReport, "secured photos round trip");
+    org.json.JSONObject old = t.toJson(); old.remove("securedPhotos"); old.remove("securedPhotosInReport");
+    Models.Task o = Models.Task.fromJson(old);
+    NoteTest.check(o.securedPhotos.isEmpty() && o.securedPhotosInReport, "old task: [] / true");
+    NoteTest.check(t.freshCopy().securedPhotos.isEmpty() && t.freshCopy().securedPhotosInReport && t.carryCopy().securedPhotos.isEmpty() && t.carryCopy().securedPhotosInReport, "copies reset");
+    System.out.println("MAIL PASS"); } }

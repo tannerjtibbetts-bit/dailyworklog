@@ -437,6 +437,14 @@ class ReportPdf {
       _y += 6;
       _drawPhotoGrid(t.photos, rows, x);
     }
+    if (t.securedPhotosInReport && t.securedPhotos.isNotEmpty) {
+      final sRows = _photoRows(t.securedPhotos, w);
+      _y += 4;
+      _ensure(_small.lineH + 8 + PhotoLayout.height(sRows.first) + captionH);
+      _text('Load securement photos', _small, x, w, 2);
+      _y += 4;
+      _drawPhotoGrid(t.securedPhotos, sRows, x);
+    }
     _y += 10;
     _ensure(12);
     _hLine(_m, _w - _m, _y);

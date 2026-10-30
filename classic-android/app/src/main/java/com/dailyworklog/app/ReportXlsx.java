@@ -109,6 +109,9 @@ final class ReportXlsx {
                     if (!t.securedBy.isEmpty()) secured += ", " + t.securedBy;
                     if (t.securedAt > 0) secured += ", " + Fmt.stamp(t.securedAt);
                 }
+                if (t.loadSecured && !t.securedPhotos.isEmpty()) {
+                    secured += " \u00B7 " + Fmt.plural(t.securedPhotos.size(), "photo", "photos");
+                }
                 s.text(6, secured, CELL);
                 s.text(7, t.nextShift ? "Yes" : "", NUM);
                 s.text(8, t.notes.trim(), CELL);

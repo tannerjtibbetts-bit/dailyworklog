@@ -19,6 +19,9 @@ class SheetItem {
 /// Digits and + only, for phone numbers.
 String phoneDigits(String? phone) => (phone ?? '').replaceAll(RegExp(r'[^0-9+]'), '');
 
+/// The app's navigator, for messages after background work when the screen that started it has closed.
+final appNavigator = GlobalKey<NavigatorState>();
+
 void toast(BuildContext context, String message, {bool long = false}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()

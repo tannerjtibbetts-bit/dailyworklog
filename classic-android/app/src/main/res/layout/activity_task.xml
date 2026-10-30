@@ -390,6 +390,15 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Load securement photos, filled in code -->
+            <LinearLayout
+                android:id="@+id/securedPhotosBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="10dp"
+                android:visibility="gone" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"

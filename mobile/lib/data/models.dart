@@ -84,6 +84,12 @@ class Task {
   List<String> assignees = [];
   List<Photo> photos = [];
 
+  /// Load securement photos (taken in the Load securement pop-up and emailed).
+  List<Photo> securedPhotos = [];
+
+  /// Load securement photos go in the report too (the user can untick this).
+  bool securedPhotosInReport = true;
+
   /// Who gets a text when this field is completed, and their number (as typed). Empty: nobody.
   String doneTextName = '';
   String doneTextPhone = '';
@@ -157,6 +163,8 @@ class Task {
         'side': side,
         'assignees': assignees,
         'photos': [for (final p in photos) p.toJson()],
+        'securedPhotos': [for (final p in securedPhotos) p.toJson()],
+        'securedPhotosInReport': securedPhotosInReport,
         'doneTextName': doneTextName,
         'doneTextPhone': doneTextPhone,
       };
@@ -178,6 +186,8 @@ class Task {
     ..side = _s(o, 'side')
     ..assignees = _strings(o['assignees'])
     ..photos = _objects(o['photos'], Photo.fromJson)
+    ..securedPhotos = _objects(o['securedPhotos'], Photo.fromJson)
+    ..securedPhotosInReport = o['securedPhotosInReport'] is bool ? o['securedPhotosInReport'] as bool : true
     ..doneTextName = _s(o, 'doneTextName')
     ..doneTextPhone = _s(o, 'doneTextPhone');
 }

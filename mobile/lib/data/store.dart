@@ -27,6 +27,12 @@ class Store extends ChangeNotifier {
   /// Your usual answers for the Observation & Coaching form (Formstack links), by question id.
   final Map<String, String> formAnswers = {};
 
+  /// Who gets load securement photos (one or more addresses, comma separated).
+  String loadEmailTo = '';
+
+  /// Gmail address the app sends from. The app password is kept in secure storage, not here.
+  String mailFrom = '';
+
   /// Project tabs this person has hidden ("notify", "links", "overtime", "notes", "seacans").
   final Set<String> hiddenTabs = {};
 
@@ -74,7 +80,7 @@ class Store extends ChangeNotifier {
     }
   }
 
-  void deleteTaskPhotos(Task t) => deletePhotos(t.photos);
+  void deleteTaskPhotos(Task t) => deletePhotos([...t.photos, ...t.securedPhotos]);
 
   void deleteLogPhotos(DailyLog l) {
     for (final t in l.tasks) {
@@ -111,6 +117,8 @@ class Store extends ChangeNotifier {
     links.clear();
     userName = (o['userName'] ?? '').toString();
     contactPhone = (o['contactPhone'] ?? '').toString();
+    loadEmailTo = (o['loadEmailTo'] ?? '').toString();
+    mailFrom = (o['mailFrom'] ?? '').toString();
     final mc = o['myColours'];
     if (mc is List) {
       myColours
@@ -141,6 +149,8 @@ class Store extends ChangeNotifier {
         'version': 2,
         'userName': userName,
         'contactPhone': contactPhone,
+        'loadEmailTo': loadEmailTo,
+        'mailFrom': mailFrom,
         'myColours': myColours.toList(),
         'formDetails': formAnswers,
         'hiddenTabs': hiddenTabs.toList(),

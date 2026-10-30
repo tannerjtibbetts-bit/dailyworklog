@@ -279,6 +279,10 @@ final class ReportDocx {
             para("Photos required: none attached", false, 9, RED, 40, true, null);
         }
         if (!t.photos.isEmpty()) photoTable(t.photos, photoDir);
+        if (t.securedPhotosInReport && !t.securedPhotos.isEmpty()) {
+            para("Load securement photos", false, 9, GREY, 40, true, null);
+            photoTable(t.securedPhotos, photoDir);
+        }
     }
 
     /** Photo rows like the PDF: same height side by side, each row only as tall as it needs. */

@@ -36,7 +36,8 @@ class ReportXlsx {
     for (final g in Task.reportGroups(log.tasks)) {
       for (final t in g.value) {
         final secured = t.loadSecured
-            ? ['Yes', t.securedBy, if (t.securedAt > 0) Fmt.stamp(t.securedAt)].where((s) => s.isNotEmpty).join(', ')
+            ? ['Yes', t.securedBy, if (t.securedAt > 0) Fmt.stamp(t.securedAt)].where((s) => s.isNotEmpty).join(', ') +
+                  (t.securedPhotos.isEmpty ? '' : ' · ${Fmt.plural(t.securedPhotos.length, 'photo', 'photos')}')
             : '';
         b.cells([
           _c(g.key, _area),

@@ -15,6 +15,7 @@ import '../ui/common.dart';
 import '../ui/theme.dart';
 import 'approvals_screen.dart';
 import 'intro_screen.dart';
+import 'load_secure_sheet.dart' show emailSetupDialog;
 import 'project_screen.dart';
 
 /// 12265550123 -> 1-226-555-0123; 2265550123 -> 226-555-0123; anything else as typed.
@@ -207,6 +208,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         },
       ),
       SheetItem(Icons.tab_outlined, 'Show or hide tabs', () => chooseTabs(context)),
+      SheetItem(Icons.alternate_email, 'Email sending', () => emailSetupDialog(context)),
       SheetItem(Icons.menu_book_outlined, 'User manual', () => openSupport(context)),
       SheetItem(Icons.save_alt, 'Back up all my work', _backup),
       SheetItem(Icons.restore, 'Restore from a backup', _restore),

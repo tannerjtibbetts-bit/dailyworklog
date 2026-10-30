@@ -396,6 +396,13 @@ final class ReportPdf {
             y += 6;
             drawPhotoGrid(t.photos, photoDir, x, w);
         }
+        if (t.securedPhotosInReport && !t.securedPhotos.isEmpty()) {
+            y += 4;
+            ensure(30 + PHOTO_H + CAPTION_H);
+            text("Load securement photos", small, x, w, 2);
+            y += 4;
+            drawPhotoGrid(t.securedPhotos, photoDir, x, w);
+        }
         y += 10;
         ensure(12);
         c.drawLine(M, y, W - M, y, line);

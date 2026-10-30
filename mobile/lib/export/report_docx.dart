@@ -284,6 +284,10 @@ class ReportDocx {
     if (t.notes.trim().isNotEmpty) _para(t.notes.trim(), false, 11, _text, 80, true);
     if (t.photosRequired && t.photos.isEmpty) _para('Photos required: none attached', false, 9, _red, 40, true);
     if (t.photos.isNotEmpty) _photoTable(t.photos, photoDir);
+    if (t.securedPhotosInReport && t.securedPhotos.isNotEmpty) {
+      _para('Load securement photos', false, 9, _grey, 40, true);
+      _photoTable(t.securedPhotos, photoDir);
+    }
   }
 
   /// Photo rows like the PDF: same height side by side, each row only as tall as it needs.

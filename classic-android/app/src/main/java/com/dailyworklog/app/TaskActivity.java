@@ -53,6 +53,12 @@ public class TaskActivity extends AppCompatActivity {
     private View root;
 
     private String pendingFile;
+    /** Load securement pop-up: photos taken in this session (file names), its subject, and the dialog. */
+    private ArrayList<String> loadSession;
+    private String loadSubject;
+    private androidx.appcompat.app.AlertDialog loadDialog;
+    private LinearLayout loadThumbs;
+    private boolean pendingForLoad;
     private ActivityResultLauncher<Uri> takePicture;
     private ActivityResultLauncher<String> pickImages;
     private ActivityResultLauncher<Intent> dictate;
@@ -76,7 +82,12 @@ public class TaskActivity extends AppCompatActivity {
             finish();
             return;
         }
-        if (savedInstanceState != null) pendingFile = savedInstanceState.getString("pendingFile");
+        if (savedInstanceState != null) {
+            pendingFile = savedInstanceState.getString("pendingFile");
+            pendingForLoad = savedInstanceState.getBoolean("pendingForLoad");
+            loadSession = savedInstanceState.getStringArrayList("loadSession");
+            loadSubject = savedInstanceState.getString("loadSubject");
+        }
 
         takePicture = registerForActivityResult(new ActivityResultContracts.TakePicture(), this::onPhotoTaken);
         pickImages = registerForActivityResult(new ActivityResultContracts.GetMultipleContents(), this::onPicked);
@@ -141,7 +152,7 @@ public class TaskActivity extends AppCompatActivity {
             store.save();
         });
 
-        findViewById(R.id.securedRow).setOnClickListener(v -> toggleSecured());
+        findViewById(R.id.securedRow).setOnClickListener(v -> openLoadPopup());
         findViewById(R.id.nextShiftRow).setOnClickListener(v -> {
             task.nextShift = !task.nextShift;
             nextShift.setChecked(task.nextShift);
@@ -153,12 +164,25 @@ public class TaskActivity extends AppCompatActivity {
         bindSecured();
         bindAssignees();
         bindPhotos();
+        if (loadSession != null) openLoadPopup();  // came back after the phone rotated
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putString("pendingFile", pendingFile);
+        out.putBoolean("pendingForLoad", pendingForLoad);
+        if (loadSession != null) {
+            out.putStringArrayList("loadSession", loadSession);
+            out.putString("loadSubject", loadSubject);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (loadDialog != null) loadDialog.dismiss();
+        loadDialog = null;
+        super.onDestroy();
     }
 
     @Override
@@ -330,19 +354,295 @@ public class TaskActivity extends AppCompatActivity {
 
     // ----- load securement -----
 
-    private void toggleSecured() {
-        task.loadSecured = !task.loadSecured;
-        task.securedBy = task.loadSecured ? store.me() : "";
-        task.securedAt = task.loadSecured ? System.currentTimeMillis() : 0;
+    private void bindSecured() {
+        secured.setChecked(task.loadSecured);
+        securedStamp.setVisibility(task.loadSecured ? View.VISIBLE : View.GONE);
+        if (task.loadSecured) securedStamp.setText(task.securedBy + ", " + Fmt.stamp(task.securedAt));
+        bindSecuredPhotos();
+    }
+
+    /** Under the Load securement row: the photos sent, and whether they go in the report. */
+    private void bindSecuredPhotos() {
+        LinearLayout box = findViewById(R.id.securedPhotosBox);
+        box.removeAllViews();
+        if (task.securedPhotos.isEmpty()) {
+            box.setVisibility(View.GONE);
+            return;
+        }
+        box.setVisibility(View.VISIBLE);
+        TextView head = new TextView(this);
+        head.setText("Load securement photos (" + task.securedPhotos.size() + ")");
+        head.setTextSize(16);
+        head.setTextColor(getColor(R.color.navy));
+        head.setTypeface(null, android.graphics.Typeface.BOLD);
+        box.addView(head);
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
+        hs.setHorizontalScrollBarEnabled(false);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClipChildren(false);
+        hs.addView(row);
+        box.addView(hs);
+        for (Models.Photo p : task.securedPhotos) {
+            row.addView(photoCell(p, Ui.dp(this, 140), () -> Ui.confirm(this, "Remove this photo?",
+                    "It will be deleted from this field.", "Remove", () -> {
+                        task.securedPhotos.remove(p);
+                        store.deletePhoto(p);
+                        store.save();
+                        bindSecuredPhotos();
+                    })), cellLp());
+        }
+        CheckBox inReport = new CheckBox(this);
+        inReport.setText("Put load securement photos in the report");
+        inReport.setTextSize(16);
+        inReport.setChecked(task.securedPhotosInReport);
+        inReport.setOnCheckedChangeListener((b, on) -> {
+            task.securedPhotosInReport = on;
+            store.save();
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMarginStart(-Ui.dp(this, 6));
+        lp.topMargin = Ui.dp(this, 6);
+        box.addView(inReport, lp);
+    }
+
+    // ----- load securement pop-up -----
+
+    /** Take photos, type a subject, Done: ticks Load secured and emails the photos. */
+    private void openLoadPopup() {
+        if (loadSession == null) {
+            loadSession = new ArrayList<>();
+            loadSubject = LoadEmail.defaultSubject(task);
+        }
+        if (loadDialog != null && loadDialog.isShowing()) {
+            refreshLoadThumbs();
+            return;
+        }
+        int pad = Ui.dp(this, 22);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, Ui.dp(this, 8), pad, 0);
+        TextView msg = new TextView(this);
+        msg.setText("Take photos of the load, type a subject, then tap Done. The photos are emailed straight away.");
+        msg.setTextSize(15);
+        msg.setTextColor(getColor(R.color.grey));
+        box.addView(msg);
+
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
+        hs.setHorizontalScrollBarEnabled(false);
+        loadThumbs = new LinearLayout(this);
+        loadThumbs.setOrientation(LinearLayout.HORIZONTAL);
+        loadThumbs.setClipChildren(false);
+        hs.addView(loadThumbs);
+        box.addView(hs);
+        refreshLoadThumbs();
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        TextView take = chip("Take photo", R.drawable.ic_camera);
+        take.setOnClickListener(v -> startCamera(true));
+        buttons.addView(take, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1f));
+        TextView gallery = chip("From gallery", R.drawable.ic_gallery);
+        gallery.setOnClickListener(v -> startGallery(true));
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1f);
+        glp.setMarginStart(Ui.dp(this, 8));
+        buttons.addView(gallery, glp);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = Ui.dp(this, 10);
+        box.addView(buttons, blp);
+
+        TextView toLine = new TextView(this);
+        Runnable bindTo = () -> {
+            boolean set = !store.loadEmailTo.isEmpty();
+            toLine.setText("To: " + (set ? store.loadEmailTo : "Not set"));
+            toLine.setTextColor(getColor(set ? R.color.text : R.color.grey));
+        };
+        bindTo.run();
+        box.addView(linkRow(toLine, "Change", v -> LoadEmail.changeTo(this, bindTo)), blp);
+
+        EditText subject = new EditText(this);
+        subject.setHint("Subject");
+        subject.setText(loadSubject);
+        subject.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        subject.setSingleLine(true);
+        subject.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                loadSubject = s.toString();
+            }
+        });
+        box.addView(subject);
+
+        TextView fromLine = new TextView(this);
+        fromLine.setTextSize(14);
+        fromLine.setTextColor(getColor(R.color.grey));
+        TextView fromLink = new TextView(this);
+        Runnable bindFrom = () -> {
+            fromLine.setText("From: " + (store.mailFrom.isEmpty() ? "Not set" : store.mailFrom));
+            fromLink.setText(store.hasMailSetup() ? "Change" : "Set up");
+        };
+        LinearLayout fromRow = new LinearLayout(this);
+        fromRow.setGravity(Gravity.CENTER_VERTICAL);
+        fromRow.addView(fromLine, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        styleLink(fromLink);
+        fromLink.setOnClickListener(v -> LoadEmail.setup(this, bindFrom));
+        fromRow.addView(fromLink);
+        bindFrom.run();
+        box.addView(fromRow);
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(box);
+        com.google.android.material.dialog.MaterialAlertDialogBuilder b = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Load securement")
+                .setView(scroll)
+                .setPositiveButton("Done", null)
+                .setNegativeButton("Cancel", (d, w) -> cancelLoadPopup());
+        if (task.loadSecured) {
+            b.setNeutralButton("Mark not secured", (d, w) -> {
+                task.loadSecured = false;
+                task.securedBy = "";
+                task.securedAt = 0;
+                store.save();
+                bindSecured();
+                cancelLoadPopup();
+            });
+        }
+        loadDialog = b.create();
+        loadDialog.setCanceledOnTouchOutside(false);
+        loadDialog.setOnCancelListener(d -> cancelLoadPopup());
+        loadDialog.setOnShowListener(x -> loadDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> loadDone(bindTo, bindFrom)));
+        loadDialog.show();
+    }
+
+    private void loadDone(Runnable bindTo, Runnable bindFrom) {
+        if (loadSession.isEmpty()) {
+            if (!task.loadSecured) markSecured();
+            closeLoadPopup();
+            Toast.makeText(this, "Load secured", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (store.loadEmailTo.isEmpty()) {
+            LoadEmail.changeTo(this, () -> {
+                bindTo.run();
+                if (!store.loadEmailTo.isEmpty()) loadDone(bindTo, bindFrom);
+            });
+            return;
+        }
+        if (!store.hasMailSetup()) {
+            LoadEmail.setup(this, () -> {
+                bindFrom.run();
+                if (store.hasMailSetup()) loadDone(bindTo, bindFrom);
+            });
+            return;
+        }
+        if (!task.loadSecured) markSecured();
+        List<Models.Photo> sent = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (String name : loadSession) {
+            Models.Photo p = new Models.Photo();
+            p.file = name;
+            p.addedBy = store.me();
+            p.addedAt = now;
+            sent.add(p);
+        }
+        task.securedPhotos.addAll(sent);
+        store.save();
+        String subject = loadSubject.trim().isEmpty() ? LoadEmail.defaultSubject(task) : loadSubject.trim();
+        String to = store.loadEmailTo;
+        closeLoadPopup();
+        bindSecured();
+        LoadEmail.send(this, project, log, task, sent, subject, to);
+    }
+
+    private void markSecured() {
+        task.loadSecured = true;
+        task.securedBy = store.me();
+        task.securedAt = System.currentTimeMillis();
         store.save();
         root.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
         bindSecured();
     }
 
-    private void bindSecured() {
-        secured.setChecked(task.loadSecured);
-        securedStamp.setVisibility(task.loadSecured ? View.VISIBLE : View.GONE);
-        if (task.loadSecured) securedStamp.setText(task.securedBy + ", " + Fmt.stamp(task.securedAt));
+    /** Cancel: the photos taken in this session are deleted. */
+    private void cancelLoadPopup() {
+        if (loadSession != null) LoadEmail.deleteFiles(store, loadSession);
+        closeLoadPopup();
+    }
+
+    private void closeLoadPopup() {
+        loadSession = null;
+        loadSubject = null;
+        loadThumbs = null;
+        if (loadDialog != null) {
+            loadDialog.setOnCancelListener(null);
+            loadDialog.dismiss();
+        }
+        loadDialog = null;
+    }
+
+    private void refreshLoadThumbs() {
+        if (loadThumbs == null || loadSession == null) return;
+        loadThumbs.removeAllViews();
+        for (String name : new ArrayList<>(loadSession)) {
+            Models.Photo p = new Models.Photo();
+            p.file = name;
+            p.addedBy = store.me();
+            loadThumbs.addView(photoCell(p, Ui.dp(this, 96), () -> {
+                loadSession.remove(name);
+                LoadEmail.deleteFiles(store, java.util.Collections.singletonList(name));
+                refreshLoadThumbs();
+            }), cellLp());
+        }
+        loadThumbs.setVisibility(loadSession.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    private void addLoadPhoto(File f) {
+        if (loadSession == null) {
+            // The pop-up was closed meanwhile: keep the photo with the field's photos instead of losing it.
+            addPhoto(f);
+            return;
+        }
+        loadSession.add(f.getName());
+        openLoadPopup();
+    }
+
+    private TextView chip(String label, int icon) {
+        TextView t = new TextView(this);
+        t.setText(label);
+        t.setTextSize(16);
+        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTextColor(getColor(R.color.deep_blue));
+        t.setGravity(Gravity.CENTER);
+        t.setBackgroundResource(R.drawable.bg_chip_sky);
+        t.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0);
+        t.setCompoundDrawablePadding(Ui.dp(this, 6));
+        t.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.deep_blue)));
+        t.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+        return t;
+    }
+
+    private void styleLink(TextView t) {
+        t.setTextSize(15);
+        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTextColor(getColor(R.color.blue));
+        t.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), 0, Ui.dp(this, 10));
+        t.setBackgroundResource(android.R.drawable.list_selector_background);
+    }
+
+    /** A line of text with a small text button on the right. */
+    private LinearLayout linkRow(TextView text, String link, View.OnClickListener click) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        text.setTextSize(16);
+        row.addView(text, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView l = new TextView(this);
+        l.setText(link);
+        styleLink(l);
+        l.setOnClickListener(click);
+        row.addView(l);
+        return row;
     }
 
     // ----- assignees -----
@@ -482,8 +782,14 @@ public class TaskActivity extends AppCompatActivity {
     }
 
     private void startCamera() {
+        startCamera(false);
+    }
+
+    /** forLoad: the photo goes to the Load securement pop-up instead of the field's photos. */
+    private void startCamera(boolean forLoad) {
         File f = PhotoUtil.newFile(store);
         pendingFile = f.getName();
+        pendingForLoad = forLoad;
         Uri u = FileProvider.getUriForFile(this, getPackageName() + ".files", f);
         try {
             takePicture.launch(u);
@@ -494,6 +800,11 @@ public class TaskActivity extends AppCompatActivity {
     }
 
     private void startGallery() {
+        startGallery(false);
+    }
+
+    private void startGallery(boolean forLoad) {
+        pendingForLoad = forLoad;
         try {
             pickImages.launch("image/*");
         } catch (ActivityNotFoundException e) {
@@ -505,6 +816,8 @@ public class TaskActivity extends AppCompatActivity {
         if (pendingFile == null) return;
         File f = store.photoFile(pendingFile);
         pendingFile = null;
+        boolean forLoad = pendingForLoad;
+        pendingForLoad = false;
         if (!Boolean.TRUE.equals(ok)) {
             //noinspection ResultOfMethodCallIgnored
             f.delete();
@@ -513,13 +826,16 @@ public class TaskActivity extends AppCompatActivity {
         PhotoUtil.BG.execute(() -> {
             boolean good = PhotoUtil.fromCamera(this, f);
             runOnUiThread(() -> {
-                if (good) addPhoto(f);
+                if (good && forLoad) addLoadPhoto(f);
+                else if (good) addPhoto(f);
                 else Toast.makeText(this, "Couldn't save that photo", Toast.LENGTH_SHORT).show();
             });
         });
     }
 
     private void onPicked(List<Uri> uris) {
+        boolean forLoad = pendingForLoad;
+        pendingForLoad = false;
         if (uris == null || uris.isEmpty()) return;
         PhotoUtil.BG.execute(() -> {
             List<File> done = new ArrayList<>();
@@ -530,7 +846,10 @@ public class TaskActivity extends AppCompatActivity {
                 else f.delete();
             }
             runOnUiThread(() -> {
-                for (File f : done) addPhoto(f);
+                for (File f : done) {
+                    if (forLoad) addLoadPhoto(f);
+                    else addPhoto(f);
+                }
                 if (done.size() < uris.size()) {
                     Toast.makeText(this, "Some photos couldn't be added", Toast.LENGTH_SHORT).show();
                 }
@@ -551,45 +870,15 @@ public class TaskActivity extends AppCompatActivity {
     private void bindPhotos() {
         photos.removeAllViews();
         int size = Ui.dp(this, 140);
-        int gap = Ui.dp(this, 14);
         int pad = Ui.dp(this, 10);
         for (Models.Photo p : task.photos) {
-            File f = store.photoFile(p.file);
-            FrameLayout cell = new FrameLayout(this);
-            cell.setPadding(0, pad, pad, 0);  // room for the remove badge
-
-            ShapeableImageView iv = new ShapeableImageView(this);
-            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            iv.setShapeAppearanceModel(ShapeAppearanceModel.builder().setAllCornerSizes(Ui.dp(this, 12)).build());
-            cell.addView(iv, new FrameLayout.LayoutParams(size, size));
-            ImageLoader.load(iv, f, 420);
-            iv.setOnClickListener(v -> Ui.showPhoto(this, p, f));
-
-            ImageView remove = new ImageView(this);
-            remove.setImageResource(R.drawable.ic_remove);
-            remove.setColorFilter(0xFFFFFFFF);
-            remove.setBackgroundResource(R.drawable.bg_red_circle);
-            int r = Ui.dp(this, 5);
-            remove.setPadding(r, r, r, r);
-            remove.setContentDescription("Remove photo");
-            FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34), Gravity.END | Gravity.TOP);
-            rl.topMargin = -pad;
-            rl.rightMargin = -pad;
-            cell.addView(remove, rl);
-            cell.setClipChildren(false);
-            cell.setClipToPadding(false);
-            remove.setOnClickListener(v -> Ui.confirm(this, "Remove this photo?",
+            photos.addView(photoCell(p, size, () -> Ui.confirm(this, "Remove this photo?",
                     "It will be deleted from this field.", "Remove", () -> {
                         task.photos.remove(p);
                         store.deletePhoto(p);
                         store.save();
                         bindPhotos();
-                    }));
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.setMarginEnd(gap);
-            photos.addView(cell, lp);
+                    })), cellLp());
         }
 
         // Dashed "add" tile at the end.
@@ -605,6 +894,44 @@ public class TaskActivity extends AppCompatActivity {
         tl.topMargin = pad;
         photos.addView(tile, tl);
         photos.setClipChildren(false);
+    }
+
+    private LinearLayout.LayoutParams cellLp() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMarginEnd(Ui.dp(this, 14));
+        return lp;
+    }
+
+    /** A rounded thumbnail (tap to view) with a red remove badge on its corner. */
+    private FrameLayout photoCell(Models.Photo p, int size, Runnable onRemove) {
+        int pad = Ui.dp(this, 10);
+        File f = store.photoFile(p.file);
+        FrameLayout cell = new FrameLayout(this);
+        cell.setPadding(0, pad, pad, 0);  // room for the remove badge
+
+        ShapeableImageView iv = new ShapeableImageView(this);
+        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        iv.setShapeAppearanceModel(ShapeAppearanceModel.builder().setAllCornerSizes(Ui.dp(this, 12)).build());
+        cell.addView(iv, new FrameLayout.LayoutParams(size, size));
+        ImageLoader.load(iv, f, 420);
+        iv.setOnClickListener(v -> Ui.showPhoto(this, p, f));
+
+        ImageView remove = new ImageView(this);
+        remove.setImageResource(R.drawable.ic_remove);
+        remove.setColorFilter(0xFFFFFFFF);
+        remove.setBackgroundResource(R.drawable.bg_red_circle);
+        int r = Ui.dp(this, 5);
+        remove.setPadding(r, r, r, r);
+        remove.setContentDescription("Remove photo");
+        FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34), Gravity.END | Gravity.TOP);
+        rl.topMargin = -pad;
+        rl.rightMargin = -pad;
+        cell.addView(remove, rl);
+        cell.setClipChildren(false);
+        cell.setClipToPadding(false);
+        remove.setOnClickListener(v -> onRemove.run());
+        return cell;
     }
 
     // ----- delete -----

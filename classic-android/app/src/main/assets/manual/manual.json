@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-10-29",
+  "updated": "2026-10-30",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -517,6 +517,7 @@
           "items": [
             "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). See the App owner section.",
             "\"Show or hide tabs\": choose which project tabs you see.",
+            "\"Email sending\": the Gmail address and app password used to email load securement photos.",
             "\"User manual\": opens this manual.",
             "\"Back up all my work\" and \"Restore from a backup\" (new app only).",
             "\"Sign out\". It only shows when you have a PIN."
@@ -1619,7 +1620,7 @@
       "id": "load-secured-and-next-shift",
       "title": "Load secured and Carry over to next shift",
       "group": "Fields",
-      "summary": "Tick Load securement completed, or mark a field to carry over to the next shift.",
+      "summary": "Load securement: take photos and email them in one go. Carry over to next shift.",
       "keywords": [
         "load secured",
         "load securement",
@@ -1638,7 +1639,7 @@
         {
           "type": "bullets",
           "items": [
-            "\"Load securement completed\": tick it when the load is secured. Your name and the time are stamped under it. The card shows \"✓  Load secured\" and the report says who secured it.",
+            "\"Load securement completed\": tap it to open the Load securement pop-up (see below). After Done, it's ticked with your name and the time. The card shows \"✓  Load secured\" and the report says who secured it.",
             "\"Carry over to next shift\": \"Shown on the report, and offered when you start the next checklist\". The card shows \"Next shift\"."
           ]
         },
@@ -1648,8 +1649,92 @@
         },
         {
           "type": "see",
+          "id": "load-securement-email",
+          "text": "Related: Load securement photos by email"
+        },
+        {
+          "type": "see",
           "id": "starting-a-daily-log",
           "text": "Related: Starting a daily log"
+        }
+      ]
+    },
+    {
+      "id": "load-securement-email",
+      "title": "Load securement photos by email",
+      "group": "Fields",
+      "summary": "Tap Load securement, take photos, type a subject and tap Done. The photos are emailed straight away.",
+      "keywords": [
+        "load securement",
+        "load secured",
+        "email",
+        "photos",
+        "subject",
+        "gmail",
+        "app password",
+        "send",
+        "straps",
+        "email sending"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "On a field, tap \"Load securement completed\". A pop-up opens where you take the load securement photos. When you tap \"Done\", the app emails them by itself. No email app opens."
+        },
+        {
+          "type": "image",
+          "file": "load_secure.png",
+          "caption": "The Load securement pop-up"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the field and tap \"Load securement completed\".",
+            "Tap \"Take photo\". Take the picture. You come back to the pop-up with the photo added.",
+            "Tap \"Take another\" as many times as you want. Or add photos with \"From gallery\". Tap the red × on a photo to drop it.",
+            "Check \"To:\". To send to someone else, tap \"Change\" and type their email. Separate several addresses with commas. The app remembers it.",
+            "Type the \"Subject\". It becomes the email's subject line.",
+            "Tap \"Done\". The field is ticked \"Load securement completed\" and you see \"Sending … photos to …\", then \"Sent … photos to …\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The photos stay on the field under \"Load securement photos\". Untick \"Put load securement photos in the report\" if you don't want them in the daily report."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Cancel\" closes the pop-up and throws away the photos you just took in it.",
+            "\"Done\" with no photos just ticks the field.",
+            "\"Mark not secured\" (when it's already ticked) unticks it. Photos already on the field stay.",
+            "If the email can't go (no signal, wrong password), you see \"Couldn't send the email\" with the reason. Tap \"Try again\". The photos are kept either way."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Setting up email sending (once):"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "The app sends from your Gmail. On a computer or in the Google app, open your Google Account, then \"Security\".",
+            "Turn on \"2-Step Verification\" if it isn't on.",
+            "Search for \"App passwords\" in your Google Account. Make one called Daily Work Log. Google shows 16 letters.",
+            "In the app, tap \"Set up\" in the pop-up (or profile → \"More…\" → \"Email sending\").",
+            "Type your Gmail address and the 16 letters, then tap \"Send a test\". You should get a \"Daily Work Log test\" email.",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "The app password is kept locked on this phone. It isn't in backups, so on a new phone set up email sending again. Big sets of photos are split into a few emails, marked (1 of 2) and so on."
+        },
+        {
+          "type": "see",
+          "id": "field-photos",
+          "text": "Related: Photos and Photos Required"
         }
       ]
     },
@@ -2937,7 +3022,7 @@
             "\"Generated\" with the date and your name.",
             "How many fields are completed, with a progress bar, and the crew.",
             "The fields, grouped \"South\", \"North\", \"Unzoned\" (and \"Other\" for fields with no area). If no fields have an area, they are in one list.",
-            "For each field: \"Completed by\" with name and time, or \"Not completed\"; load securement; \"Carries over to next shift\"; \"Assigned:\"; the notes; and the photos.",
+            "For each field: \"Completed by\" with name and time, or \"Not completed\"; load securement; \"Carries over to next shift\"; \"Assigned:\"; the notes; the photos; and the load securement photos (unless \"Put load securement photos in the report\" is unticked).",
             "Photos are small (about 1 inch tall) and sit side by side, with who took each one and when underneath. Zoom in on the report to see a photo up close.",
             "\"Photos required: none attached\" in red if a required photo is missing.",
             "The sea can list, after the fields, only when \"Include in my reports (PDF, Word and email)\" is ticked on the Sea Can Movements tab. It shows the sea cans that have a number, with Moves, Can #, From location and Current location.",

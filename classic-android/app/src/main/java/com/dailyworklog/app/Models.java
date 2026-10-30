@@ -113,6 +113,9 @@ public final class Models {
         }
         public List<String> assignees = new ArrayList<>();
         public List<Photo> photos = new ArrayList<>();
+        /** Load securement photos (emailed from the Load securement pop-up). */
+        public List<Photo> securedPhotos = new ArrayList<>();
+        public boolean securedPhotosInReport = true;
 
         /** Same field with a clean slate: for templates, copies and duplicates. */
         Task freshCopy() {
@@ -155,6 +158,10 @@ public final class Models {
             JSONArray ph = new JSONArray();
             for (Photo p : photos) ph.put(p.toJson());
             o.put("photos", ph);
+            JSONArray sp = new JSONArray();
+            for (Photo p : securedPhotos) sp.put(p.toJson());
+            o.put("securedPhotos", sp);
+            o.put("securedPhotosInReport", securedPhotosInReport);
             return o;
         }
 
@@ -184,6 +191,14 @@ public final class Models {
                     if (p != null) t.photos.add(Photo.fromJson(p));
                 }
             }
+            JSONArray sp = o.optJSONArray("securedPhotos");
+            if (sp != null) {
+                for (int i = 0; i < sp.length(); i++) {
+                    JSONObject p = sp.optJSONObject(i);
+                    if (p != null) t.securedPhotos.add(Photo.fromJson(p));
+                }
+            }
+            t.securedPhotosInReport = o.optBoolean("securedPhotosInReport", true);
             return t;
         }
     }
