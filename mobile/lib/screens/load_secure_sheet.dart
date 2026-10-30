@@ -36,8 +36,9 @@ Future<bool> emailSetupDialog(BuildContext context) async {
   final store = Store.instance;
   final from = TextEditingController(text: store.mailFrom);
   final pass = TextEditingController(text: await MailSettings.password());
+  final to = TextEditingController(text: store.loadEmailTo);
   if (!context.mounted) return false;
-  String? fromError, passError;
+  String? fromError, passError, toError;
   var busy = false;
   final ok = await showDialog<bool>(
     context: context,
@@ -46,8 +47,9 @@ Future<bool> emailSetupDialog(BuildContext context) async {
         bool check() {
           fromError = Mailer.validAddress(from.text.trim()) ? null : 'Enter your Gmail address';
           passError = pass.text.replaceAll(RegExp(r'\s'), '').length < 8 ? 'Enter the app password' : null;
+          toError = to.text.trim().isEmpty || Mailer.validList(to.text) ? null : 'Enter a valid email address';
           set(() {});
-          return fromError == null && passError == null;
+          return fromError == null && passError == null && toError == null;
         }
 
         return AlertDialog(
@@ -77,6 +79,14 @@ Future<bool> emailSetupDialog(BuildContext context) async {
                   autocorrect: false,
                   enableSuggestions: false,
                   decoration: InputDecoration(labelText: 'App password', errorText: passError),
+                ),
+                // Who gets the photos: remembered until changed here or with Change in the pop-up.
+                TextField(
+                  controller: to,
+                  keyboardType: TextInputType.emailAddress,
+                  textCapitalization: TextCapitalization.none,
+                  autocorrect: false,
+                  decoration: InputDecoration(labelText: 'Send load securement photos to', errorText: toError),
                 ),
                 if (busy)
                   const Padding(padding: EdgeInsets.only(top: 14), child: LinearProgressIndicator()),
@@ -116,6 +126,7 @@ Future<bool> emailSetupDialog(BuildContext context) async {
   );
   if (ok != true) return false;
   store.mailFrom = from.text.trim();
+  store.loadEmailTo = Mailer.addresses(to.text).join(', ');
   store.save();
   await MailSettings.setPassword(pass.text);
   return true;

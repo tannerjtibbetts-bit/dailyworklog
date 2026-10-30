@@ -6,6 +6,7 @@ import 'package:dailyworklog/data/store.dart';
 import 'package:dailyworklog/screens/assign_sheet.dart';
 import 'package:dailyworklog/screens/field_widgets.dart';
 import 'package:dailyworklog/screens/log_screen.dart';
+import 'package:dailyworklog/screens/load_secure_sheet.dart';
 import 'package:dailyworklog/screens/task_screen.dart';
 import 'package:dailyworklog/services/photos.dart';
 import 'package:dailyworklog/services/sms.dart';
@@ -528,6 +529,23 @@ void main() {
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
       expect(t.title, 'North one, bay 2');
+    });
+
+    testWidgets('Email sending remembers who gets load securement photos', (tester) async {
+      Store.instance.loadEmailTo = 'old@aecon.com';
+      await tester.pumpWidget(app(Builder(
+        builder: (c) => Scaffold(body: TextButton(onPressed: () => emailSetupDialog(c), child: const Text('open'))),
+      )));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.text('old@aecon.com'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Your Gmail address'), 'tanner@gmail.com');
+      await tester.enterText(find.widgetWithText(TextField, 'App password'), 'abcd efgh ijkl mnop');
+      await tester.enterText(find.widgetWithText(TextField, 'old@aecon.com'), 'new@aecon.com; boss@aecon.com');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(Store.instance.loadEmailTo, 'new@aecon.com, boss@aecon.com');
+      expect(Store.instance.mailFrom, 'tanner@gmail.com');
     });
 
     testWidgets('assign sheet: groups, tick and assign', (tester) async {

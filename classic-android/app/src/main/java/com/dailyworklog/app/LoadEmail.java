@@ -165,6 +165,13 @@ final class LoadEmail {
         pass.setSingleLine(true);
         pass.setText(store.mailPassword());
         box.addView(pass);
+        // Who gets the photos: remembered until changed here or with Change in the pop-up.
+        EditText sendTo = new EditText(a);
+        sendTo.setHint("Send load securement photos to");
+        sendTo.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        sendTo.setSingleLine(true);
+        sendTo.setText(store.loadEmailTo);
+        box.addView(sendTo);
         android.widget.ScrollView scroll = new android.widget.ScrollView(a);
         scroll.addView(box);
         AlertDialog d = new MaterialAlertDialogBuilder(a)
@@ -177,6 +184,12 @@ final class LoadEmail {
         d.setOnShowListener(x -> {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 if (!check(from, pass)) return;
+                String toText = sendTo.getText().toString().trim();
+                if (!toText.isEmpty() && !Mailer.validList(toText)) {
+                    sendTo.setError("Enter a valid email address");
+                    return;
+                }
+                store.loadEmailTo = toText.isEmpty() ? "" : String.join(", ", Mailer.addresses(toText));
                 store.mailFrom = from.getText().toString().trim();
                 store.save();
                 if (!store.setMailPassword(pass.getText().toString())) {

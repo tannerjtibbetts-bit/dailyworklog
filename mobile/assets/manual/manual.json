@@ -517,7 +517,7 @@
           "items": [
             "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). See the App owner section.",
             "\"Show or hide tabs\": choose which project tabs you see.",
-            "\"Email sending\": the Gmail address and app password used to email load securement photos.",
+            "\"Email sending\": the Gmail address and app password used to email load securement photos, and who gets them.",
             "\"User manual\": opens this manual.",
             "\"Back up all my work\" and \"Restore from a backup\" (new app only).",
             "\"Sign out\". It only shows when you have a PIN."
@@ -1674,7 +1674,10 @@
         "app password",
         "send",
         "straps",
-        "email sending"
+        "email sending",
+        "change email",
+        "recipient",
+        "send to"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -1694,7 +1697,7 @@
             "Open the field and tap \"Load securement completed\".",
             "Tap \"Take photo\". Take the picture. You come back to the pop-up with the photo added.",
             "Tap \"Take another\" as many times as you want. Or add photos with \"From gallery\". Tap the red × on a photo to drop it.",
-            "Check \"To:\". To send to someone else, tap \"Change\" and type their email. Separate several addresses with commas. The app remembers it.",
+            "Check \"To:\". The first time, tap \"Change\" and type the email that should get the photos. Separate several addresses with commas. After that every load securement email goes there automatically. You only type it again if you want to change it.",
             "Type the \"Subject\". It becomes the email's subject line.",
             "Tap \"Done\". The field is ticked \"Load securement completed\" and you see \"Sending … photos to …\", then \"Sent … photos to …\"."
           ]
@@ -1723,9 +1726,13 @@
             "Turn on \"2-Step Verification\" if it isn't on.",
             "Search for \"App passwords\" in your Google Account. Make one called Daily Work Log. Google shows 16 letters.",
             "In the app, tap \"Set up\" in the pop-up (or profile → \"More…\" → \"Email sending\").",
-            "Type your Gmail address and the 16 letters, then tap \"Send a test\". You should get a \"Daily Work Log test\" email.",
+            "Type your Gmail address, the 16 letters, and who gets the photos in \"Send load securement photos to\". Tap \"Send a test\". You should get a \"Daily Work Log test\" email.",
             "Tap \"Save\"."
           ]
+        },
+        {
+          "type": "text",
+          "text": "To change who gets the photos later, tap \"Change\" next to \"To:\" in the pop-up, or go to profile → \"More…\" → \"Email sending\" and change \"Send load securement photos to\". The new address is used from then on."
         },
         {
           "type": "tip",
