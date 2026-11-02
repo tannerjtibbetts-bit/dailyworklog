@@ -1,0 +1,38 @@
+# Codemagic builds the iPhone app online (no Mac needed) and sends it to TestFlight / the App Store.
+# Start a build from the Codemagic website (Start new build > iPhone app to TestFlight).
+# One-time setup in Codemagic: add this repository, then under Teams > Integrations add an
+# App Store Connect API key named "DailyWorkLog App Store". Codemagic then creates the signing
+# certificate and profile itself.
+workflows:
+  ios-release:
+    name: iPhone app to TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: mobile
+    integrations:
+      app_store_connect: DailyWorkLog App Store
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.dailyworklog.app
+      vars:
+        BUNDLE_ID: com.dailyworklog.app
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Install pods
+        script: cd ios && pod install --repo-update
+      - name: Set up signing
+        script: xcode-project use-profiles
+      - name: Build
+        # PROJECT_BUILD_NUMBER goes up by one with every Codemagic build, as Apple requires.
+        script: flutter build ipa --release --build-number=$PROJECT_BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

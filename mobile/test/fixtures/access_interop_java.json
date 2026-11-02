@@ -1,0 +1,14 @@
+{
+  "ownerKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEB1k4Q2DypgfmV6Z8lOLzULbO9jr+hMU7nejP4cLxNXz+K5cMA2n77lDH61JZEhbbsYGlBbCrH56h4jDQov61fw==",
+  "ownerPkcs8": "MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCBF+2sUmSHUMKQsvcSn0zf/KfF/krxv9f9bhEF4XheGtw==",
+  "workKeyUrl": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF0sncL3jK6Agdmd1-vE2tOGUvWlnxiuXeZ-NDH-wh7-E1cukfvrsZBqkY3wwX0mdDDIyS62Ne7ZrMazyyFO8YA",
+  "workKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF0sncL3jK6Agdmd1+vE2tOGUvWlnxiuXeZ+NDH+wh7+E1cukfvrsZBqkY3wwX0mdDDIyS62Ne7ZrMazyyFO8YA==",
+  "request": "Daily Work Log access request from Sam Maint:\nDWL-REQ-djF8aW5zdGFsbC0xMjN8U2FtIE1haW50",
+  "requestUnicode": "DWL-REQ-djF8aW5zdGFsbC00NTZ8Sm9zw6kgw5F1w7Fleg",
+  "payload": "djF8aW5zdGFsbC0xMjN8U2FtIE1haW50fDIwMjctMTAtMTY=",
+  "approval": "Your Daily Work Log approval. Copy this whole text, then paste it on the sign-in screen:\nDWL-OK-djF8MjAyNy0xMC0xNnw.MEQCIHr2y1BR6Ot22I9_xIB-7mIxr4kS4QpL-EaHeN2Otav_AiBgipbKgzsPKZ95uN3JMXnOG3SWzfWgtJWZTQgQRhVJrg",
+  "chain": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF0sncL3jK6Agdmd1-vE2tOGUvWlnxiuXeZ-NDH-wh7-E1cukfvrsZBqkY3wwX0mdDDIyS62Ne7ZrMazyyFO8YA.MEUCIDPjzGN0SaVFz15TvS9FV1v9LePzP6DnH4v8PcztLb8KAiEA9Pz-C0gLB68XFpDZflosUQKlwUh9ltR9ypqTLaNZY_4",
+  "handover": "Daily Work Log owner handover. On your new phone, copy this whole text, open the app and tap \"Take over as the app owner\":\nDWL-OWNER-vxNfsRfhhZs2sdiFJmYEeA~rUDZ3m_q5Xy-uy-S~fF-GGXW21jVBCKDWRnTOcka3K6u9l66hTfLQF3MtoLmh1OANG1p_Qpjn2fDUwUPQ_Zrasap3hdnKiOeVRHuTcikcRF4wadY-xFQRFkYupVCEieA~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF0sncL3jK6Agdmd1-vE2tOGUvWlnxiuXeZ-NDH-wh7-E1cukfvrsZBqkY3wwX0mdDDIyS62Ne7ZrMazyyFO8YA.MEUCIDPjzGN0SaVFz15TvS9FV1v9LePzP6DnH4v8PcztLb8KAiEA9Pz-C0gLB68XFpDZflosUQKlwUh9ltR9ypqTLaNZY_4",
+  "handoverCode": "482913",
+  "workApproval": "DWL-OK-djF8MjAyNy0xMS0wMXw.MEUCIEWwY4gnM_IXxDuZlKSMeQZrbAREjw0-BPReX-fRPTXXAiEA1rJyK7eUSv0BJdwb_bngksCenQuiFvoMxrmzaTHKrfA.MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF0sncL3jK6Agdmd1-vE2tOGUvWlnxiuXeZ-NDH-wh7-E1cukfvrsZBqkY3wwX0mdDDIyS62Ne7ZrMazyyFO8YA.MEUCIDPjzGN0SaVFz15TvS9FV1v9LePzP6DnH4v8PcztLb8KAiEA9Pz-C0gLB68XFpDZflosUQKlwUh9ltR9ypqTLaNZY_4"
+}
