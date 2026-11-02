@@ -485,14 +485,18 @@ class AttRow {
 
   static AttRow fromJson(Map<String, dynamic> o) => AttRow()
     ..name = _s(o, 'name')
-    ..status = _s(o, 'status')
+    ..status = Attendance.renamed(_s(o, 'status'))
     ..comment = _s(o, 'comment');
 }
 
 /// Attendance sheet: one row per crew member with whether they're here today.
 class Attendance {
   static const yes = 'Yes', no = 'No';
-  static const statuses = [yes, no, 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up', 'Late', 'Left early'];
+  static const statuses = [yes, no, 'Called in', 'AWOL', 'Vacation', 'Off', 'Training', 'B72', 'Step up', 'Late',
+    'Left early'];
+
+  /// Answers that were renamed: D72 is now B72.
+  static String renamed(String status) => status == 'D72' ? 'B72' : status;
 
   /// ISO date this sheet is for.
   String date = '';

@@ -2570,9 +2570,10 @@
       "id": "attendance-tab",
       "title": "Attendance: who's here today",
       "group": "Tabs",
-      "summary": "Mark each person Yes, No, AWOL, Vacation, Off, Training, D72, Step up, Late or Left early, and add a comment. Remove rows, export, and Clear answers.",
+      "summary": "Mark each person Yes, No, Called in, AWOL, Vacation, Off, Training, B72, Step up, Late or Left early, and add a comment. Remove rows, export, and Clear answers.",
       "keywords": [
         "attendance",
+        "called in",
         "here",
         "present",
         "absent",
@@ -2580,7 +2581,7 @@
         "vacation",
         "off",
         "training",
-        "d72",
+        "b72",
         "step up",
         "yes",
         "no",
@@ -2615,7 +2616,7 @@
           "items": [
             "Open the project and tap \"Attendance\".",
             "Check the date at the top. To pick another day, tap \"Change\".",
-            "In each row, tap the box under \"Here?\" and pick an answer: \"Yes\", \"No\", \"AWOL\", \"Vacation\", \"Off\", \"Training\", \"D72\", \"Step up\", \"Late\" or \"Left early\".",
+            "In each row, tap the box under \"Here?\" and pick an answer: \"Yes\", \"No\", \"Called in\", \"AWOL\", \"Vacation\", \"Off\", \"Training\", \"B72\", \"Step up\", \"Late\" or \"Left early\".",
             "To add a comment for that person, tap the \"Comment\" box at the end of the row and type, for example \"Left at 1pm, doctor\".",
             "To change who is on a row, tap the name and pick someone else.",
             "Type anything else in the \"Notes\" box under the table."

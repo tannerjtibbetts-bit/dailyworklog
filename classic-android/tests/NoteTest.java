@@ -85,7 +85,8 @@ class AttendanceTest { public static void main(String[] a) throws Exception {
   NoteTest.check(sh.contains("<c r=\"A14\" t=\"inlineStr\" s=\"1\"><is><t xml:space=\"preserve\">Notes</t>") && sh.contains("Jim back Monday"), "notes");
   NoteTest.check(sh.contains("width=\"28\"") && sh.contains("<col min=\"2\" max=\"2\" width=\"14\""), "widths");
   // Comments, Late and Left early
-  NoteTest.check(String.join(",", Models.Attendance.STATUSES).equals("Yes,No,AWOL,Vacation,Off,Training,D72,Step up,Late,Left early"), "statuses");
+  NoteTest.check(String.join(",", Models.Attendance.STATUSES).equals("Yes,No,Called in,AWOL,Vacation,Off,Training,B72,Step up,Late,Left early"), "statuses");
+  NoteTest.check(Models.Attendance.AttRow.fromJson(new org.json.JSONObject().put("status", "D72")).status.equals("B72"), "D72 renamed");
   Models.Project c = new Models.Project();
   Models.Attendance.AttRow c1 = new Models.Attendance.AttRow(); c1.name = "Sam"; c1.status = "Late"; c1.comment = "In at 7:40"; c.attendance.rows.add(c1);
   Models.Attendance.AttRow c2 = new Models.Attendance.AttRow(); c2.comment = "Ask about Friday"; c.attendance.rows.add(c2);

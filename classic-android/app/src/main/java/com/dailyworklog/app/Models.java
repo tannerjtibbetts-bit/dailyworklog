@@ -595,7 +595,12 @@ public final class Models {
     /** Attendance sheet: who is here today (Yes, No, AWOL, Vacation and so on). */
     public static class Attendance {
         public static final String YES = "Yes", NO = "No", AWOL = "AWOL";
-        public static final String[] STATUSES = {"Yes", "No", "AWOL", "Vacation", "Off", "Training", "D72", "Step up", "Late", "Left early"};
+        public static final String[] STATUSES = {"Yes", "No", "Called in", "AWOL", "Vacation", "Off", "Training", "B72", "Step up", "Late", "Left early"};
+
+        /** Answers that were renamed: D72 is now B72. */
+        static String renamed(String status) {
+            return "D72".equals(status) ? "B72" : status;
+        }
         /** ISO date this sheet is for ("" until first shown). */
         public String date = "";
         public boolean include;
@@ -620,7 +625,7 @@ public final class Models {
             static AttRow fromJson(JSONObject o) {
                 AttRow r = new AttRow();
                 r.name = o.optString("name", "");
-                r.status = o.optString("status", "");
+                r.status = renamed(o.optString("status", ""));
                 r.comment = o.optString("comment", "");
                 return r;
             }

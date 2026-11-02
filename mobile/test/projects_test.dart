@@ -219,7 +219,9 @@ void main() {
       expect(q.attendance.rows[0].name, 'Al');
       expect(q.attendance.notes, 'Cy at medical');
       expect(Attendance.statuses,
-          ['Yes', 'No', 'AWOL', 'Vacation', 'Off', 'Training', 'D72', 'Step up', 'Late', 'Left early']);
+          ['Yes', 'No', 'Called in', 'AWOL', 'Vacation', 'Off', 'Training', 'B72', 'Step up', 'Late', 'Left early']);
+      // Sheets saved with the old D72 show B72.
+      expect(AttRow.fromJson({'name': 'x', 'status': 'D72'}).status, 'B72');
       expect(Fmt.longDay('2026-10-27'), 'Tue Oct 27, 2026');
     });
   });
