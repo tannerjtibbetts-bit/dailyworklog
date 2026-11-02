@@ -1,11 +1,14 @@
 // The Load securement pop-up: take photos, type a subject, tap Done, and the photos are emailed
 // straight away through Gmail. Also the Email sending setup and the "send to" address.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
 import '../data/store.dart';
+import '../import/scan_reader.dart';
+import '../services/can_number.dart';
 import '../services/load_email.dart';
 import '../services/mailer.dart';
 import '../services/photos.dart';
@@ -61,8 +64,9 @@ Future<bool> emailSetupDialog(BuildContext context) async {
               children: [
                 const Text(
                   'The app sends load securement photos from your Gmail. You need a Gmail "app password" '
-                  '(not your normal password). In your Google account: Security > 2-Step Verification '
-                  '(turn it on) > App passwords > make one named Daily Work Log, then type the 16 letters here.',
+                  '(not your normal password). Turn on 2-Step Verification in your Google account, then go to '
+                  "myaccount.google.com/apppasswords (it isn't in the menus), make one named Daily Work Log, "
+                  'and paste the 16 letters here.',
                   style: TextStyle(color: C.grey, fontSize: 15),
                 ),
                 const SizedBox(height: 12),
@@ -170,11 +174,27 @@ Future<void> sendLoadPhotos(BuildContext context, Project p, DailyLog l, Task t,
   }
 }
 
+/// Reads the sea can number off a load photo and puts it in the subject, if nothing's been typed there yet.
+Future<void> _readCanNumber(String path, TextEditingController subject, bool Function() stillThere) async {
+  if (!LoadEmail.blankSubject(subject.text)) return;
+  try {
+    final r = await ScanReader.read(path);
+    final n = CanNumber.find(r.lines);
+    if (n == null || !stillThere() || !LoadEmail.blankSubject(subject.text)) return;
+    final text = '${LoadEmail.subjectStart}$n';
+    subject.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
+  } catch (_) {
+    // couldn't read it: the subject stays as is for typing
+  }
+}
+
 /// The Load securement pop-up for field [t].
 Future<void> openLoadSecurement(BuildContext context, Project p, DailyLog l, Task t) async {
   final store = Store.instance;
   final taken = <String>[]; // photo files taken in this pop-up
-  final subject = TextEditingController(text: LoadEmail.defaultSubject(t));
+  // Typing goes after "Load securement - ".
+  final subject = TextEditingController(text: LoadEmail.defaultSubject())
+    ..selection = TextSelection.collapsed(offset: LoadEmail.defaultSubject().length);
   var setUp = await MailSettings.isSetUp();
   if (!context.mounted) return;
 
@@ -187,6 +207,9 @@ Future<void> openLoadSecurement(BuildContext context, Project p, DailyLog l, Tas
         Future<void> add(Future<List<String>> pick) async {
           final names = await pick;
           set(() => taken.addAll(names));
+          for (final n in names) {
+            unawaited(_readCanNumber(store.photoFile(n).path, subject, () => taken.contains(n)));
+          }
         }
 
         Future<void> done() async {
@@ -345,6 +368,6 @@ Future<void> openLoadSecurement(BuildContext context, Project p, DailyLog l, Tas
     toast(context, 'Load secured');
     return;
   }
-  final s = subject.text.trim().isEmpty ? LoadEmail.defaultSubject(t) : subject.text.trim();
+  final s = LoadEmail.finalSubject(subject.text);
   await sendLoadPhotos(context, p, l, t, photos, s);
 }

@@ -734,7 +734,7 @@ public class LogActivity extends AppCompatActivity {
             for (int i = 0; i < chips.length; i++) {
                 boolean on = filter == codes[i];
                 chips[i].setBackgroundResource(on ? R.drawable.bg_chip_on : R.drawable.bg_chip);
-                chips[i].setTextColor(on ? 0xFFFFFFFF : getColor(R.color.grey));
+                chips[i].setTextColor(on ? 0xFFFFFFFF : getColor(R.color.text));
             }
         }
     }

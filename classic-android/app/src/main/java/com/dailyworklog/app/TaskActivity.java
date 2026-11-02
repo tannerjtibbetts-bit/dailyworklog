@@ -56,6 +56,7 @@ public class TaskActivity extends AppCompatActivity {
     /** Load securement pop-up: photos taken in this session (file names), its subject, and the dialog. */
     private ArrayList<String> loadSession;
     private String loadSubject;
+    private EditText loadSubjectField;
     private androidx.appcompat.app.AlertDialog loadDialog;
     private LinearLayout loadThumbs;
     private boolean pendingForLoad;
@@ -412,7 +413,7 @@ public class TaskActivity extends AppCompatActivity {
     private void openLoadPopup() {
         if (loadSession == null) {
             loadSession = new ArrayList<>();
-            loadSubject = LoadEmail.defaultSubject(task);
+            loadSubject = LoadEmail.defaultSubject();
         }
         if (loadDialog != null && loadDialog.isShowing()) {
             refreshLoadThumbs();
@@ -465,6 +466,8 @@ public class TaskActivity extends AppCompatActivity {
         subject.setText(loadSubject);
         subject.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         subject.setSingleLine(true);
+        subject.setSelection(subject.getText().length());  // typing goes after "Load securement - "
+        loadSubjectField = subject;
         subject.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
@@ -549,7 +552,7 @@ public class TaskActivity extends AppCompatActivity {
         }
         task.securedPhotos.addAll(sent);
         store.save();
-        String subject = loadSubject.trim().isEmpty() ? LoadEmail.defaultSubject(task) : loadSubject.trim();
+        String subject = LoadEmail.finalSubject(loadSubject);
         String to = store.loadEmailTo;
         closeLoadPopup();
         bindSecured();
@@ -574,6 +577,7 @@ public class TaskActivity extends AppCompatActivity {
     private void closeLoadPopup() {
         loadSession = null;
         loadSubject = null;
+        loadSubjectField = null;
         loadThumbs = null;
         if (loadDialog != null) {
             loadDialog.setOnCancelListener(null);
@@ -606,6 +610,30 @@ public class TaskActivity extends AppCompatActivity {
         }
         loadSession.add(f.getName());
         openLoadPopup();
+        readCanNumber(f);
+    }
+
+    /** Reads the sea can number off a load photo and puts it in the subject, if nothing's been typed there yet. */
+    private void readCanNumber(File f) {
+        if (!LoadEmail.blankSubject(loadSubject)) return;
+        ScanReader.readLines(this, Uri.fromFile(f), new ScanReader.LinesResult() {
+            @Override
+            public void onLines(List<String> lines) {
+                String n = CanNumber.find(lines);
+                if (n == null || isFinishing() || isDestroyed()) return;
+                if (loadSession == null || !loadSession.contains(f.getName()) || !LoadEmail.blankSubject(loadSubject)) return;
+                loadSubject = LoadEmail.SUBJECT_START + n;
+                if (loadSubjectField != null) {
+                    loadSubjectField.setText(loadSubject);
+                    loadSubjectField.setSelection(loadSubject.length());
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // couldn't read it: the subject stays as is for typing
+            }
+        });
     }
 
     private TextView chip(String label, int icon) {

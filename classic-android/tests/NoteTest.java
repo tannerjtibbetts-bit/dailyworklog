@@ -533,7 +533,9 @@ class MailTest {
     Models.Project p = new Models.Project(); p.name = "B44";
     Models.DailyLog l = new Models.DailyLog(); l.date = "2026-10-30";
     Models.Task t = new Models.Task(); t.title = " ";
-    NoteTest.check(LoadEmail.defaultSubject(t).equals("Load securement - (Untitled field)"), "default subject");
+    NoteTest.check(LoadEmail.defaultSubject().equals("Load securement - ") && LoadEmail.blankSubject("Load securement - ")
+        && LoadEmail.finalSubject(" Load securement -  ").equals("Load securement") && LoadEmail.finalSubject("Load securement - 410018").equals("Load securement - 410018"), "default subject");
+    NoteTest.check("410018".equals(CanNumber.find(java.util.Arrays.asList("BPPU", "410018 5", "42U6", "30,480 KG"))) && CanNumber.find(java.util.Arrays.asList("30,480 KG")) == null, "can number");
     t.title = "Pack up sea can";
     NoteTest.check(LoadEmail.body(p, l, t, "Tanner", 0L, 3).equals("Load securement photos\nField: Pack up sea can\nChecklist: Daily work log 30/10/2026 (B44)\nSecured by Tanner, "
         + Fmt.stamp(0L) + "\n3 photos attached.\n\nSent from Daily Work Log"), "body");

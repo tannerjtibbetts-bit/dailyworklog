@@ -3,8 +3,8 @@
     <!-- Text: near-black, with blue-grey for secondary text -->
     <color name="navy">#0F1A2B</color>
     <color name="text">#111827</color>
-    <color name="grey">#55667D</color>
-    <color name="grey_light">#8FA1B8</color>
+    <color name="grey">#46566C</color>
+    <color name="grey_light">#5E6F86</color>
 
     <!-- Blues -->
     <color name="blue">#1268D6</color>
@@ -15,14 +15,14 @@
     <color name="green">#1DB04B</color>
     <color name="red">#E5484D</color>
 
-    <!-- Surfaces -->
-    <color name="bg">#EAF2FB</color>
-    <color name="bg_todo">#EAF2FB</color>
+    <!-- Surfaces: a calm mid blue behind the white cards (greys above darkened to stay readable on it) -->
+    <color name="bg">#A9C8EA</color>
+    <color name="bg_todo">#A9C8EA</color>
     <color name="card_stroke">#D3E1F1</color>
-    <!-- Field cards by area: North pale blue, South pale pink, Unzoned pale yellow -->
-    <color name="north_bg">#DDEBFC</color>
-    <color name="north_stroke">#A9CBF2</color>
-    <color name="north_accent">#5E9BE6</color>
+    <!-- Field cards by area: North sky blue, South pale pink, Unzoned pale yellow -->
+    <color name="north_bg">#D4F0FF</color>
+    <color name="north_stroke">#5DB8EE</color>
+    <color name="north_accent">#2A9BE0</color>
     <color name="south_bg">#FCE8EF</color>
     <color name="south_stroke">#F0BFD0</color>
     <color name="south_accent">#E07FA3</color>

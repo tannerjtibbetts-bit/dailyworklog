@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dailyworklog/data/models.dart';
+import 'package:dailyworklog/services/can_number.dart';
 import 'package:dailyworklog/services/load_email.dart';
 import 'package:dailyworklog/services/mailer.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,8 +136,15 @@ void main() {
     final p = Project()..name = 'B44';
     final l = DailyLog()..date = '2026-10-30';
     final t = Task()..title = 'Pack up sea can 317503';
-    expect(LoadEmail.defaultSubject(t), 'Load securement - Pack up sea can 317503');
-    expect(LoadEmail.defaultSubject(Task()), 'Load securement - (Untitled field)');
+    expect(LoadEmail.defaultSubject(), 'Load securement - ');
+    expect(LoadEmail.blankSubject('Load securement - '), true);
+    expect(LoadEmail.finalSubject(' Load securement -  '), 'Load securement');
+    expect(LoadEmail.finalSubject('Load securement - 410018'), 'Load securement - 410018');
+    expect(CanNumber.find(['BPPU', '410018 5', '42U6', '30,480 KG']), '410018');
+    expect(CanNumber.find(['30,480 KG']), isNull);
+    expect(CanNumber.find(['BPPU 410018 5']), '410018');
+    expect(CanNumber.find(['BPPU 410018', 'TCLU 317503']), isNull); // two different numbers: not sure
+    expect(CanNumber.checkDigit('CSQU305438'), 3);
     final b = LoadEmail.body(p, l, t, 'Tanner', DateTime(2026, 10, 30, 9, 5).millisecondsSinceEpoch, 3);
     expect(b, 'Load securement photos\nField: Pack up sea can 317503\nChecklist: Daily work log 30/10/2026 (B44)\n'
         'Secured by Tanner, 10/30/2026 at 9:05 AM\n3 photos attached.\n\nSent from Daily Work Log');

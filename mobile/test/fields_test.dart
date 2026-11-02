@@ -502,7 +502,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Load securement'), findsOneWidget);
       expect(find.text('To: Not set'), findsOneWidget);
-      expect(find.text('Load securement - North one'), findsOneWidget);
+      expect(find.text('Load securement - '), findsOneWidget);
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       expect(t.loadSecured, isTrue);

@@ -518,7 +518,8 @@ class _LogScreenState extends State<LogScreen> {
             onTap: () => _setFilter(f),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-              child: Text(label, style: TextStyle(fontSize: 18, color: on ? Colors.white : C.grey)),
+              child: Text(label,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: on ? Colors.white : C.text)),
             ),
           ),
         ),

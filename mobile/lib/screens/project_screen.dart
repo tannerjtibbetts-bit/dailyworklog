@@ -985,7 +985,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
                 child: Text(
                   _tabLabels[t]!,
                   maxLines: 1,
-                  style: TextStyle(fontSize: 14, color: mode == t ? Colors.white : C.text),
+                  // Every tab in bold, easier to read.
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: mode == t ? Colors.white : C.text),
                 ),
               ),
             ),

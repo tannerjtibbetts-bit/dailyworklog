@@ -196,6 +196,7 @@ public class LogsActivity extends AppCompatActivity {
     private void stylePill(TextView pill, boolean on) {
         pill.setBackgroundResource(on ? R.drawable.bg_pill_on : R.drawable.bg_pill_off);
         pill.setTextColor(on ? 0xFFFFFFFF : getColor(R.color.text));
+        pill.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);  // every tab in bold, easier to read
     }
 
     private void rebuild() {

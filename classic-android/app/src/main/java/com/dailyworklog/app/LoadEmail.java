@@ -21,9 +21,22 @@ import java.util.List;
 final class LoadEmail {
     private LoadEmail() {}
 
-    /** "Load securement - Pack up sea can 317503" */
-    static String defaultSubject(Models.Task t) {
-        return "Load securement - " + title(t);
+    /** The subject the pop-up starts with: the sea can number is typed (or read from a photo) after it. */
+    static final String SUBJECT_START = "Load securement - ";
+
+    static String defaultSubject() {
+        return SUBJECT_START;
+    }
+
+    /** Nothing typed after "Load securement - " yet. */
+    static boolean blankSubject(String s) {
+        String t = s == null ? "" : s.trim();
+        return t.isEmpty() || t.equals(SUBJECT_START.trim());
+    }
+
+    /** What's sent: as typed, or just "Load securement" if nothing was added. */
+    static String finalSubject(String s) {
+        return blankSubject(s) ? "Load securement" : s.trim();
     }
 
     private static String title(Models.Task t) {
@@ -148,8 +161,8 @@ final class LoadEmail {
         box.setPadding(pad, Ui.dp(a, 8), pad, 0);
         TextView msg = new TextView(a);
         msg.setText("The app sends load securement photos from your Gmail. You need a Gmail \"app password\" (not your normal "
-                + "password). In your Google account: Security > 2-Step Verification (turn it on) > App passwords > make one named "
-                + "Daily Work Log, then type the 16 letters here.");
+                + "password). Turn on 2-Step Verification in your Google account, then go to myaccount.google.com/apppasswords "
+                + "(it isn't in the menus), make one named Daily Work Log, and paste the 16 letters here.");
         msg.setTextSize(15);
         msg.setTextColor(a.getColor(R.color.grey));
         box.addView(msg);
@@ -161,8 +174,9 @@ final class LoadEmail {
         box.addView(from);
         EditText pass = new EditText(a);
         pass.setHint("App password");
-        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        // Single line first: setSingleLine after the password type would show the password in plain text.
         pass.setSingleLine(true);
+        pass.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         pass.setText(store.mailPassword());
         box.addView(pass);
         // Who gets the photos: remembered until changed here or with Change in the pop-up.

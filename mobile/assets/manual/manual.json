@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-10-30",
+  "updated": "2026-11-02",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -1677,7 +1677,9 @@
         "email sending",
         "change email",
         "recipient",
-        "send to"
+        "send to",
+        "sea can number",
+        "subject"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -1698,7 +1700,7 @@
             "Tap \"Take photo\". Take the picture. You come back to the pop-up with the photo added.",
             "Tap \"Take another\" as many times as you want. Or add photos with \"From gallery\". Tap the red × on a photo to drop it.",
             "Check \"To:\". The first time, tap \"Change\" and type the email that should get the photos. Separate several addresses with commas. After that every load securement email goes there automatically. You only type it again if you want to change it.",
-            "Type the \"Subject\". It becomes the email's subject line.",
+            "The \"Subject\" starts as \"Load securement - \". Type the sea can number after it. The app also tries to read the sea can number from your first photo and fills it in for you. Check it, and fix it if it's wrong. If you leave it blank, the subject is just \"Load securement\".",
             "Tap \"Done\". The field is ticked \"Load securement completed\" and you see \"Sending … photos to …\", then \"Sent … photos to …\"."
           ]
         },
@@ -1724,7 +1726,7 @@
           "items": [
             "The app sends from your Gmail. On a computer or in the Google app, open your Google Account, then \"Security\".",
             "Turn on \"2-Step Verification\" if it isn't on.",
-            "Search for \"App passwords\" in your Google Account. Make one called Daily Work Log. Google shows 16 letters.",
+            "In your phone's browser, go to myaccount.google.com/apppasswords (it isn't in Google's menus). Make one called Daily Work Log. Google shows 16 letters.",
             "In the app, tap \"Set up\" in the pop-up (or profile → \"More…\" → \"Email sending\").",
             "Type your Gmail address, the 16 letters, and who gets the photos in \"Send load securement photos to\". Tap \"Send a test\". You should get a \"Daily Work Log test\" email.",
             "Tap \"Save\"."

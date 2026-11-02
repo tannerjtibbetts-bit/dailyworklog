@@ -34,9 +34,19 @@ class MailSettings {
 class LoadEmail {
   LoadEmail._();
 
-  /// "Load securement - Pack up sea can 317503"
-  static String defaultSubject(Task t) =>
-      'Load securement - ${t.title.trim().isEmpty ? '(Untitled field)' : t.title.trim()}';
+  /// The subject the pop-up starts with: the sea can number is typed (or read from a photo) after it.
+  static const subjectStart = 'Load securement - ';
+
+  static String defaultSubject() => subjectStart;
+
+  /// Nothing typed after "Load securement - " yet.
+  static bool blankSubject(String? s) {
+    final t = (s ?? '').trim();
+    return t.isEmpty || t == subjectStart.trim();
+  }
+
+  /// What's sent: as typed, or just "Load securement" if nothing was added.
+  static String finalSubject(String? s) => blankSubject(s) ? 'Load securement' : s!.trim();
 
   static String body(Project p, DailyLog log, Task t, String me, int at, int count) {
     final title = t.title.trim().isEmpty ? '(Untitled field)' : t.title.trim();

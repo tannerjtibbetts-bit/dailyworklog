@@ -6,8 +6,8 @@ class C {
   // Text: near-black, with blue-grey for secondary text
   static const navy = Color(0xFF0F1A2B);
   static const text = Color(0xFF111827);
-  static const grey = Color(0xFF55667D);
-  static const greyLight = Color(0xFF8FA1B8);
+  static const grey = Color(0xFF46566C);
+  static const greyLight = Color(0xFF5E6F86);
   // Blues
   static const blue = Color(0xFF1268D6);
   static const deepBlue = Color(0xFF174A8B);
@@ -15,13 +15,13 @@ class C {
   // Status
   static const green = Color(0xFF1DB04B);
   static const red = Color(0xFFE5484D);
-  // Surfaces
-  static const bg = Color(0xFFEAF2FB);
+  // Surfaces: a calm mid blue behind the white cards (greys above darkened to stay readable on it)
+  static const bg = Color(0xFFA9C8EA);
   static const cardStroke = Color(0xFFD3E1F1);
-  // Field cards by area: North pale blue, South pale pink, Unzoned pale yellow
-  static const northBg = Color(0xFFDDEBFC);
-  static const northStroke = Color(0xFFA9CBF2);
-  static const northAccent = Color(0xFF5E9BE6);
+  // Field cards by area: North sky blue, South pale pink, Unzoned pale yellow
+  static const northBg = Color(0xFFD4F0FF);
+  static const northStroke = Color(0xFF5DB8EE);
+  static const northAccent = Color(0xFF2A9BE0);
   static const southBg = Color(0xFFFCE8EF);
   static const southStroke = Color(0xFFF0BFD0);
   static const southAccent = Color(0xFFE07FA3);
