@@ -739,10 +739,19 @@ public class LogActivity extends AppCompatActivity {
         }
     }
 
+    /** "Delay cleared 2:15 PM", with the date as well when it wasn't cleared on the checklist's day. */
+    private String clearedChip(long at) {
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        c.setTimeInMillis(at);
+        String day = Fmt.iso(c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH), c.get(java.util.Calendar.DAY_OF_MONTH));
+        String pattern = day.equals(log.date) ? "h:mm a" : "MM/dd h:mm a";
+        return "Delay cleared " + new java.text.SimpleDateFormat(pattern, java.util.Locale.US).format(new java.util.Date(at));
+    }
+
     private class TaskVH extends RecyclerView.ViewHolder {
         final View accent;
         final CheckCircle check;
-        final TextView title, stamp, assigned, notes, required, secured, nextShift, side, delayed;
+        final TextView title, stamp, assigned, notes, required, secured, nextShift, side, delayed, delayCleared;
         final ImageButton open, camera;
         final HorizontalScrollView photoScroll;
         final LinearLayout photos;
@@ -759,6 +768,7 @@ public class LogActivity extends AppCompatActivity {
             required = v.findViewById(R.id.required);
             secured = v.findViewById(R.id.secured);
             delayed = v.findViewById(R.id.delayedChip);
+            delayCleared = v.findViewById(R.id.delayClearedChip);
             nextShift = v.findViewById(R.id.nextShiftChip);
             side = v.findViewById(R.id.sideChip);
             open = v.findViewById(R.id.open);
@@ -800,6 +810,8 @@ public class LogActivity extends AppCompatActivity {
             secured.setVisibility(t.loadSecured ? View.VISIBLE : View.GONE);
             delayed.setVisibility(t.delayed ? View.VISIBLE : View.GONE);
             if (t.delayed) delayed.setText(t.delayLine());
+            delayCleared.setVisibility(t.delayed && t.delayCleared ? View.VISIBLE : View.GONE);
+            if (t.delayed && t.delayCleared) delayCleared.setText(clearedChip(t.delayClearedAt));
             nextShift.setVisibility(t.nextShift ? View.VISIBLE : View.GONE);
             side.setVisibility(t.side.isEmpty() ? View.GONE : View.VISIBLE);
             side.setText(Models.Task.sideLabel(t.side));

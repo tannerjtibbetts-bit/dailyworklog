@@ -31,8 +31,45 @@ List<String> newlyAssigned(List<String> before, List<String> after) => [
 /// Only people ticked for assignment texts in Manage crew get one; never yourself.
 bool getsAssignText(Project p, String name, String me) => name != me && p.assignTexts.contains(name);
 
-/// Red for delays.
-const delayRed = Color(0xFFD93B3F);
+/// Red for delays, green for a cleared delay.
+const delayRed = Color(0xFFD93B3F), clearedGreen = Color(0xFF148A3A);
+
+/// What [clearedDialog] returns for "Not cleared".
+const notCleared = '\u0000not cleared';
+
+/// "Delay cleared?" with an optional "who gave the go-ahead". Returns the name ('' if none), [notCleared], or null
+/// if cancelled. With [current] (already cleared) it can change the name or undo it.
+Future<String?> clearedDialog(BuildContext context, String? current) {
+  final ctl = TextEditingController(text: current ?? '');
+  return showDialog<String>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text(current == null ? 'Delay cleared?' : 'Delay cleared'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (current == null)
+            const Text('This stamps the time now as when the delay was cleared.',
+                style: TextStyle(color: C.grey, fontSize: 15)),
+          TextField(
+            controller: ctl,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Who gave the go-ahead? (optional)'),
+          ),
+        ],
+      ),
+      actions: [
+        if (current != null) TextButton(onPressed: () => Navigator.pop(c, notCleared), child: const Text('Not cleared')),
+        TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(c, ctl.text.trim()),
+          child: Text(current == null ? 'Cleared' : 'Save'),
+        ),
+      ],
+    ),
+  );
+}
 
 /// "Why is it delayed?" (or, with a [current] reason, change it). Returns the reason, '' for "Not delayed",
 /// or null if cancelled.
@@ -410,11 +447,7 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     final r = await delayDialog(context, t.delayed ? t.delayReason : null);
     if (r == null || !mounted) return;
     if (r.isEmpty) {
-      t
-        ..delayed = false
-        ..delayReason = ''
-        ..delayedBy = ''
-        ..delayedAt = 0;
+      t.clearDelay(); // "Not delayed": the cleared time goes too
     } else {
       if (!t.delayed) {
         t
@@ -424,6 +457,29 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
       t
         ..delayed = true
         ..delayReason = r;
+    }
+    store.save();
+    HapticFeedback.selectionClick();
+  }
+
+  /// "Delay is cleared": stamps the time now, with who gave the go-ahead (or changes / undoes it).
+  Future<void> _editCleared(Task t) async {
+    final r = await clearedDialog(context, t.delayCleared ? t.delayGoAhead : null);
+    if (r == null || !mounted) return;
+    if (r == notCleared) {
+      t
+        ..delayCleared = false
+        ..delayClearedBy = ''
+        ..delayClearedAt = 0
+        ..delayGoAhead = '';
+    } else {
+      if (!t.delayCleared) {
+        t
+          ..delayCleared = true
+          ..delayClearedBy = store.me()
+          ..delayClearedAt = nowMs();
+      }
+      t.delayGoAhead = r;
     }
     store.save();
     HapticFeedback.selectionClick();
@@ -775,6 +831,33 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
           : const Text('Tap to mark it delayed and give a reason', style: TextStyle(color: C.greyLight, fontSize: 15)),
       tick: delayRed,
     ),
+    // "Delay is cleared": only while it's delayed; time-punches the go-ahead.
+    if (t.delayed) ...[
+      _divider,
+      _tickRow(
+        t.delayCleared,
+        () => _editCleared(t),
+        'Delay is cleared',
+        t.delayCleared
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Cleared ${Fmt.stamp(t.delayClearedAt)}',
+                      style: const TextStyle(color: clearedGreen, fontSize: 16, fontWeight: FontWeight.bold)),
+                  if (t.delayGoAhead.isNotEmpty)
+                    Text('Go-ahead from ${t.delayGoAhead}', style: const TextStyle(color: C.grey, fontSize: 15)),
+                  _stamp(
+                    [t.delayClearedBy, if (t.delayLength().isNotEmpty) 'delayed ${t.delayLength()}']
+                        .where((x) => x.isNotEmpty)
+                        .join(' · '),
+                    15,
+                  ),
+                ],
+              )
+            : const Text('Tap when you get the OK to go ahead', style: TextStyle(color: C.greyLight, fontSize: 15)),
+        tick: clearedGreen,
+      ),
+    ],
     _divider,
     _tickRow(
       t.nextShift,

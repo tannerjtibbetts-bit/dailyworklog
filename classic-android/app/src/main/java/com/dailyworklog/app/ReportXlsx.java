@@ -63,8 +63,14 @@ final class ReportXlsx {
          * part of a cell, so a cell with "on hold" gets a light yellow fill.
          */
         Sheet rich(int col, String text, List<Rich.Run> runs, int style) {
+            return rich(col, text, runs, style, 0, 0);
+        }
+
+        /** Like rich, with [greenStart, greenEnd) in green bold (the "Delay cleared" words). */
+        Sheet rich(int col, String text, List<Rich.Run> runs, int style, int greenStart, int greenEnd) {
             if (Rich.hasOnHold(text)) style = style == CELL ? CELL_HOLD : NORMAL_HOLD;
-            List<Rich.Segment> segs = Rich.segments(text, runs, true);
+            List<Rich.Segment> segs = Rich.overlay(text, Rich.segments(text, runs, true), greenStart, greenEnd,
+                    new Rich.Style(true, false, "green", false));
             boolean plain = true;
             for (Rich.Segment x : segs) if (!x.style.isPlain()) plain = false;
             if (plain) return text(col, text, style);
@@ -123,7 +129,7 @@ final class ReportXlsx {
                 s.row();
                 s.text(0, g.getKey(), AREA);
                 s.rich(1, t.title, null, CELL);
-                s.text(2, t.done ? "Done" : t.delayed ? "Delayed" : "Not done", t.done ? GREEN : RED);
+                s.text(2, t.done ? "Done" : t.delayOpen() ? "Delayed" : "Not done", t.done ? GREEN : RED);
                 s.text(3, t.done ? t.completedBy : "", CELL);
                 s.text(4, t.done && t.completedAt > 0 ? Fmt.stamp(t.completedAt) : "", CELL);
                 s.text(5, Fmt.join(t.assignees), CELL);
@@ -140,9 +146,17 @@ final class ReportXlsx {
                 s.text(7, t.nextShift ? "Yes" : "", NUM);
                 String notes = t.notes.trim();
                 List<Rich.Run> runs = notes.equals(t.notes) ? t.notesStyle : null;
+                int greenStart = 0, greenEnd = 0;
                 if (t.delayed) {
-                    // "Delayed: reason" first; the notes' formatting moves along after it.
-                    String prefix = notes.isEmpty() ? t.delayLine() : t.delayLine() + "\n";
+                    // "Delayed: reason" (and when it was cleared) first; the notes' formatting moves along after it.
+                    String prefix = t.delayLine();
+                    if (t.delayCleared) {
+                        greenStart = prefix.length() + 1;
+                        greenEnd = greenStart + "Delay cleared".length();
+                        prefix += "\nDelay cleared: " + Fmt.stamp(t.delayClearedAt)
+                                + (t.delayGoAhead.isEmpty() ? "" : " (go-ahead from " + t.delayGoAhead + ")");
+                    }
+                    if (!notes.isEmpty()) prefix += "\n";
                     List<Rich.Run> moved = new java.util.ArrayList<>();
                     if (runs != null && !notes.isEmpty()) {
                         for (Rich.Run r : runs) moved.add(new Rich.Run(r.start + prefix.length(), r.end + prefix.length(), r.style));
@@ -150,7 +164,7 @@ final class ReportXlsx {
                     notes = prefix + notes;
                     runs = moved;
                 }
-                s.rich(8, notes, runs, CELL);
+                s.rich(8, notes, runs, CELL, greenStart, greenEnd);
                 if (!t.photos.isEmpty()) s.num(9, String.valueOf(t.photos.size()), NUM);
                 else if (t.photosRequired) s.text(9, "Required, none", RED);
                 else s.text(9, "", NUM);

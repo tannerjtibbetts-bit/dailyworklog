@@ -141,6 +141,21 @@
                 android:visibility="gone" />
 
             <TextView
+                android:id="@+id/delayClearedChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_chip_green"
+                android:paddingStart="14dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="6dp"
+                android:singleLine="true"
+                android:textColor="#148A3A"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/sideChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

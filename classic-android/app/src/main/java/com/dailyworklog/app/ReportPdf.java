@@ -385,6 +385,7 @@ final class ReportPdf {
         if (t.done) text("Completed by " + t.completedBy + ", " + Fmt.stamp(t.completedAt), small, x, w, 2);
         else text("Not completed", smallRed, x, w, 2);
         if (t.delayed) text(delayLine(t), small, x, w, 2);
+        if (t.delayed && t.delayCleared) text(clearedLine(t), small, x, w, 2);
         if (t.loadSecured) {
             String who = t.securedBy.isEmpty() ? "" : " by " + t.securedBy + ", " + Fmt.stamp(t.securedAt);
             text("\u2713 Load securement completed" + who, smallGreen, x, w, 2);
@@ -480,6 +481,16 @@ final class ReportPdf {
         b.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, b.length(), f);
         b.setSpan(new android.text.style.ForegroundColorSpan(0xFFD93B3F), 0, b.length(), f);
         if (!t.delayedBy.isEmpty()) b.append(" (").append(t.delayedBy).append(", ").append(Fmt.stamp(t.delayedAt)).append(")");
+        return b;
+    }
+
+    /** "Delay cleared: when" in green bold, then " (who, go-ahead from X, delayed 2 h)" in the normal grey. */
+    private static CharSequence clearedLine(Models.Task t) {
+        android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder("Delay cleared: " + Fmt.stamp(t.delayClearedAt));
+        int f = android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE;
+        b.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, b.length(), f);
+        b.setSpan(new android.text.style.ForegroundColorSpan(0xFF148A3A), 0, b.length(), f);
+        b.append(t.clearedDetails());
         return b;
     }
 

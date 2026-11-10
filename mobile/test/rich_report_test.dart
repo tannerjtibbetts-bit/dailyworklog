@@ -70,11 +70,41 @@ void main() {
     expect(sheet, contains('<t xml:space="preserve">Delayed</t></r><r><rPr><rFont val="Calibri"/><color rgb="FF000000"/><sz val="11"/></rPr><t xml:space="preserve">: Waiting on crane\nCrane </t>'));
     // The formatting on "straps" moved along with the notes.
     expect(sheet, contains('<color rgb="FFE8730C"/><sz val="11"/></rPr><t xml:space="preserve">straps</t>'));
+    // Cleared 2 h 15 min later, with the go-ahead.
+    t
+      ..delayCleared = true
+      ..delayClearedBy = 'Tanner'
+      ..delayClearedAt = day + (2 * 60 + 15) * 60000
+      ..delayGoAhead = 'Lee';
+    expect(t.delayLength(), '2 h 15 min');
+    final doc2 = _unzip(ReportDocx.write(p, log, 'Tester', day, '/nowhere'))['word/document.xml']!;
+    expect(doc2, contains('<w:b/><w:color w:val="148A3A"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve">Delay cleared: 11/10/2026 at 9:45 AM</w:t>'));
+    expect(doc2, contains(' (Tanner, go-ahead from Lee, </w:t>'));
+    expect(doc2, contains('<w:t xml:space="preserve"> 2 h 15 min)</w:t>'));
+    final sheet2 = _unzip(ReportXlsx.write(p, log, 'Tester', day))['xl/worksheets/sheet1.xml']!;
+    expect(sheet2, contains('<c r="C8" s="7" t="inlineStr"><is><t xml:space="preserve">Not done</t>'));
+    expect(sheet2, contains('<b/><color rgb="FF148A3A"/><sz val="11"/></rPr><t xml:space="preserve">Delay cleared</t>'));
+    expect(sheet2, contains('<t xml:space="preserve">: 11/10/2026 at 9:45 AM (go-ahead from Lee)\nCrane </t>'));
+    expect(t.carryCopy().delayed, isFalse); // a cleared delay doesn't carry over
     final again = Task.fromJson(jsonDecode(jsonEncode(t.toJson())) as Map<String, dynamic>);
+    expect([again.delayCleared, again.delayClearedBy, again.delayClearedAt, again.delayGoAhead],
+        [true, 'Tanner', day + 8100000, 'Lee']);
     expect([again.delayed, again.delayReason, again.delayedBy, again.delayedAt], [true, 'Waiting on crane', 'Sam', day]);
-    expect(t.carryCopy().delayReason, 'Waiting on crane');
+    expect(t.carryCopy().delayCleared, isFalse);
     expect(t.freshCopy().delayed, isFalse);
     expect(Task.fromJson({'title': 'old'}).delayed, isFalse);
+  });
+
+  test('how long a delay lasted', () {
+    Task at(int mins) => Task()
+      ..delayedAt = 1000000
+      ..delayClearedAt = 1000000 + mins * 60000;
+    expect(at(45).delayLength(), '45 min');
+    expect(at(120).delayLength(), '2 h');
+    expect(at(135).delayLength(), '2 h 15 min');
+    expect(at(27 * 60 + 5).delayLength(), '1 day 3 h');
+    expect(at(0).delayLength(), 'under a minute');
+    expect(Task().delayLength(), '');
   });
 
   test('PDF builds with the formatted text', () async {

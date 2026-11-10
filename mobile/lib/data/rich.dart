@@ -81,6 +81,21 @@ class Segment {
 class Rich {
   Rich._();
 
+  /// "Delay cleared: when (by, go-ahead from X, delayed 2 h)" for reports, with "Delay cleared: when" green and bold.
+  /// Green is only used by the app itself (not one of the colours a person can pick).
+  static (String, List<Run>) clearedLine(String when, String by, String goAhead, String length) {
+    final head = 'Delay cleared: $when';
+    final extra = [
+      by,
+      if (goAhead.isNotEmpty) 'go-ahead from $goAhead',
+      if (length.isNotEmpty) 'delayed $length',
+    ].where((x) => x.isNotEmpty).join(', ');
+    return (
+      extra.isEmpty ? head : '$head ($extra)',
+      [Run(0, head.length, const RichStyle(bold: true, colour: 'green'))],
+    );
+  }
+
   /// "Delayed: reason (by, when)" for reports, with the "Delayed: reason" part red and bold.
   static (String, List<Run>) delayLine(String reason, String by, String when) {
     final head = 'Delayed: $reason';
@@ -153,7 +168,8 @@ class Rich {
     if (keywords) {
       for (final m in _delay.allMatches(text)) {
         for (var i = m.start; i < m.end; i++) {
-          st[i] = st[i].copyWith(bold: true, colour: 'red');
+          // The app's own green ("Delay cleared") stays green.
+          if (st[i].colour != 'green') st[i] = st[i].copyWith(bold: true, colour: 'red');
         }
       }
       for (final m in _onHold.allMatches(text)) {

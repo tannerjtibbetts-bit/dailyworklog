@@ -89,6 +89,35 @@ class Task {
   String delayedBy = '';
   int delayedAt = 0;
 
+  /// "Delay is cleared": when the OK to go ahead came, who ticked it, and who gave the go-ahead.
+  bool delayCleared = false;
+  String delayClearedBy = '';
+  int delayClearedAt = 0;
+  String delayGoAhead = '';
+
+  /// How long the delay lasted: "45 min", "2 h 15 min", "1 day 3 h" ('' if not known).
+  String delayLength() {
+    if (delayedAt == 0 || delayClearedAt == 0 || delayClearedAt < delayedAt) return '';
+    final mins = (delayClearedAt - delayedAt) ~/ 60000;
+    if (mins < 1) return 'under a minute';
+    final days = mins ~/ (24 * 60), hours = (mins % (24 * 60)) ~/ 60, m = mins % 60;
+    if (days > 0) return [Fmt.plural(days, 'day', 'days'), if (hours > 0) '$hours h'].join(' ');
+    if (hours > 0) return m > 0 ? '$hours h $m min' : '$hours h';
+    return '$m min';
+  }
+
+  /// Takes the delay off completely (and its cleared time).
+  void clearDelay() {
+    delayed = false;
+    delayReason = '';
+    delayedBy = '';
+    delayedAt = 0;
+    delayCleared = false;
+    delayClearedBy = '';
+    delayClearedAt = 0;
+    delayGoAhead = '';
+  }
+
   /// south, north, unzoned or '' (not set). Reports list South, then North, then Unzoned.
   String side = '';
   List<String> assignees = [];
@@ -153,14 +182,20 @@ class Task {
     ..doneTextName = doneTextName
     ..doneTextPhone = doneTextPhone;
 
-  /// Unfinished field rolled into the next day: keeps the notes too.
-  Task carryCopy() => freshCopy()
-    ..notes = notes
-    ..notesStyle = List.of(notesStyle)
-    ..delayed = delayed
-    ..delayReason = delayReason
-    ..delayedBy = delayedBy
-    ..delayedAt = delayedAt;
+  /// Unfinished field rolled into the next day: keeps the notes, and the delay while it isn't cleared.
+  Task carryCopy() {
+    final c = freshCopy()
+      ..notes = notes
+      ..notesStyle = List.of(notesStyle);
+    if (delayed && !delayCleared) {
+      c
+        ..delayed = true
+        ..delayReason = delayReason
+        ..delayedBy = delayedBy
+        ..delayedAt = delayedAt;
+    }
+    return c;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -181,6 +216,10 @@ class Task {
         'delayReason': delayReason,
         'delayedBy': delayedBy,
         'delayedAt': delayedAt,
+        'delayCleared': delayCleared,
+        'delayClearedBy': delayClearedBy,
+        'delayClearedAt': delayClearedAt,
+        'delayGoAhead': delayGoAhead,
         'side': side,
         'assignees': assignees,
         'photos': [for (final p in photos) p.toJson()],
@@ -209,6 +248,10 @@ class Task {
     ..delayReason = _s(o, 'delayReason')
     ..delayedBy = _s(o, 'delayedBy')
     ..delayedAt = _i(o, 'delayedAt')
+    ..delayCleared = _b(o, 'delayCleared')
+    ..delayClearedBy = _s(o, 'delayClearedBy')
+    ..delayClearedAt = _i(o, 'delayClearedAt')
+    ..delayGoAhead = _s(o, 'delayGoAhead')
     ..side = _s(o, 'side')
     ..assignees = _strings(o['assignees'])
     ..photos = _objects(o['photos'], Photo.fromJson)

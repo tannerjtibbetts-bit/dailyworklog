@@ -24,7 +24,7 @@ final class Rich {
     static final List<String> COLOURS = Collections.unmodifiableList(Arrays.asList("", "yellow", "orange", "red"));
 
     /** Screen / report colours (RGB, no alpha). */
-    static final int YELLOW = 0xC99A00, ORANGE = 0xE8730C, RED = 0xD93B3F, HIGHLIGHT = 0xFFE45C, BLACK = 0x111827;
+    static final int YELLOW = 0xC99A00, ORANGE = 0xE8730C, RED = 0xD93B3F, HIGHLIGHT = 0xFFE45C, BLACK = 0x111827, GREEN = 0x148A3A;
 
     /** RGB of a typing colour, or -1 for "" (normal text colour). */
     static int rgb(String colour) {
@@ -32,6 +32,7 @@ final class Rich {
             case "yellow": return YELLOW;
             case "orange": return ORANGE;
             case "red": return RED;
+            case "green": return GREEN;  // not a user colour: only for report text like "Delay cleared"
             default: return -1;
         }
     }
@@ -240,6 +241,23 @@ final class Rich {
     /** Keywords only (titles and other plain text). */
     static List<Segment> segments(String text) {
         return segments(text, Collections.emptyList(), true);
+    }
+
+    /** Segments with [start, end) forced to style (on top of formatting and keywords), re-merged. */
+    static List<Segment> overlay(String text, List<Segment> segs, int start, int end, Style style) {
+        if (start >= end) return segs;
+        Style[] st = new Style[text.length()];
+        for (Segment x : segs) for (int i = x.start; i < x.end(); i++) st[i] = x.style;
+        for (int i = Math.max(0, start); i < Math.min(end, text.length()); i++) st[i] = style;
+        List<Segment> out = new ArrayList<>();
+        int i = 0;
+        while (i < text.length()) {
+            int j = i + 1;
+            while (j < text.length() && st[j].equals(st[i])) j++;
+            out.add(new Segment(text.substring(i, j), i, st[i]));
+            i = j;
+        }
+        return out;
     }
 
     /** True if "delay" or "on hold" appears (so the text needs rich output at all). */

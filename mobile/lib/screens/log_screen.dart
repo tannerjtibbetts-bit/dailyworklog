@@ -19,6 +19,12 @@ import 'assign_sheet.dart';
 import 'field_widgets.dart';
 import 'task_screen.dart';
 
+/// When a delay was cleared: just the time if it was on the checklist's day, otherwise with the date.
+String clearedTime(Task t, String logIso) {
+  final d = DateTime.fromMillisecondsSinceEpoch(t.delayClearedAt);
+  return DateFormat(Fmt.isoOf(d) == logIso ? 'h:mm a' : 'MM/dd h:mm a', 'en_US').format(d);
+}
+
 enum FieldFilter { none, me, incomplete, complete, unassigned }
 
 bool matchesFilter(Task t, FieldFilter f, String me) {
@@ -719,6 +725,15 @@ class _LogScreenState extends State<LogScreen> {
                                           bg: const Color(0xFFFDECEC),
                                           fg: const Color(0xFFD93B3F),
                                           border: const Color(0xFFF4C4C5),
+                                        ),
+                                      ),
+                                    if (t.delayed && t.delayCleared)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: FieldChip(
+                                          'Delay cleared ${clearedTime(t, log?.date ?? '')}',
+                                          bg: const Color(0xFFE6F6EC),
+                                          fg: const Color(0xFF148A3A),
                                         ),
                                       ),
                                     if (t.loadSecured)

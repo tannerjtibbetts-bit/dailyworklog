@@ -285,6 +285,10 @@ class ReportDocx {
     if (t.delayed) {
       final (line, runs) = Rich.delayLine(t.delayReason, t.delayedBy, Fmt.stamp(t.delayedAt));
       _richPara(line, runs, false, 9, _grey, 40, true);
+      if (t.delayCleared) {
+        final (cl, cr) = Rich.clearedLine(Fmt.stamp(t.delayClearedAt), t.delayClearedBy, t.delayGoAhead, t.delayLength());
+        _richPara(cl, cr, false, 9, _grey, 40, true);
+      }
     }
     if (t.loadSecured) {
       _body.write('<w:p><w:pPr><w:spacing w:before="0" w:after="40"/><w:ind w:left="440"/></w:pPr>');
@@ -397,7 +401,7 @@ class ReportDocx {
     }
   }
 
-  static const _richColours = {'yellow': 'C99A00', 'orange': 'E8730C', 'red': 'D93B3F'};
+  static const _richColours = {'yellow': 'C99A00', 'orange': 'E8730C', 'red': 'D93B3F', 'green': '148A3A'};
 
   /// A paragraph of formatted text, like [_para].
   void _richPara(String text, List<Run> runs, bool bold, int pt, String color, int afterTwips, bool indent) {

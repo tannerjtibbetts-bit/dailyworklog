@@ -48,6 +48,9 @@ class ProjectSearch {
         if (has(t.title)) add('Field: $title');
         if (has(t.notes)) add('Notes on $title: ${snippet(t.notes, q)}');
         if (t.delayed && has('Delayed: ${t.delayReason}')) add('$title: Delayed: ${t.delayReason}');
+        if (t.delayed && t.delayCleared && has('Delay cleared')) {
+          add('$title: Delay cleared ${Fmt.stamp(t.delayClearedAt)}');
+        }
         for (final n in [...t.assignees, t.completedBy, t.securedBy]) {
           if (n.isNotEmpty && has(n)) {
             add('$title: $n');

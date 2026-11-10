@@ -1748,9 +1748,9 @@
     },
     {
       "id": "task-delayed",
-      "title": "Marking a task as delayed",
+      "title": "Marking a task as delayed, and when it's cleared",
       "group": "Fields",
-      "summary": "Tick \"Task is delayed\" on a field and give the reason. It shows in red on the checklist and in the reports.",
+      "summary": "Tick \"Task is delayed\" and give the reason, then \"Delay is cleared\" when you get the OK. Both show in red and green on the checklist and in the reports.",
       "keywords": [
         "delay",
         "delayed",
@@ -1759,7 +1759,14 @@
         "waiting",
         "hold up",
         "task is delayed",
-        "not delayed"
+        "not delayed",
+        "cleared",
+        "delay cleared",
+        "go-ahead",
+        "go ahead",
+        "ok",
+        "time punch",
+        "how long"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -1791,6 +1798,26 @@
           ]
         },
         {
+          "type": "text",
+          "text": "When the delay is over and you get the OK to go ahead:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the field. Under \"Task is delayed\" there's now \"Delay is cleared\".",
+            "Tap \"Delay is cleared\". If you like, type who gave the go-ahead.",
+            "Tap \"Cleared\". The box turns green and shows the time it was cleared, who gave the go-ahead, and how long it was delayed, for example \"delayed 2 h 15 min\"."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "To change the go-ahead name, tap \"Delay is cleared\" again and tap \"Save\". The time stays the same.",
+            "If you ticked it by mistake, tap it and tap \"Not cleared\".",
+            "\"Not delayed\" on \"Task is delayed\" takes off both the delay and the cleared time."
+          ]
+        },
+        {
           "type": "image",
           "file": "delay_log.png",
           "caption": "The red \"Delayed\" label on the checklist"
@@ -1802,11 +1829,11 @@
         {
           "type": "bullets",
           "items": [
-            "On the checklist, the field gets a red \"Delayed: …\" label with the reason.",
-            "In the PDF and Word reports, a red \"Delayed: …\" line goes under the field, with who marked it and when.",
-            "In the Excel report, the Status says \"Delayed\" and the Notes start with \"Delayed: …\".",
-            "If the field carries over to the next shift, it stays delayed until you untick it.",
-            "Searching \"delayed\" on the Checklists tab finds every day with a delayed task."
+            "On the checklist, the field gets a red \"Delayed: …\" label with the reason, and a green \"Delay cleared …\" label with the time once it's cleared.",
+            "In the PDF and Word reports, a red \"Delayed: …\" line goes under the field, and a green \"Delay cleared: …\" line with the time, who gave the go-ahead and how long it was delayed.",
+            "In the Excel report, the Status says \"Delayed\" until it's cleared, and the Notes start with \"Delayed: …\" and \"Delay cleared: …\".",
+            "If the field carries over to the next shift, an open delay goes with it. A cleared delay doesn't.",
+            "Searching \"delayed\" or \"cleared\" on the Checklists tab finds those days."
           ]
         },
         {

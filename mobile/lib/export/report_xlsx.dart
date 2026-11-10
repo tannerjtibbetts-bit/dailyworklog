@@ -45,7 +45,7 @@ class ReportXlsx {
           _rich(t.title, const [], _cell),
           t.done
               ? _c('Done', _green)
-              : t.delayed
+              : t.delayed && !t.delayCleared
               ? _c('Delayed', _red)
               : _c('Not done', _red),
           _c(t.done ? t.completedBy : '', _cell),
@@ -149,8 +149,17 @@ class ReportXlsx {
     final notes = t.notes.trim();
     final runs = notes == t.notes ? t.notesStyle : const <Run>[];
     if (!t.delayed) return _rich(notes, runs, _cell);
-    final prefix = notes.isEmpty ? 'Delayed: ${t.delayReason}' : 'Delayed: ${t.delayReason}\n';
+    var head = 'Delayed: ${t.delayReason}';
+    final extra = <Run>[];
+    if (t.delayCleared) {
+      final cleared = 'Delay cleared: ${Fmt.stamp(t.delayClearedAt)}';
+      // Just the words "Delay cleared" in green, like the classic app.
+      extra.add(Run(head.length + 1, head.length + 1 + 'Delay cleared'.length, const RichStyle(bold: true, colour: 'green')));
+      head = '$head\n$cleared${t.delayGoAhead.isEmpty ? '' : ' (go-ahead from ${t.delayGoAhead})'}';
+    }
+    final prefix = notes.isEmpty ? head : '$head\n';
     return _rich('$prefix$notes', [
+      ...extra,
       for (final r in runs) Run(r.start + prefix.length, r.end + prefix.length, r.style),
     ], _cell);
   }
@@ -271,7 +280,7 @@ class _Cell {
   const _Cell(this.text, this.style, {this.number = false, this.rich = false, this.runs = const []});
 }
 
-const _xlsxColours = {'yellow': 'FFC99A00', 'orange': 'FFE8730C', 'red': 'FFD93B3F'};
+const _xlsxColours = {'yellow': 'FFC99A00', 'orange': 'FFE8730C', 'red': 'FFD93B3F', 'green': 'FF148A3A'};
 
 /// Builds the sheet's rows, from column A.
 class _Sheet {

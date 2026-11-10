@@ -9,6 +9,7 @@ const richColourValues = {
   'yellow': Color(0xFFC99A00),
   'orange': Color(0xFFE8730C),
   'red': Color(0xFFD93B3F),
+  'green': Color(0xFF148A3A), // only used by the app (Delay cleared), not offered to pick
 };
 const richHighlight = Color(0xFFFFE45C);
 

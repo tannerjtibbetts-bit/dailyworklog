@@ -557,7 +557,24 @@ void main() {
       expect(t.delayReason, 'Waiting on crane');
       expect(t.delayedBy, 'Tanner');
       expect(find.text('Waiting on crane'), findsOneWidget);
+      // Delay is cleared: stamps the time, with who gave the go-ahead.
+      await tester.ensureVisible(find.text('Delay is cleared'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delay is cleared'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delay cleared?'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Who gave the go-ahead? (optional)'), 'Lee Super');
+      await tester.tap(find.text('Cleared'));
+      await tester.pumpAndSettle();
+      expect(t.delayCleared, isTrue);
+      expect(t.delayGoAhead, 'Lee Super');
+      expect(t.delayClearedBy, 'Tanner');
+      expect(find.text('Go-ahead from Lee Super'), findsOneWidget);
+      expect(t.delayed, isTrue); // the delay stays on record
+
       // Tap again: it can be taken off.
+      await tester.ensureVisible(find.text('Task is delayed'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Task is delayed'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Task is delayed'));
@@ -566,6 +583,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(t.delayed, isFalse);
       expect(t.delayReason, '');
+      expect(t.delayCleared, isFalse); // Not delayed takes the cleared time off too
+      expect(find.text('Delay is cleared'), findsNothing);
 
       await tester.enterText(find.byType(TextField).first, 'North one, bay 2');
       await tester.pumpAndSettle();

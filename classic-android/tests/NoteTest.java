@@ -693,4 +693,66 @@ class DelayTest {
     NoteTest.check(lines.equals(java.util.Arrays.asList("Lift pump: Delayed: Waiting on crane")), "search delayed " + lines);
     t.delayed = false;
     NoteTest.check(ProjectSearch.run(p, "crane").isEmpty(), "not delayed: no line");
-    System.out.println("DELAY PASS"); } }
+    cleared(p, l, t);
+    System.out.println("DELAY PASS"); }
+
+  static void cleared(Models.Project p, Models.DailyLog l, Models.Task t) throws Exception {
+    long h = 3600000L, m = 60000L, t0 = 1_700_000_000_000L;
+    t.delayed = true; t.delayReason = "Waiting on crane"; t.delayedBy = "Sam"; t.delayedAt = t0;
+    t.delayCleared = true; t.delayClearedBy = "Jo"; t.delayClearedAt = t0 + 2 * h + 15 * m; t.delayGoAhead = "Rick";
+    // JSON round trip and old data
+    Models.Task q = Models.Task.fromJson(t.toJson());
+    NoteTest.check(q.delayCleared && q.delayClearedBy.equals("Jo") && q.delayClearedAt == t.delayClearedAt && q.delayGoAhead.equals("Rick") && q.delayed, "cleared saved, delay kept");
+    org.json.JSONObject old = t.toJson(); for (String k : new String[]{"delayCleared", "delayClearedBy", "delayClearedAt", "delayGoAhead"}) old.remove(k);
+    Models.Task o = Models.Task.fromJson(old);
+    NoteTest.check(!o.delayCleared && o.delayClearedBy.isEmpty() && o.delayClearedAt == 0 && o.delayGoAhead.isEmpty() && o.delayed, "old data: not cleared");
+    // carryCopy: a cleared delay doesn't carry; an open one does (without cleared fields)
+    Models.Task c = t.carryCopy();
+    NoteTest.check(!c.delayed && c.delayReason.isEmpty() && !c.delayCleared && c.delayClearedAt == 0 && c.delayGoAhead.isEmpty(), "carryCopy drops a cleared delay");
+    Models.Task f = t.freshCopy();
+    NoteTest.check(!f.delayed && !f.delayCleared && f.delayGoAhead.isEmpty(), "freshCopy: none");
+    // Not delayed clears everything
+    Models.Task n = Models.Task.fromJson(t.toJson()); n.clearDelay();
+    NoteTest.check(!n.delayed && n.delayReason.isEmpty() && n.delayedBy.isEmpty() && n.delayedAt == 0 && !n.delayCleared && n.delayClearedBy.isEmpty()
+        && n.delayClearedAt == 0 && n.delayGoAhead.isEmpty(), "Not delayed clears all");
+    // delayLength
+    Models.Task d = new Models.Task(); d.delayedAt = t0;
+    String[][] cases = {{"45", "45 min"}, {"120", "2 h"}, {"135", "2 h 15 min"}, {"1620", "1 day 3 h"}, {"1", "1 min"}};
+    for (String[] cs : cases) { d.delayClearedAt = t0 + Long.parseLong(cs[0]) * m + 30000; RichTest.eq(Models.Task.delayLength(d), cs[1], "delayLength " + cs[1]); }
+    d.delayClearedAt = t0 + 59000; RichTest.eq(Models.Task.delayLength(d), "under a minute", "delayLength under a minute");
+    d.delayClearedAt = 0; RichTest.eq(Models.Task.delayLength(d), "", "delayLength empty: not cleared");
+    d.delayClearedAt = t0 - m; RichTest.eq(Models.Task.delayLength(d), "", "delayLength empty: cleared before delayed");
+    d.delayedAt = 0; d.delayClearedAt = t0; RichTest.eq(Models.Task.delayLength(d), "", "delayLength empty: no delay time");
+    d.delayedAt = t0; d.delayClearedAt = t0 + 50 * h; RichTest.eq(Models.Task.delayLength(d), "2 days 2 h", "delayLength 2 days");
+    RichTest.eq(t.clearedDetails(), " (Jo, go-ahead from Rick, delayed 2 h 15 min)", "cleared details");
+    // Excel: status Not done once cleared; notes prefix with cleared line; green bold words; runs shifted
+    t.notes = "Bring slings"; t.notesStyle = java.util.Arrays.asList(new Rich.Run(6, 12, RichTest.B));
+    String s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains("<c r=\"C8\" t=\"inlineStr\" s=\"7\">" + ReportXlsxTest.t("Not done")), "xlsx cleared: Not done");
+    String r = "<r><rPr><rFont val=\"Calibri\"/>", st = Fmt.stamp(t.delayClearedAt);
+    String want = "<c r=\"I8\" t=\"inlineStr\" s=\"5\"><is>" + r + "<b/><color rgb=\"FFD93B3F\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">Delayed</t></r>"
+        + r + "<color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">: Waiting on crane\n</t></r>"
+        + r + "<b/><color rgb=\"FF148A3A\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">Delay cleared</t></r>"
+        + r + "<color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">: " + st + " (go-ahead from Rick)\nBring </t></r>"
+        + r + "<b/><color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">slings</t></r></is></c>";
+    if (!s.contains(want)) System.out.println(s.substring(s.indexOf("<c r=\"I8\""), s.indexOf("<c r=\"J8\"")));
+    NoteTest.check(s.contains(want), "xlsx notes: delayed + cleared prefix, green words, runs shifted");
+    t.delayGoAhead = ""; t.notes = "";
+    s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains("<t xml:space=\"preserve\">: " + st + "</t></r></is></c>"), "xlsx no go-ahead, no notes");
+    t.delayGoAhead = "Rick";
+    // Word
+    String doc = docx(p, l);
+    NoteTest.check(doc.contains("<w:b/><w:color w:val=\"148A3A\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr><w:t xml:space=\"preserve\">Delay cleared: " + st + "</w:t></w:r>"
+        + "<w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\" w:cs=\"Calibri\"/><w:color w:val=\"6B7685\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr><w:t xml:space=\"preserve\"> (Jo, go-ahead from Rick, delayed 2 h 15 min)</w:t>"), "docx cleared line");
+    t.delayClearedBy = ""; t.delayGoAhead = ""; t.delayClearedAt = 0;
+    NoteTest.check(docx(p, l).contains(">Delay cleared: " + Fmt.stamp(0) + "</w:t></w:r></w:p>"), "docx cleared: no bracket when nothing to add");
+    t.delayClearedAt = t0 + 2 * h;
+    // Search
+    java.util.List<String> lines = ProjectSearch.run(p, "cleared").days.get(0).lines;
+    RichTest.eq(lines, java.util.Arrays.asList("Lift pump: Delay cleared " + Fmt.stamp(t.delayClearedAt)), "search cleared");
+    lines = ProjectSearch.run(p, "delay").days.get(0).lines;
+    RichTest.eq(lines, java.util.Arrays.asList("Lift pump: Delayed: Waiting on crane", "Lift pump: Delay cleared " + Fmt.stamp(t.delayClearedAt)), "search delay: both lines");
+    t.delayCleared = false;
+    NoteTest.check(ProjectSearch.run(p, "cleared").isEmpty(), "not cleared: no line");
+  } }

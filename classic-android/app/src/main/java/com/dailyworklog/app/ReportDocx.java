@@ -268,6 +268,13 @@ final class ReportDocx {
             run(t.delayLine(), true, 9, RED, null);
             if (!t.delayedBy.isEmpty()) run(" (" + t.delayedBy + ", " + Fmt.stamp(t.delayedAt) + ")", false, 9, GREY, null);
             body.append("</w:p>");
+            if (t.delayCleared) {
+                body.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"40\"/><w:ind w:left=\"440\"/></w:pPr>");
+                run("Delay cleared: " + Fmt.stamp(t.delayClearedAt), true, 9, "148A3A", null);
+                String more = t.clearedDetails();
+                if (!more.isEmpty()) run(more, false, 9, GREY, null);
+                body.append("</w:p>");
+            }
         }
         if (t.loadSecured) {
             body.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"40\"/><w:ind w:left=\"440\"/></w:pPr>");

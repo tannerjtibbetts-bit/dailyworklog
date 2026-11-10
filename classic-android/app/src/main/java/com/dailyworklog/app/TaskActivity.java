@@ -160,6 +160,7 @@ public class TaskActivity extends AppCompatActivity {
 
         findViewById(R.id.securedRow).setOnClickListener(v -> openLoadPopup());
         findViewById(R.id.delayedRow).setOnClickListener(v -> editDelay());
+        findViewById(R.id.delayClearedRow).setOnClickListener(v -> editDelayCleared());
         findViewById(R.id.nextShiftRow).setOnClickListener(v -> {
             task.nextShift = !task.nextShift;
             nextShift.setChecked(task.nextShift);
@@ -385,6 +386,75 @@ public class TaskActivity extends AppCompatActivity {
             reason.setTypeface(null, android.graphics.Typeface.NORMAL);
             stampView.setVisibility(View.GONE);
         }
+        bindDelayCleared();
+    }
+
+    /** "Delay is cleared": only shown while the field is delayed. */
+    private void bindDelayCleared() {
+        findViewById(R.id.delayClearedRow).setVisibility(task.delayed ? View.VISIBLE : View.GONE);
+        CheckBox box = findViewById(R.id.delayCleared);
+        box.setChecked(task.delayCleared);
+        int green = 0xFF148A3A;
+        box.setButtonTintList(new android.content.res.ColorStateList(
+                new int[][]{{android.R.attr.state_checked}, {}}, new int[]{green, getColor(R.color.grey_light)}));
+        TextView sub = findViewById(R.id.delayClearedSub);
+        TextView goAhead = findViewById(R.id.delayGoAheadText);
+        TextView stampView = findViewById(R.id.delayClearedStamp);
+        if (task.delayCleared) {
+            sub.setText("Cleared " + Fmt.stamp(task.delayClearedAt));
+            sub.setTextColor(green);
+            sub.setTypeface(null, android.graphics.Typeface.BOLD);
+            goAhead.setVisibility(task.delayGoAhead.isEmpty() ? View.GONE : View.VISIBLE);
+            goAhead.setText("Go-ahead from " + task.delayGoAhead);
+            String len = Models.Task.delayLength(task);
+            String line = task.delayClearedBy + (len.isEmpty() ? "" : " \u00B7 delayed " + len);
+            stampView.setVisibility(line.isEmpty() ? View.GONE : View.VISIBLE);
+            stampView.setText(line);
+        } else {
+            sub.setText("Tap when you get the OK to go ahead");
+            sub.setTextColor(getColor(R.color.grey_light));
+            sub.setTypeface(null, android.graphics.Typeface.NORMAL);
+            goAhead.setVisibility(View.GONE);
+            stampView.setVisibility(View.GONE);
+        }
+    }
+
+    /** Off: stamp now as when the delay was cleared. On: change who gave the go-ahead, or untick. */
+    private void editDelayCleared() {
+        EditText et = new EditText(this);
+        et.setHint("Who gave the go-ahead? (optional)");
+        et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        et.setSingleLine(true);
+        et.setText(task.delayCleared ? task.delayGoAhead : "");
+        et.setSelection(et.getText().length());
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(Ui.dp(this, 22), Ui.dp(this, 8), Ui.dp(this, 22), 0);
+        box.addView(et);
+        boolean on = task.delayCleared;
+        com.google.android.material.dialog.MaterialAlertDialogBuilder b = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(on ? "Delay cleared" : "Delay cleared?")
+                .setView(box)
+                .setPositiveButton(on ? "Save" : "Cleared", (x, w) -> {
+                    if (!task.delayCleared) {
+                        task.delayCleared = true;
+                        task.delayClearedBy = store.me();
+                        task.delayClearedAt = System.currentTimeMillis();
+                        root.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+                    }
+                    task.delayGoAhead = et.getText().toString().trim();
+                    store.save();
+                    bindDelayCleared();
+                })
+                .setNegativeButton("Cancel", null);
+        if (!on) b.setMessage("This stamps the time now as when the delay was cleared.");
+        if (on) {
+            b.setNeutralButton("Not cleared", (x, w) -> {
+                task.clearDelayCleared();
+                store.save();
+                bindDelayCleared();
+            });
+        }
+        b.show();
     }
 
     /** Off: ask why and tick it. On: change the reason, or untick with "Not delayed". */
@@ -406,10 +476,7 @@ public class TaskActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null);
         if (task.delayed) {
             b.setNeutralButton("Not delayed", (x, w) -> {
-                task.delayed = false;
-                task.delayReason = "";
-                task.delayedBy = "";
-                task.delayedAt = 0;
+                task.clearDelay();  // the clearing goes too
                 store.save();
                 bindDelay();
             });

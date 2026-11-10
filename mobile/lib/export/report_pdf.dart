@@ -427,6 +427,10 @@ class ReportPdf {
     if (t.delayed) {
       final (line, runs) = Rich.delayLine(t.delayReason, t.delayedBy, Fmt.stamp(t.delayedAt));
       _richText(line, runs, _small, x, w, 2);
+      if (t.delayCleared) {
+        final (cl, cr) = Rich.clearedLine(Fmt.stamp(t.delayClearedAt), t.delayClearedBy, t.delayGoAhead, t.delayLength());
+        _richText(cl, cr, _small, x, w, 2);
+      }
     }
     if (t.loadSecured) {
       final who = t.securedBy.isEmpty ? '' : ' by ${t.securedBy}, ${Fmt.stamp(t.securedAt)}';
@@ -643,7 +647,7 @@ class ReportPdf {
 
   // ----- formatted text (bold, underline, colour, Delay and on hold) -----
 
-  static const _richColours = {'yellow': 0xFFC99A00, 'orange': 0xFFE8730C, 'red': 0xFFD93B3F};
+  static const _richColours = {'yellow': 0xFFC99A00, 'orange': 0xFFE8730C, 'red': 0xFFD93B3F, 'green': 0xFF148A3A};
   static final _highlight = PdfColor.fromInt(0xFFFFE45C);
 
   _Style _richStyle(_Style st, RichStyle r) => _Style(

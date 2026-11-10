@@ -55,6 +55,7 @@ final class ProjectSearch {
                 if (has(t.title, q)) add(lines, "Field: " + title);
                 if (has(t.notes, q)) add(lines, "Notes on " + title + ": " + snippet(t.notes, q));
                 if (t.delayed && has(t.delayLine(), q)) add(lines, title + ": " + t.delayLine());
+                if (t.delayed && t.delayCleared && has("Delay cleared", q)) add(lines, title + ": Delay cleared " + Fmt.stamp(t.delayClearedAt));
                 List<String> names = new ArrayList<>(t.assignees);
                 names.add(t.completedBy);
                 names.add(t.securedBy);

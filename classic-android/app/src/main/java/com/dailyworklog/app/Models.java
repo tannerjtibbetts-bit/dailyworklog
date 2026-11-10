@@ -81,10 +81,60 @@ public final class Models {
         public boolean delayed;
         public String delayReason = "", delayedBy = "";
         public long delayedAt;
+        /** "Delay is cleared" ticked: who, when, and who gave the go-ahead (optional). The delay stays set as history. */
+        public boolean delayCleared;
+        public String delayClearedBy = "", delayGoAhead = "";
+        public long delayClearedAt;
 
         /** "Delayed: reason" for the card, reports and search. */
         public String delayLine() {
             return "Delayed: " + delayReason;
+        }
+
+        /** " (who, go-ahead from X, delayed 2 h)" after "Delay cleared: …" in reports; "" when there's nothing to say. */
+        public String clearedDetails() {
+            List<String> parts = new ArrayList<>();
+            if (!delayClearedBy.isEmpty()) parts.add(delayClearedBy);
+            if (!delayGoAhead.isEmpty()) parts.add("go-ahead from " + delayGoAhead);
+            String len = delayLength(this);
+            if (!len.isEmpty()) parts.add("delayed " + len);
+            return parts.isEmpty() ? "" : " (" + String.join(", ", parts) + ")";
+        }
+
+        /** Delayed and not cleared yet. */
+        public boolean delayOpen() {
+            return delayed && !delayCleared;
+        }
+
+        /** Untick "Task is delayed": the delay and its clearing both go. */
+        public void clearDelay() {
+            delayed = false;
+            delayReason = "";
+            delayedBy = "";
+            delayedAt = 0;
+            clearDelayCleared();
+        }
+
+        /** Untick "Delay is cleared". */
+        public void clearDelayCleared() {
+            delayCleared = false;
+            delayClearedBy = "";
+            delayClearedAt = 0;
+            delayGoAhead = "";
+        }
+
+        /**
+         * How long the delay lasted: "45 min", "2 h", "2 h 15 min", "1 day 3 h", "under a minute".
+         * Empty when a time is missing or the clearing is before the delay.
+         */
+        public static String delayLength(Task t) {
+            if (t.delayedAt <= 0 || t.delayClearedAt <= 0 || t.delayClearedAt < t.delayedAt) return "";
+            long mins = (t.delayClearedAt - t.delayedAt) / 60000L;
+            if (mins < 1) return "under a minute";
+            long days = mins / 1440, hours = (mins % 1440) / 60, m = mins % 60;
+            if (days > 0) return days + (days == 1 ? " day" : " days") + (hours > 0 ? " " + hours + " h" : "");
+            if (hours > 0) return hours + " h" + (m > 0 ? " " + m + " min" : "");
+            return m + " min";
         }
         /** Who gets a text when this field is completed (blank: nobody). */
         public String doneTextName = "", doneTextPhone = "";
@@ -145,11 +195,13 @@ public final class Models {
             Task t = freshCopy();
             t.notes = notes;
             t.notesStyle = new ArrayList<>(notesStyle);
-            // An unfinished delayed field is still delayed next shift.
-            t.delayed = delayed;
-            t.delayReason = delayReason;
-            t.delayedBy = delayedBy;
-            t.delayedAt = delayedAt;
+            // An open delay carries over to the next shift; a cleared one doesn't.
+            if (delayOpen()) {
+                t.delayed = true;
+                t.delayReason = delayReason;
+                t.delayedBy = delayedBy;
+                t.delayedAt = delayedAt;
+            }
             return t;
         }
 
@@ -173,6 +225,10 @@ public final class Models {
             o.put("delayReason", delayReason);
             o.put("delayedBy", delayedBy);
             o.put("delayedAt", delayedAt);
+            o.put("delayCleared", delayCleared);
+            o.put("delayClearedBy", delayClearedBy);
+            o.put("delayClearedAt", delayClearedAt);
+            o.put("delayGoAhead", delayGoAhead);
             o.put("side", side);
             o.put("doneTextName", doneTextName);
             o.put("doneTextPhone", doneTextPhone);
@@ -207,6 +263,10 @@ public final class Models {
             t.delayReason = o.optString("delayReason", "");
             t.delayedBy = o.optString("delayedBy", "");
             t.delayedAt = o.optLong("delayedAt", 0L);
+            t.delayCleared = o.optBoolean("delayCleared", false);
+            t.delayClearedBy = o.optString("delayClearedBy", "");
+            t.delayClearedAt = o.optLong("delayClearedAt", 0L);
+            t.delayGoAhead = o.optString("delayGoAhead", "");
             t.side = o.optString("side", "");
             t.doneTextName = o.optString("doneTextName", "");
             t.doneTextPhone = o.optString("doneTextPhone", "");
