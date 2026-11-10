@@ -1,13 +1,16 @@
 // Notes tab: write a note, add photos, and tick it into today's report. Saves automatically.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/rich.dart';
 import '../data/store.dart';
 import '../services/photos.dart';
 import '../ui/common.dart';
+import '../ui/rich_text.dart';
 import '../ui/theme.dart';
 
 /// Title bar used by the Note and Notify screens: project name over the screen name.
@@ -177,7 +180,7 @@ class _NoteScreenState extends State<NoteScreen> with WidgetsBindingObserver {
 
   /// True until the note has something in it and is added to the project.
   bool isNew = true;
-  late final TextEditingController note;
+  late final RichController note;
 
   Store get store => Store.instance;
 
@@ -188,7 +191,7 @@ class _NoteScreenState extends State<NoteScreen> with WidgetsBindingObserver {
     n = project?.findNote(widget.noteId);
     isNew = n == null;
     if (isNew) n = Note()..by = store.me();
-    note = TextEditingController(text: n!.text);
+    note = RichController(text: n!.text, runs: n!.textStyle);
     WidgetsBinding.instance.addObserver(this);
     if (project == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -214,8 +217,11 @@ class _NoteScreenState extends State<NoteScreen> with WidgetsBindingObserver {
     final p = project, x = n;
     if (p == null || x == null) return;
     final text = note.text.trim();
-    var changed = text != x.text;
+    // Trimming moves the text, so the formatting moves with it.
+    final style = Rich.afterEdit(note.text, text, note.runs, null);
+    var changed = text != x.text || !listEquals(style, x.textStyle);
     x.text = text;
+    x.textStyle = style;
     if (isNew) {
       if (x.isEmpty) return;
       p.notes.insert(0, x);
@@ -368,6 +374,10 @@ class _NoteScreenState extends State<NoteScreen> with WidgetsBindingObserver {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 14),
+                      child: FormatBar(controller: note, onChanged: persist),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 160),
                         child: TextField(

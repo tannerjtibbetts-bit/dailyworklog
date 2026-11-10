@@ -8,13 +8,14 @@ import 'package:intl/intl.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/rich.dart';
 
 class ReportXlsx {
   ReportXlsx._();
 
   // Cell styles (index into cellXfs in styles.xml).
   static const _normal = 0, _bold = 1, _title = 2, _meta = 3, _head = 4, _cell = 5, _green = 6, _red = 7;
-  static const _section = 8, _num = 9, _area = 10;
+  static const _section = 8, _num = 9, _area = 10, _cellHold = 11, _normalHold = 12;
 
   static Uint8List write(Project p, DailyLog log, String by, int at) {
     final b = _Sheet();
@@ -41,14 +42,14 @@ class ReportXlsx {
             : '';
         b.cells([
           _c(g.key, _area),
-          _c(t.title, _cell),
+          _rich(t.title, const [], _cell),
           t.done ? _c('Done', _green) : _c('Not done', _red),
           _c(t.done ? t.completedBy : '', _cell),
           _c(t.done && t.completedAt > 0 ? Fmt.stamp(t.completedAt) : '', _cell),
           _c(Fmt.join(t.assignees), _cell),
           _c(secured, _cell),
           _c(t.nextShift ? 'Yes' : '', _num),
-          _c(t.notes.trim(), _cell),
+          _rich(t.notes.trim(), t.notes.trim() == t.notes ? t.notesStyle : const [], _cell),
           t.photos.isNotEmpty
               ? _n(t.photos.length)
               : t.photosRequired
@@ -67,7 +68,7 @@ class ReportXlsx {
         b.cells([
           _c(DateFormat('h:mm a', 'en_US').format(DateTime.fromMillisecondsSinceEpoch(e.at)), _cell),
           _c(e.label(), _cell),
-          _c(e.type == Extra.template ? '' : e.detail.trim(), _cell),
+          _rich(e.type == Extra.template ? '' : e.detail.trim(), _noteRuns(p, e), _cell),
         ]);
       }
     }
@@ -88,7 +89,7 @@ class ReportXlsx {
         _c('Yes total', _bold),
         for (var d = 0; d < 3; d++) _n(ot.yesCount(d)),
       ]);
-      if (ot.notes.trim().isNotEmpty) b.row(['Notes: ${ot.notes.trim()}'], _normal);
+      if (ot.notes.trim().isNotEmpty) b.cells([_rich('Notes: ${ot.notes.trim()}', const [], _normal)]);
     }
 
     final a = p.attendance;
@@ -100,11 +101,11 @@ class ReportXlsx {
         b.cells([
           _c(r.name, _cell),
           _c(r.status, _yesNo(r.status)),
-          _c(r.comment.trim(), _cell),
+          _rich(r.comment.trim(), const [], _cell),
         ]);
       }
       if (a.summary().isNotEmpty) b.row([a.summary()], _bold);
-      if (a.notes.trim().isNotEmpty) b.row(['Notes: ${a.notes.trim()}'], _normal);
+      if (a.notes.trim().isNotEmpty) b.cells([_rich('Notes: ${a.notes.trim()}', const [], _normal)]);
     }
 
     final cans = p.filledSeaCans();
@@ -127,6 +128,21 @@ class ReportXlsx {
   }
 
   static _Cell _c(String text, int style) => _Cell(text, style);
+
+  /// Text with its formatting and Delay / on hold. Excel can't highlight part of a cell, so a cell with
+  /// "on hold" gets a light yellow fill.
+  static _Cell _rich(String text, List<Run> runs, int style) {
+    final hold = RegExp(r'\bon\s+hold\b', caseSensitive: false).hasMatch(text);
+    final s = hold ? (style == _cell ? _cellHold : _normalHold) : style;
+    return _Cell(text, s, runs: runs, rich: true);
+  }
+
+  /// A Notes-tab note in "Also today" keeps its formatting when it's found and unchanged.
+  static List<Run> _noteRuns(Project p, Extra e) {
+    if (e.type != Extra.note) return const [];
+    final n = p.findNote(e.refId);
+    return n != null && n.text == e.detail.trim() ? n.textStyle : const [];
+  }
 
   static _Cell _n(num v) => _Cell('$v', _num, number: true);
 
@@ -163,12 +179,13 @@ class ReportXlsx {
         '<font><b/><sz val="13"/><color rgb="FF14233A"/><name val="Calibri"/></font></fonts>';
     const styleSheet =
         '$head<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">$fonts'
-        '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+        '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
         '<fill><patternFill patternType="solid"><fgColor rgb="FF14233A"/><bgColor indexed="64"/></patternFill></fill>'
-        '<fill><patternFill patternType="solid"><fgColor rgb="FFEEF2F7"/><bgColor indexed="64"/></patternFill></fill></fills>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFEEF2F7"/><bgColor indexed="64"/></patternFill></fill>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF59D"/><bgColor indexed="64"/></patternFill></fill></fills>'
         '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>$border</borders>'
         '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-        '<cellXfs count="11">'
+        '<cellXfs count="13">'
         '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">$top</xf>' // 0 normal
         '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' // 1 bold
         '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' // 2 title
@@ -182,6 +199,9 @@ class ReportXlsx {
         '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">$mid</xf>' // 9 number
         '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" '
         'applyAlignment="1">$top</xf>' // 10 area
+        '<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" '
+        'applyAlignment="1">$top</xf>' // 11 cell with "on hold"
+        '<xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFill="1" applyAlignment="1">$top</xf>' // 12 normal with "on hold"
         '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
         '</styleSheet>';
 
@@ -226,8 +246,14 @@ class _Cell {
   final int style;
   final bool number;
 
-  const _Cell(this.text, this.style, {this.number = false});
+  /// Written as formatted runs (bold, underline, colour, Delay and on hold).
+  final bool rich;
+  final List<Run> runs;
+
+  const _Cell(this.text, this.style, {this.number = false, this.rich = false, this.runs = const []});
 }
+
+const _xlsxColours = {'yellow': 'FFC99A00', 'orange': 'FFE8730C', 'red': 'FFD93B3F'};
 
 /// Builds the sheet's rows, from column A.
 class _Sheet {
@@ -251,6 +277,15 @@ class _Sheet {
         _rows.write('<c r="$ref"$s><v>${c.text}</v></c>');
       } else if (c.text.isEmpty) {
         _rows.write('<c r="$ref"$s/>');
+      } else if (c.rich && Rich.segments(c.text, c.runs).any((x) => !x.style.isPlain)) {
+        _rows.write('<c r="$ref"$s t="inlineStr"><is>');
+        for (final seg in Rich.segments(c.text, c.runs)) {
+          final st = seg.style;
+          _rows.write('<r><rPr><rFont val="Calibri"/>${st.bold ? '<b/>' : ''}'
+              '<color rgb="${st.colour.isEmpty ? 'FF000000' : _xlsxColours[st.colour]}"/><sz val="11"/>'
+              '${st.underline ? '<u/>' : ''}</rPr><t xml:space="preserve">${_esc(seg.text)}</t></r>');
+        }
+        _rows.write('</is></c>');
       } else {
         _rows.write('<c r="$ref"$s t="inlineStr"><is><t xml:space="preserve">${_esc(c.text)}</t></is></c>');
       }

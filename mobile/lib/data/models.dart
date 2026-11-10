@@ -3,6 +3,7 @@
 import 'package:uuid/uuid.dart';
 
 import 'fmt.dart';
+import 'rich.dart';
 
 const _uuid = Uuid();
 
@@ -64,6 +65,9 @@ class Task {
   String id = newId();
   String title = '';
   String notes = '';
+
+  /// Bold, underline and colour on chosen words of [notes].
+  List<Run> notesStyle = [];
   bool done = false;
   String completedBy = '';
   int completedAt = 0;
@@ -144,12 +148,15 @@ class Task {
     ..doneTextPhone = doneTextPhone;
 
   /// Unfinished field rolled into the next day: keeps the notes too.
-  Task carryCopy() => freshCopy()..notes = notes;
+  Task carryCopy() => freshCopy()
+    ..notes = notes
+    ..notesStyle = List.of(notesStyle);
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
         'notes': notes,
+        'notesStyle': Rich.toJson(notesStyle),
         'done': done,
         'completedBy': completedBy,
         'completedAt': completedAt,
@@ -169,7 +176,8 @@ class Task {
         'doneTextPhone': doneTextPhone,
       };
 
-  static Task fromJson(Map<String, dynamic> o) => Task()
+  static Task fromJson(Map<String, dynamic> o) {
+    final t = Task()
     ..id = _s(o, 'id', newId())
     ..title = _s(o, 'title')
     ..notes = _s(o, 'notes')
@@ -190,6 +198,9 @@ class Task {
     ..securedPhotosInReport = o['securedPhotosInReport'] is bool ? o['securedPhotosInReport'] as bool : true
     ..doneTextName = _s(o, 'doneTextName')
     ..doneTextPhone = _s(o, 'doneTextPhone');
+    t.notesStyle = Rich.fromJson(o['notesStyle'], t.notes.length);
+    return t;
+  }
 }
 
 /// A link used, note sent or template used, that can be included in the day's report.
@@ -364,6 +375,9 @@ class Notice {
 class Note {
   String id = newId();
   String text = '';
+
+  /// Bold, underline and colour on chosen words of [text].
+  List<Run> textStyle = [];
   String by = '';
   int createdAt = nowMs();
   late int updatedAt = createdAt;
@@ -374,6 +388,7 @@ class Note {
   Map<String, dynamic> toJson() => {
         'id': id,
         'text': text,
+        'textStyle': Rich.toJson(textStyle),
         'by': by,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
@@ -388,6 +403,7 @@ class Note {
       ..createdAt = _i(o, 'createdAt')
       ..photos = _objects(o['photos'], Photo.fromJson);
     n.updatedAt = o.containsKey('updatedAt') ? _i(o, 'updatedAt') : n.createdAt;
+    n.textStyle = Rich.fromJson(o['textStyle'], n.text.length);
     return n;
   }
 }

@@ -1,0 +1,65 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:archive/archive.dart';
+import 'package:dailyworklog/data/models.dart';
+import 'package:dailyworklog/data/rich.dart';
+import 'package:dailyworklog/export/report_docx.dart';
+import 'package:dailyworklog/export/report_pdf.dart';
+import 'package:dailyworklog/export/report_xlsx.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:xml/xml.dart';
+
+Map<String, String> _unzip(List<int> bytes) => {
+      for (final f in ZipDecoder().decodeBytes(bytes).files)
+        if (f.isFile && !f.name.endsWith('.jpeg')) f.name: utf8.decode(f.content),
+    };
+
+void main() {
+  final day = DateTime(2026, 11, 10, 7, 30).millisecondsSinceEpoch;
+  late Project p;
+  late DailyLog log;
+
+  setUp(() {
+    p = Project()..name = 'B44';
+    log = DailyLog()..date = '2026-11-10';
+    const notes = 'Crane delayed by wind. Pump 3 on hold until parts arrive. Bring straps.';
+    log.tasks.add(Task()
+      ..title = 'Delay at gate 3'
+      ..notes = notes
+      ..notesStyle = [
+        const Run(58, 63, RichStyle(bold: true, underline: true)), // "Bring"
+        const Run(64, 70, RichStyle(colour: 'orange')), // "straps"
+      ]);
+    p.logs.add(log);
+  });
+
+  test('Word: Delay red bold, on hold highlighted, chosen words formatted', () {
+    final doc = _unzip(ReportDocx.write(p, log, 'Tester', day, '/nowhere'))['word/document.xml']!;
+    XmlDocument.parse(doc);
+    expect(doc, contains('<w:b/><w:color w:val="D93B3F"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">delayed</w:t>'));
+    expect(doc, contains('<w:highlight w:val="yellow"/></w:rPr><w:t xml:space="preserve">on hold</w:t>'));
+    expect(doc, contains('<w:u w:val="single"/></w:rPr><w:t xml:space="preserve">Bring</w:t>'));
+    expect(doc, contains('<w:color w:val="E8730C"/>'));
+    // The title's Delay too.
+    expect(doc, contains('<w:color w:val="D93B3F"/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr><w:t xml:space="preserve">Delay</w:t>'));
+  });
+
+  test('Excel: rich runs, and a light yellow cell for on hold', () {
+    final files = _unzip(ReportXlsx.write(p, log, 'Tester', day));
+    final sheet = files['xl/worksheets/sheet1.xml']!;
+    XmlDocument.parse(sheet);
+    XmlDocument.parse(files['xl/styles.xml']!);
+    expect(sheet, contains('<r><rPr><rFont val="Calibri"/><b/><color rgb="FFD93B3F"/><sz val="11"/></rPr><t xml:space="preserve">delayed</t></r>'));
+    expect(sheet, contains('<c r="I8" s="11" t="inlineStr">'));
+    expect(sheet, contains('<color rgb="FFE8730C"/><sz val="11"/></rPr><t xml:space="preserve">straps</t>'));
+    expect(files['xl/styles.xml'], contains('FFFFF59D'));
+  });
+
+  test('PDF builds with the formatted text', () async {
+    final bytes = await ReportPdf.write(p, log, 'Tester', day, '/nowhere');
+    final out = Platform.environment['EXPORT_TEST_OUT'];
+    if (out != null && out.isNotEmpty) File('$out/rich.pdf').writeAsBytesSync(bytes);
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+  });
+}

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/rich.dart';
 import 'photo_layout.dart';
 
 /// Turns a photo file into the JPEG to embed, or null if it's missing.
@@ -102,7 +103,10 @@ class ReportDocx {
         final time = DateFormat('h:mm a', 'en_US').format(DateTime.fromMillisecondsSinceEpoch(e.at));
         _para('$time   ${e.label()}', false, 11, _text, 30, true);
         if (e.detail.trim().isNotEmpty && e.type != Extra.template) {
-          _para(e.detail.trim(), false, 9, _grey, 40, true);
+          // A note from the Notes tab keeps its formatting.
+          final note = e.type == Extra.note ? p.findNote(e.refId) : null;
+          final d = e.detail.trim();
+          _richPara(d, note != null && note.text == d ? note.textStyle : const [], false, 9, _grey, 40, true);
         }
         if (e.photos.isNotEmpty) _photoTable(e.photos, photoDir);
       }
@@ -227,7 +231,7 @@ class ReportDocx {
   void _overtimeNotes(String notes) {
     if (notes.isEmpty) return;
     _para('Notes', true, 10, _navy, 40, false);
-    _para(notes, false, 10, _text, 160, false);
+    _richPara(notes, const [], false, 10, _text, 160, false);
   }
 
   static String _dash(String v) => v.isEmpty ? '-' : v;
@@ -252,7 +256,11 @@ class ReportDocx {
           : i > 0 && red
           ? _red
           : _text;
-      _run(v, bold || yesNo, 10, col);
+      if (plain) {
+        _richRuns(v, const [], bold, 10, col); // comments: Delay / on hold stand out
+      } else {
+        _run(v, bold || yesNo, 10, col);
+      }
       _body.write('</w:p></w:tc>');
     }
     _body.write('</w:tr>');
@@ -264,7 +272,7 @@ class ReportDocx {
       '<w:p><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="40"/><w:ind w:left="440" w:hanging="440"/></w:pPr>',
     );
     _run(t.done ? '✔  ' : '○  ', true, 13, t.done ? _green : 'A3ACB7', 'Segoe UI Symbol');
-    _run(t.title.isEmpty ? '(Untitled field)' : t.title, true, 13, _navy);
+    _richRuns(t.title.isEmpty ? '(Untitled field)' : t.title, const [], true, 13, _navy);
     _body.write('</w:p>');
 
     if (t.done) {
@@ -281,7 +289,9 @@ class ReportDocx {
     }
     if (t.nextShift) _para('Carries over to next shift', true, 9, '174A8B', 40, true);
     if (t.assignees.isNotEmpty) _para('Assigned: ${Fmt.join(t.assignees)}', false, 9, _grey, 40, true);
-    if (t.notes.trim().isNotEmpty) _para(t.notes.trim(), false, 11, _text, 80, true);
+    if (t.notes.trim().isNotEmpty) {
+      _richPara(t.notes.trim(), t.notes.trim() == t.notes ? t.notesStyle : const [], false, 11, _text, 80, true);
+    }
     if (t.photosRequired && t.photos.isEmpty) _para('Photos required: none attached', false, 9, _red, 40, true);
     if (t.photos.isNotEmpty) _photoTable(t.photos, photoDir);
     if (t.securedPhotosInReport && t.securedPhotos.isNotEmpty) {
@@ -367,12 +377,39 @@ class ReportDocx {
     _body.write('</w:p>');
   }
 
-  void _run(String text, bool bold, int pt, String color, [String? font]) {
+  /// Formatted text (bold, underline, colour, Delay and on hold) as runs; line breaks become Word breaks.
+  void _richRuns(String text, List<Run> runs, bool bold, int pt, String color) {
+    for (final seg in Rich.segments(text, runs)) {
+      final st = seg.style;
+      final col = st.colour.isEmpty ? color : _richColours[st.colour]!;
+      final lines = seg.text.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        if (i > 0) _body.write('<w:r><w:br/></w:r>');
+        if (lines[i].isEmpty) continue;
+        _run(lines[i], bold || st.bold, pt, col, null, st.underline, st.highlight);
+      }
+    }
+  }
+
+  static const _richColours = {'yellow': 'C99A00', 'orange': 'E8730C', 'red': 'D93B3F'};
+
+  /// A paragraph of formatted text, like [_para].
+  void _richPara(String text, List<Run> runs, bool bold, int pt, String color, int afterTwips, bool indent) {
+    _body.write('<w:p><w:pPr><w:spacing w:before="0" w:after="$afterTwips"/>');
+    if (indent) _body.write('<w:ind w:left="440"/>');
+    _body.write('</w:pPr>');
+    _richRuns(text, runs, bold, pt, color);
+    _body.write('</w:p>');
+  }
+
+  void _run(String text, bool bold, int pt, String color, [String? font, bool underline = false, bool highlight = false]) {
     final f = font ?? 'Calibri';
     _body.write('<w:r><w:rPr><w:rFonts w:ascii="$f" w:hAnsi="$f" w:cs="$f"/>');
     if (bold) _body.write('<w:b/>');
+    // Word wants these in this order: color, sz, szCs, highlight, u.
     _body.write(
-      '<w:color w:val="$color"/><w:sz w:val="${pt * 2}"/><w:szCs w:val="${pt * 2}"/></w:rPr>'
+      '<w:color w:val="$color"/><w:sz w:val="${pt * 2}"/><w:szCs w:val="${pt * 2}"/>'
+      '${highlight ? '<w:highlight w:val="yellow"/>' : ''}${underline ? '<w:u w:val="single"/>' : ''}</w:rPr>'
       '<w:t xml:space="preserve">${esc(text)}</w:t></w:r>',
     );
   }

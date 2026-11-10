@@ -405,7 +405,7 @@ class ReportXlsxTest {
   java.util.Map<String,String> m = parts(p, l);
   NoteTest.check(m.keySet().containsAll(java.util.Arrays.asList("[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/styles.xml", "xl/worksheets/sheet1.xml")), "zip parts");
   NoteTest.check(m.get("xl/workbook.xml").contains("name=\"Daily report\""), "sheet name");
-  NoteTest.check(m.get("xl/styles.xml").contains("cellXfs count=\"11\""), "11 styles");
+  NoteTest.check(m.get("xl/styles.xml").contains("cellXfs count=\"13\"") && m.get("xl/styles.xml").contains("FFFFF59D"), "13 styles (with on hold fill)");
   String s = m.get("xl/worksheets/sheet1.xml");
   System.out.println(s.substring(0, Math.min(1800, s.length())));
   NoteTest.check(s.contains("<row r=\"1\" ht=\"24\" customHeight=\"1\"><c r=\"A1\" t=\"inlineStr\" s=\"2\">" + t("Daily work log 27/10/2026")), "title row");
@@ -548,3 +548,71 @@ class MailTest {
     NoteTest.check(o.securedPhotos.isEmpty() && o.securedPhotosInReport, "old task: [] / true");
     NoteTest.check(t.freshCopy().securedPhotos.isEmpty() && t.freshCopy().securedPhotosInReport && t.carryCopy().securedPhotos.isEmpty() && t.carryCopy().securedPhotosInReport, "copies reset");
     System.out.println("MAIL PASS"); } }
+class RichTest {
+  static final Rich.Style B = new Rich.Style(true, false, "", false), U = new Rich.Style(false, true, "", false);
+  static String show(java.util.List<Rich.Segment> segs) {
+    java.util.List<String> o = new java.util.ArrayList<>();
+    for (Rich.Segment x : segs) o.add(x.text + "[" + x.style + "]");
+    return String.join("|", o);
+  }
+  static java.util.List<Rich.Run> runs(Rich.Run... r) { return java.util.Arrays.asList(r); }
+  static void eq(Object got, Object want, String name) {
+    if (!got.equals(want)) System.out.println("got  " + got + "\nwant " + want);
+    NoteTest.check(got.equals(want), name);
+  }
+  public static void main(String[] a) throws Exception {
+    java.util.List<Rich.Run> none = java.util.Collections.emptyList();
+    // 1-3 segments
+    eq(show(Rich.segments("Crane delayed, on  hold now", none, true)), "Crane []|delayed[b,red]|, []|on  hold[b,hl]| now[]", "1. Delay red bold, on hold bold highlighted");
+    eq(show(Rich.segments("abc", runs(new Rich.Run(0, 2, B)), false)), "ab[b]|c[]", "2. user bold, keywords off");
+    eq(show(Rich.segments("Delay", runs(new Rich.Run(0, 5, new Rich.Style(false, true, "orange", false))), true)), "Delay[b,u,red]", "3. Delay beats the user colour, keeps underline");
+    // 4-6 toggles and colour
+    java.util.List<Rich.Run> r = Rich.applyToggle("hello", none, 1, 3, false);
+    eq(r, runs(new Rich.Run(1, 3, B)), "4. bold on");
+    eq(Rich.applyToggle("hello", r, 1, 3, false), none, "4. bold off again");
+    eq(Rich.applyToggle("hello", runs(new Rich.Run(0, 2, B)), 1, 4, false), runs(new Rich.Run(0, 4, B)), "5. partly bold -> all bold");
+    eq(Rich.applyColour("hello", runs(new Rich.Run(0, 5, B)), 1, 3, "red"),
+        runs(new Rich.Run(0, 1, B), new Rich.Run(1, 3, new Rich.Style(true, false, "red", false)), new Rich.Run(3, 5, B)), "6. colour inside bold");
+    // 7-10 edits
+    eq(Rich.afterEdit("hello", "heXYllo", runs(new Rich.Run(0, 5, B)), null), runs(new Rich.Run(0, 7, B)), "7. typed inside bold stays bold");
+    eq(Rich.afterEdit("hello", "hello!", runs(new Rich.Run(0, 5, B)), null), runs(new Rich.Run(0, 6, B)), "8. typed at the end");
+    eq(Rich.afterEdit("hello", "hllo", runs(new Rich.Run(1, 3, U)), null), runs(new Rich.Run(1, 2, U)), "9. deleted e");
+    eq(Rich.afterEdit("ab", "aXb", none, B), runs(new Rich.Run(1, 2, B)), "10. typing style");
+    // 11 bad runs, relay, plurals, json
+    org.json.JSONArray bad = new org.json.JSONArray("[{\"s\":3,\"e\":3,\"b\":true},{\"s\":0,\"e\":99,\"u\":true},{\"s\":0,\"e\":2,\"c\":\"pink\"}]");
+    eq(Rich.fromJson(bad, 5), runs(new Rich.Run(0, 5, U)), "11. bad runs dropped, clipped");
+    eq(show(Rich.segments("relay", none, true)), "relay[]", "11. relay is not a delay");
+    eq(show(Rich.segments("Delays DELAYED", none, true)), "Delays[b,red]| []|DELAYED[b,red]", "11. Delays DELAYED");
+    eq(Rich.toJson(runs(new Rich.Run(1, 3, new Rich.Style(true, false, "red", false)))).toString(), "[{\"s\":1,\"e\":3,\"b\":true,\"c\":\"red\"}]", "11. json keys");
+    // Saved with tasks and notes; carried copies keep the notes' formatting, fresh copies don't.
+    Models.Project p = new Models.Project();
+    Models.DailyLog l = new Models.DailyLog(); l.date = "2026-11-10"; p.logs.add(l);
+    Models.Task t = new Models.Task(); t.title = "Crane delay"; t.notes = "Pump on hold today"; t.notesStyle = runs(new Rich.Run(0, 4, B)); l.tasks.add(t);
+    Models.Note n = new Models.Note(); n.text = "Seal replaced"; n.textStyle = runs(new Rich.Run(5, 13, new Rich.Style(false, true, "orange", false))); p.notes.add(n);
+    Models.Project q = Models.Project.fromJson(p.toJson());
+    eq(q.logs.get(0).tasks.get(0).notesStyle, t.notesStyle, "notesStyle saved");
+    eq(q.notes.get(0).textStyle, n.textStyle, "textStyle saved");
+    eq(t.carryCopy().notesStyle, t.notesStyle, "carryCopy keeps notesStyle");
+    NoteTest.check(t.freshCopy().notesStyle.isEmpty(), "freshCopy has none");
+    org.json.JSONObject old = t.toJson(); old.remove("notesStyle");
+    NoteTest.check(Models.Task.fromJson(old).notesStyle.isEmpty(), "old task: no formatting");
+    org.json.JSONObject cut = t.toJson(); cut.put("notes", "Pu");
+    eq(Models.Task.fromJson(cut).notesStyle, runs(new Rich.Run(0, 2, B)), "runs clipped to the text");
+    // Reports: Excel rich cell + on hold fill; Word runs.
+    Models.Extra e = p.record(null, l.date, Models.Extra.NOTE, n.id, "Tanner", n.text, n.photos, "Tanner", 1L); e.include = true;
+    String s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains("<c r=\"B8\" t=\"inlineStr\" s=\"5\"><is><r><rPr><rFont val=\"Calibri\"/><color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">Crane </t></r>"
+        + "<r><rPr><rFont val=\"Calibri\"/><b/><color rgb=\"FFD93B3F\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">delay</t></r></is></c>"), "xlsx title Delay red bold");
+    NoteTest.check(s.contains("<c r=\"I8\" t=\"inlineStr\" s=\"11\"><is><r><rPr><rFont val=\"Calibri\"/><b/><color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">Pump</t></r>"), "xlsx notes bold + on hold fill");
+    NoteTest.check(s.contains("<color rgb=\"FFE8730C\"/><sz val=\"11\"/><u/></rPr><t xml:space=\"preserve\">replaced</t>"), "xlsx also-today note keeps its formatting");
+    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+    ReportDocx.write(p, l, "Tanner", 0L, new java.io.File("."), f -> null, bo);
+    String doc = "";
+    try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bo.toByteArray()))) {
+      for (java.util.zip.ZipEntry ze; (ze = z.getNextEntry()) != null; ) if (ze.getName().equals("word/document.xml")) doc = new String(z.readAllBytes(), "UTF-8");
+    }
+    javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new java.io.ByteArrayInputStream(doc.getBytes("UTF-8")));
+    NoteTest.check(doc.contains("<w:b/><w:color w:val=\"D93B3F\"/><w:sz w:val=\"26\"/><w:szCs w:val=\"26\"/></w:rPr><w:t xml:space=\"preserve\">delay</w:t>"), "docx title Delay red");
+    NoteTest.check(doc.contains("<w:b/><w:color w:val=\"1B2533\"/><w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/><w:highlight w:val=\"yellow\"/></w:rPr><w:t xml:space=\"preserve\">on hold</w:t>"), "docx on hold highlighted");
+    NoteTest.check(doc.contains("<w:color w:val=\"E8730C\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/><w:u w:val=\"single\"/></w:rPr><w:t xml:space=\"preserve\">replaced</w:t>"), "docx note underline orange");
+    System.out.println("RICH PASS"); } }

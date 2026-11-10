@@ -116,7 +116,7 @@ final class ReportPdf {
             }
             for (Models.Task t : g.getValue()) drawTask(t, photoDir);
         }
-        drawExtras(log, photoDir);
+        drawExtras(p, log, photoDir);
         drawOvertime(p, false);
         drawAttendance(p, false);
         drawSeaCans(p, false);
@@ -241,8 +241,7 @@ final class ReportPdf {
                         : Models.Attendance.NO.equals(r.status) || Models.Attendance.AWOL.equals(r.status) ? no
                         : r.status.isEmpty() ? small : body;
                 c.drawText(s, M + nameW + (statusW - tp.measureText(s)) / 2f, y + 13.5f, tp);
-                String cm = TextUtils.ellipsize(r.comment.trim(), body, commentW - 12, TextUtils.TruncateAt.END).toString();
-                c.drawText(cm, M + nameW + statusW + 6, y + 13.5f, body);
+                drawLine(RichEdit.spanned(r.comment.trim().replace('\n', ' ')), body, M + nameW + statusW + 6, y + 13.5f, commentW - 12);
                 y += rowH;
             }
             c.drawLine(M, y, M + w, y, line);
@@ -325,12 +324,12 @@ final class ReportPdf {
     private void drawOvertimeNotes(String notes, float w) {
         if (notes.isEmpty()) return;
         text("Notes", text(9.5f, 0xFF14233A, true), M, w, 3);
-        for (String para : notes.split("\n")) text(para.isEmpty() ? " " : para, body, M, w, 2);
+        for (String para : notes.split("\n")) text(para.isEmpty() ? " " : RichEdit.spanned(para), body, M, w, 2);
         y += 8;
     }
 
     /** Links used, notes sent and templates used that were ticked for the report. */
-    private void drawExtras(Models.DailyLog log, File photoDir) {
+    private void drawExtras(Models.Project p, Models.DailyLog log, File photoDir) {
         List<Models.Extra> list = log.includedExtras();
         if (list.isEmpty()) return;
         float w = W - 2 * M;
@@ -342,7 +341,10 @@ final class ReportPdf {
             ensure(30);
             text(time + "   " + e.label(), body, x, iw, 2);
             if (Models.Extra.LINK.equals(e.type) && !e.detail.isEmpty()) text(e.detail, small, x, iw, 2);
-            if ((Models.Extra.NOTIFY.equals(e.type) || Models.Extra.NOTE.equals(e.type)) && !e.detail.trim().isEmpty()) text(e.detail.trim(), small, x, iw, 2);
+            if ((Models.Extra.NOTIFY.equals(e.type) || Models.Extra.NOTE.equals(e.type)) && !e.detail.trim().isEmpty()) {
+                // A note from the Notes tab keeps its formatting.
+                text(RichEdit.spanned(e.detail.trim(), ReportXlsx.noteRuns(p, e), true), small, x, iw, 2);
+            }
             if (!e.photos.isEmpty()) {
                 y += 6;
                 drawPhotoGrid(e.photos, photoDir, x, iw);
@@ -354,7 +356,7 @@ final class ReportPdf {
     private void drawTask(Models.Task t, File photoDir) {
         float x = M + INDENT;
         float w = W - M - x;
-        StaticLayout head = layout(t.title.isEmpty() ? "(Untitled field)" : t.title, heading, w);
+        StaticLayout head = layout(RichEdit.spanned(t.title.isEmpty() ? "(Untitled field)" : t.title), heading, w);
         // Keep the title with its details and, when it has photos, the first row of them.
         float keep = head.getHeight() + 40;
         if (!t.photos.isEmpty()) {
@@ -388,7 +390,7 @@ final class ReportPdf {
         if (!t.assignees.isEmpty()) text("Assigned: " + Fmt.join(t.assignees), small, x, w, 2);
         if (!t.notes.trim().isEmpty()) {
             y += 4;
-            text(t.notes.trim(), body, x, w, 2);
+            text(RichEdit.notes(t), body, x, w, 2);
         }
         if (t.photosRequired && t.photos.isEmpty()) text("Photos required: none attached", smallRed, x, w, 2);
 
@@ -470,7 +472,7 @@ final class ReportPdf {
 
     // ----- layout helpers -----
 
-    private static StaticLayout layout(String s, TextPaint p, float width) {
+    private static StaticLayout layout(CharSequence s, TextPaint p, float width) {
         return StaticLayout.Builder.obtain(s, 0, s.length(), p, Math.max(1, (int) width))
                 .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                 .setLineSpacing(0f, 1.12f)
@@ -478,11 +480,27 @@ final class ReportPdf {
                 .build();
     }
 
-    private void text(String s, TextPaint p, float x, float width, float after) {
+    private void text(CharSequence s, TextPaint p, float x, float width, float after) {
         StaticLayout l = layout(s, p, width);
         ensure(Math.min(l.getHeight(), H - 2 * M - 40));
         draw(l, x);
         y += after;
+    }
+
+    /** One line of (formatted) text with its baseline at baseline, cut short with an ellipsis to fit width. */
+    private void drawLine(CharSequence s, TextPaint p, float x, float baseline, float width) {
+        if (s.length() == 0) return;
+        StaticLayout l = StaticLayout.Builder.obtain(s, 0, s.length(), p, Math.max(1, (int) width))
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setIncludePad(false)
+                .setMaxLines(1)
+                .setEllipsize(TextUtils.TruncateAt.END)
+                .setEllipsizedWidth(Math.max(1, (int) width))
+                .build();
+        c.save();
+        c.translate(x, baseline - l.getLineBaseline(0));
+        l.draw(c);
+        c.restore();
     }
 
     private void draw(StaticLayout l, float x) {

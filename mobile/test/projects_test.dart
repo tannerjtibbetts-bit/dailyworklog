@@ -516,6 +516,8 @@ void main() {
     });
 
     testWidgets('note screen: new note is kept once written and can be ticked', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(420, 900)); // a phone-shaped screen
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final p = sample();
       p.notes.clear();
       Store.instance.projects.add(p);
@@ -530,14 +532,20 @@ void main() {
       expect(find.text('Note'), findsOneWidget);
       expect(find.byTooltip('Delete note'), findsOneWidget);
       // Ticking an empty note does nothing.
+      await tester.ensureVisible(find.text("Include in today's report"));
+      await tester.pumpAndSettle();
       await tester.tap(find.text("Include in today's report"));
       await tester.pump();
       expect(p.notes, isEmpty);
       await tester.enterText(find.byType(TextField), 'Crane booked for 7');
+      await tester.ensureVisible(find.text("Include in today's report"));
+      await tester.pumpAndSettle();
       await tester.tap(find.text("Include in today's report"));
       await tester.pump();
       expect(p.notes.single.text, 'Crane booked for 7');
       expect(p.logs[0].findExtra(p.notes.single.id)!.include, true);
+      await tester.pump(const Duration(seconds: 5)); // let the earlier message go away
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       expect(find.text('open'), findsOneWidget);

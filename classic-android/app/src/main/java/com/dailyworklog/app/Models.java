@@ -63,6 +63,8 @@ public final class Models {
         public String id = newId();
         public String title = "";
         public String notes = "";
+        /** Bold / underline / colour on words of the notes (see Rich). */
+        public List<Rich.Run> notesStyle = new ArrayList<>();
         public boolean done;
         public String completedBy = "";
         public long completedAt;
@@ -133,6 +135,7 @@ public final class Models {
         Task carryCopy() {
             Task t = freshCopy();
             t.notes = notes;
+            t.notesStyle = new ArrayList<>(notesStyle);
             return t;
         }
 
@@ -141,6 +144,7 @@ public final class Models {
             o.put("id", id);
             o.put("title", title);
             o.put("notes", notes);
+            o.put("notesStyle", Rich.toJson(notesStyle));
             o.put("done", done);
             o.put("completedBy", completedBy);
             o.put("completedAt", completedAt);
@@ -170,6 +174,7 @@ public final class Models {
             t.id = o.optString("id", newId());
             t.title = o.optString("title", "");
             t.notes = o.optString("notes", "");
+            t.notesStyle = Rich.fromJson(o.optJSONArray("notesStyle"), t.notes.length());
             t.done = o.optBoolean("done", false);
             t.completedBy = o.optString("completedBy", "");
             t.completedAt = o.optLong("completedAt", 0L);
@@ -445,6 +450,8 @@ public final class Models {
     public static class Note {
         public String id = newId();
         public String text = "";
+        /** Bold / underline / colour on words of the text (see Rich). */
+        public List<Rich.Run> textStyle = new ArrayList<>();
         public String by = "";
         public long createdAt = System.currentTimeMillis();
         public long updatedAt = createdAt;
@@ -458,6 +465,7 @@ public final class Models {
             JSONObject o = new JSONObject();
             o.put("id", id);
             o.put("text", text);
+            o.put("textStyle", Rich.toJson(textStyle));
             o.put("by", by);
             o.put("createdAt", createdAt);
             o.put("updatedAt", updatedAt);
@@ -471,6 +479,7 @@ public final class Models {
             Note n = new Note();
             n.id = o.optString("id", newId());
             n.text = o.optString("text", "");
+            n.textStyle = Rich.fromJson(o.optJSONArray("textStyle"), n.text.length());
             n.by = o.optString("by", "");
             n.createdAt = o.optLong("createdAt", 0L);
             n.updatedAt = o.optLong("updatedAt", n.createdAt);

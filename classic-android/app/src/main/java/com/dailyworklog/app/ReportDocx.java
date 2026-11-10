@@ -94,7 +94,8 @@ final class ReportDocx {
                 String time = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(new java.util.Date(e.at));
                 para(time + "   " + e.label(), false, 11, TEXT, 30, true, null);
                 if (!e.detail.trim().isEmpty() && !Models.Extra.TEMPLATE.equals(e.type)) {
-                    para(e.detail.trim(), false, 9, GREY, 40, true, null);
+                    // A note from the Notes tab keeps its formatting.
+                    richPara(e.detail.trim(), ReportXlsx.noteRuns(p, e), false, 9, GREY, 40, true);
                 }
                 if (!e.photos.isEmpty()) photoTable(e.photos, photoDir);
             }
@@ -163,7 +164,8 @@ final class ReportDocx {
             boolean red = Models.Attendance.NO.equals(v) || Models.Attendance.AWOL.equals(v);
             boolean green = Models.Attendance.YES.equals(v);
             String col = i == 1 && green ? GREEN : i == 1 && red ? RED : TEXT;
-            run(v, head || (i == 1 && (green || red)), 10, col, null);
+            if (i == 2 && !head) richRuns(v, null, false, 10, col);  // comments: Delay / on hold stand out
+            else run(v, head || (i == 1 && (green || red)), 10, col, null);
             body.append("</w:p></w:tc>");
         }
         body.append("</w:tr>");
@@ -226,7 +228,7 @@ final class ReportDocx {
     private void overtimeNotes(String notes) {
         if (notes.isEmpty()) return;
         para("Notes", true, 10, NAVY, 40, false, null);
-        para(notes, false, 10, TEXT, 160, false, null);
+        richPara(notes, null, false, 10, TEXT, 160, false);
     }
 
     private static String dash(String v) {
@@ -253,7 +255,7 @@ final class ReportDocx {
         // Title line with a status mark; keepNext holds it on the page with its details.
         body.append("<w:p><w:pPr><w:keepNext/><w:spacing w:before=\"200\" w:after=\"40\"/><w:ind w:left=\"440\" w:hanging=\"440\"/></w:pPr>");
         run(t.done ? "\u2714  " : "\u25CB  ", true, 13, t.done ? GREEN : "A3ACB7", "Segoe UI Symbol");
-        run(t.title.isEmpty() ? "(Untitled field)" : t.title, true, 13, NAVY, null);
+        richRuns(t.title.isEmpty() ? "(Untitled field)" : t.title, null, true, 13, NAVY);
         body.append("</w:p>");
 
         if (t.done) {
@@ -273,7 +275,8 @@ final class ReportDocx {
             para("Assigned: " + Fmt.join(t.assignees), false, 9, GREY, 40, true, null);
         }
         if (!t.notes.trim().isEmpty()) {
-            para(t.notes.trim(), false, 11, TEXT, 80, true, null);
+            String notes = t.notes.trim();
+            richPara(notes, notes.equals(t.notes) ? t.notesStyle : null, false, 11, TEXT, 80, true);
         }
         if (t.photosRequired && t.photos.isEmpty()) {
             para("Photos required: none attached", false, 9, RED, 40, true, null);
@@ -366,14 +369,44 @@ final class ReportDocx {
         body.append("</w:p>");
     }
 
+    /** Formatted text (bold, underline, colour, Delay and on hold) as runs; line breaks become Word breaks. */
+    private void richRuns(String text, List<Rich.Run> runs, boolean bold, int pt, String color) {
+        for (Rich.Segment seg : Rich.segments(text, runs, true)) {
+            Rich.Style st = seg.style;
+            String col = st.colour.isEmpty() ? color : Rich.hex(st.colour);
+            String[] lines = seg.text.split("\n", -1);
+            for (int i = 0; i < lines.length; i++) {
+                if (i > 0) body.append("<w:r><w:br/></w:r>");
+                if (lines[i].isEmpty()) continue;
+                run(lines[i], bold || st.bold, pt, col, null, st.underline, st.highlight);
+            }
+        }
+    }
+
+    /** A paragraph of formatted text, like para. */
+    private void richPara(String text, List<Rich.Run> runs, boolean bold, int pt, String color, int afterTwips, boolean indent) {
+        body.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"").append(afterTwips).append("\"/>");
+        if (indent) body.append("<w:ind w:left=\"440\"/>");
+        body.append("</w:pPr>");
+        richRuns(text, runs, bold, pt, color);
+        body.append("</w:p>");
+    }
+
     private void run(String text, boolean bold, int pt, String color, String font) {
+        run(text, bold, pt, color, font, false, false);
+    }
+
+    private void run(String text, boolean bold, int pt, String color, String font, boolean underline, boolean highlight) {
         String f = font == null ? "Calibri" : font;
         body.append("<w:r><w:rPr><w:rFonts w:ascii=\"").append(f).append("\" w:hAnsi=\"").append(f)
                 .append("\" w:cs=\"").append(f).append("\"/>");
         if (bold) body.append("<w:b/>");
+        // Word wants these in this order: color, sz, szCs, highlight, u.
         body.append("<w:color w:val=\"").append(color).append("\"/><w:sz w:val=\"").append(pt * 2)
-                .append("\"/><w:szCs w:val=\"").append(pt * 2).append("\"/></w:rPr><w:t xml:space=\"preserve\">")
-                .append(esc(text)).append("</w:t></w:r>");
+                .append("\"/><w:szCs w:val=\"").append(pt * 2).append("\"/>");
+        if (highlight) body.append("<w:highlight w:val=\"yellow\"/>");
+        if (underline) body.append("<w:u w:val=\"single\"/>");
+        body.append("</w:rPr><w:t xml:space=\"preserve\">").append(esc(text)).append("</w:t></w:r>");
     }
 
     static String esc(String s) {

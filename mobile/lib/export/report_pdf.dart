@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/rich.dart';
 import 'photo_layout.dart';
 
 class _Style {
@@ -70,6 +71,9 @@ class ReportPdf {
 
   /// The log's date, so photo captions only show a date when it's a different day.
   String _logIso = '';
+
+  /// The project being printed, to find Notes-tab notes and their formatting.
+  Project? _project;
 
   ReportPdf._(this._footerTitle, this._photoDir);
 
@@ -138,6 +142,7 @@ class ReportPdf {
 
   void _render(Project p, DailyLog log, String by, int at) {
     _logIso = log.date;
+    _project = p;
     _newPage();
     const w = _w - 2 * _m;
     if (p.name.isNotEmpty) _text(p.name.toUpperCase(), _caps, _m, w, 4);
@@ -260,7 +265,10 @@ class ReportPdf {
             : _body;
         _drawString(s, tp, _m + nameW + (stW - _measure(s, tp)) / 2, _y + 13.5);
         final c = r.comment.trim().replaceAll('\n', ' ');
-        if (c.isNotEmpty) _drawString(_ellipsize(c, _body, comW - 10), _body, _m + nameW + stW + 6, _y + 13.5);
+        if (c.isNotEmpty) {
+          _drawRichLine(c, _charStyles(c, const []), _body, 0, c.length, _m + nameW + stW + 6, _y + 13.5,
+              maxX: _m + nameW + stW + comW - 4);
+        }
         _y += rowH;
       }
       _hLine(_m, _m + w, _y);
@@ -340,7 +348,7 @@ class ReportPdf {
     if (notes.isEmpty) return;
     _text('Notes', _otBold, _m, w, 3);
     for (final para in notes.split('\n')) {
-      _text(para.isEmpty ? ' ' : para, _body, _m, w, 2);
+      _richText(para.isEmpty ? ' ' : para, const [], _body, _m, w, 2);
     }
     _y += 8;
   }
@@ -359,7 +367,10 @@ class ReportPdf {
       _text('$time   ${e.label()}', _body, x, iw, 2);
       if (e.type == Extra.link && e.detail.isNotEmpty) _text(e.detail, _small, x, iw, 2);
       if ((e.type == Extra.notify || e.type == Extra.note) && e.detail.trim().isNotEmpty) {
-        _text(e.detail.trim(), _small, x, iw, 2);
+        // A note from the Notes tab keeps its formatting.
+        final note = e.type == Extra.note ? _project?.findNote(e.refId) : null;
+        final runs = note != null && note.text == e.detail.trim() ? note.textStyle : const <Run>[];
+        _richText(e.detail.trim(), runs, _small, x, iw, 2);
       }
       if (e.photos.isNotEmpty) {
         _y += 6;
@@ -371,7 +382,9 @@ class ReportPdf {
 
   void _drawTask(Task t) {
     const x = _m + _indent, w = _w - _m - x;
-    final head = _wrap(t.title.isEmpty ? '(Untitled field)' : t.title, _heading, w);
+    final titleText = t.title.isEmpty ? '(Untitled field)' : t.title;
+    final titleStyles = _charStyles(titleText, const []);
+    final head = _richWrap(titleText, titleStyles, _heading, w);
     final rows = t.photos.isEmpty ? null : _photoRows(t.photos, w);
     _ensure(math.min(_keep(t, rows), _h - 2 * _m - 40));
 
@@ -398,7 +411,11 @@ class ReportPdf {
         ..drawEllipse(cx, _h - cy, 6.8, 6.8)
         ..strokePath();
     }
-    _drawLines(head, _heading, x);
+    for (final (a, b) in head) {
+      _ensure(_heading.lineH);
+      _drawRichLine(titleText, titleStyles, _heading, a, b, x, _y + _heading.ascent);
+      _y += _heading.lineH;
+    }
     _y += 3;
 
     if (t.done) {
@@ -429,7 +446,7 @@ class ReportPdf {
     if (t.assignees.isNotEmpty) _text('Assigned: ${Fmt.join(t.assignees)}', _small, x, w, 2);
     if (t.notes.trim().isNotEmpty) {
       _y += 4;
-      _text(t.notes.trim(), _body, x, w, 2);
+      _richText(t.notes.trim(), t.notes.trim() == t.notes ? t.notesStyle : const [], _body, x, w, 2);
     }
     if (t.photosRequired && t.photos.isEmpty) _text('Photos required: none attached', _smallRed, x, w, 2);
 
@@ -617,6 +634,132 @@ class ReportPdf {
       _drawString(l, st, x, _y + st.ascent);
       _y += st.lineH;
     }
+  }
+
+  // ----- formatted text (bold, underline, colour, Delay and on hold) -----
+
+  static const _richColours = {'yellow': 0xFFC99A00, 'orange': 0xFFE8730C, 'red': 0xFFD93B3F};
+  static final _highlight = PdfColor.fromInt(0xFFFFE45C);
+
+  _Style _richStyle(_Style st, RichStyle r) => _Style(
+        st.size,
+        r.colour.isEmpty ? st.argb : _richColours[r.colour]!,
+        bold: st.bold || r.bold,
+        spacing: st.spacing,
+      );
+
+  /// Width of text[a, b) drawn with its styles.
+  double _richWidth(String text, List<RichStyle> styles, _Style st, int a, int b) {
+    var w = 0.0;
+    var i = a;
+    while (i < b) {
+      var j = i + 1;
+      while (j < b && styles[j] == styles[i]) {
+        j++;
+      }
+      w += _measure(text.substring(i, j), _richStyle(st, styles[i]));
+      i = j;
+    }
+    return w;
+  }
+
+  /// Word wrap of formatted text: lines as [start, end) ranges of [text]. Line breaks are kept and an
+  /// over-long word is split.
+  List<(int, int)> _richWrap(String text, List<RichStyle> styles, _Style st, double width) {
+    final out = <(int, int)>[];
+    var p = 0;
+    while (p <= text.length) {
+      var nl = text.indexOf('\n', p);
+      if (nl < 0) nl = text.length;
+      var lineStart = p, lastFit = p, i = p;
+      while (i < nl) {
+        var wordEnd = text.indexOf(' ', i);
+        if (wordEnd < 0 || wordEnd > nl) wordEnd = nl;
+        if (_richWidth(text, styles, st, lineStart, wordEnd) <= width) {
+          lastFit = wordEnd;
+          i = wordEnd + 1;
+          continue;
+        }
+        if (lastFit > lineStart) {
+          // Start a new line with this word.
+          out.add((lineStart, lastFit));
+          lineStart = i;
+          lastFit = i;
+          continue;
+        }
+        // The word alone is too wide: split it.
+        var n = wordEnd;
+        while (n > lineStart + 1 && _richWidth(text, styles, st, lineStart, n) > width) {
+          n--;
+        }
+        out.add((lineStart, n));
+        lineStart = n;
+        lastFit = n;
+        i = n;
+      }
+      out.add((lineStart, lastFit < lineStart ? lineStart : lastFit));
+      p = nl + 1;
+    }
+    return out;
+  }
+
+  List<RichStyle> _charStyles(String text, List<Run> runs) {
+    final styles = List<RichStyle>.filled(text.length, RichStyle.plain);
+    for (final seg in Rich.segments(text, runs)) {
+      for (var i = seg.start; i < seg.end; i++) {
+        styles[i] = seg.style;
+      }
+    }
+    return styles;
+  }
+
+  /// Draws text[a, b) on one line with its styles, starting at [x], stopping at [maxX] (with "…").
+  void _drawRichLine(String text, List<RichStyle> styles, _Style st, int a, int b, double x, double baseline,
+      {double? maxX}) {
+    var cx = x;
+    var i = a;
+    while (i < b) {
+      var j = i + 1;
+      while (j < b && styles[j] == styles[i]) {
+        j++;
+      }
+      final rs = styles[i], ps = _richStyle(st, rs);
+      var piece = text.substring(i, j);
+      var w = _measure(piece, ps);
+      var cut = false;
+      if (maxX != null && cx + w > maxX) {
+        piece = _ellipsize(piece, ps, maxX - cx);
+        w = _measure(piece, ps);
+        cut = true;
+      }
+      if (rs.highlight) _fillRect(cx, baseline - st.ascent, w, st.size * 1.15, _highlight);
+      _drawString(piece, ps, cx, baseline);
+      if (rs.underline) {
+        _g!
+          ..setStrokeColor(ps.color)
+          ..setLineWidth(0.6)
+          ..drawLine(cx, _h - (baseline + 1.5), cx + w, _h - (baseline + 1.5))
+          ..strokePath();
+      }
+      cx += w;
+      if (cut) return;
+      i = j;
+    }
+  }
+
+  /// Formatted text, wrapped to [width], like [_text].
+  void _richText(String s, List<Run> runs, _Style st, double x, double width, double after) {
+    final text = s.replaceAll('\r\n', '\n').replaceAll('\t', ' ');
+    // Runs only line up with the text if nothing was replaced.
+    final styles = _charStyles(text, text == s ? runs : const []);
+    final lines = _richWrap(text, styles, st, width);
+    _ensure(math.min(lines.length * st.lineH, _h - 2 * _m - 40));
+    for (final (a, b) in lines) {
+      _ensure(st.lineH);
+      _drawRichLine(text, styles, st, a, b, x, _y + st.ascent);
+      _y += st.lineH;
+    }
+    _y += after;
   }
 
   /// Text with its baseline at [baseline] (measured down from the top of the page).

@@ -229,6 +229,7 @@ class Export {
     ..location = p.location
     ..overtime = p.overtime
     ..attendance = p.attendance
+    ..notes = p.notes // Notes-tab notes in "Also today" keep their formatting
     ..seaCans = p.seaCans
     ..seaCanInclude = p.seaCanInclude;
 

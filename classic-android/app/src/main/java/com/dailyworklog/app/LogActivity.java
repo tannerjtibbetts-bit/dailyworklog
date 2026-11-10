@@ -785,7 +785,7 @@ public class LogActivity extends AppCompatActivity {
                     : unzoned ? (t.done ? R.drawable.bg_card_unzoned_done : R.drawable.bg_card_unzoned)
                     : t.done ? R.drawable.bg_card_done : R.drawable.bg_card);
             check.setChecked(t.done, false);
-            title.setText(t.title);
+            title.setText(RichEdit.spanned(t.title));
             if (t.done) {
                 stamp.setVisibility(View.VISIBLE);
                 stamp.setText(t.completedBy + ", " + Fmt.stamp(t.completedAt));
@@ -795,7 +795,7 @@ public class LogActivity extends AppCompatActivity {
             assigned.setVisibility(t.assignees.isEmpty() ? View.GONE : View.VISIBLE);
             assigned.setText(Fmt.join(t.assignees));
             notes.setVisibility(t.notes.trim().isEmpty() ? View.GONE : View.VISIBLE);
-            notes.setText(t.notes.trim());
+            notes.setText(RichEdit.notes(t));
             secured.setVisibility(t.loadSecured ? View.VISIBLE : View.GONE);
             nextShift.setVisibility(t.nextShift ? View.VISIBLE : View.GONE);
             side.setVisibility(t.side.isEmpty() ? View.GONE : View.VISIBLE);

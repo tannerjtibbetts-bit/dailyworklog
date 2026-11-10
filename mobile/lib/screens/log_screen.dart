@@ -13,6 +13,7 @@ import '../import/import_screen.dart';
 import '../services/done_text.dart';
 import '../services/photos.dart';
 import '../ui/common.dart';
+import '../ui/rich_text.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
 import 'field_widgets.dart';
@@ -652,7 +653,7 @@ class _LogScreenState extends State<LogScreen> {
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
-                                    child: Text(
+                                    child: RichView(
                                       t.title,
                                       style: const TextStyle(color: C.navy, fontSize: 22, fontWeight: FontWeight.bold),
                                     ),
@@ -704,8 +705,9 @@ class _LogScreenState extends State<LogScreen> {
                                     if (t.notes.trim().isNotEmpty)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 10),
-                                        child: Text(
-                                          t.notes.trim(),
+                                        child: RichView(
+                                          t.notes,
+                                          runs: t.notesStyle,
                                           style: const TextStyle(color: C.text, fontSize: 18, height: 1.3),
                                         ),
                                       ),

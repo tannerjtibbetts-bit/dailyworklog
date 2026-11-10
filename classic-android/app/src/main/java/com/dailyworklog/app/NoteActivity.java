@@ -40,6 +40,8 @@ public class NoteActivity extends AppCompatActivity {
 
     private LinearLayout photos;
     private EditText note;
+    /** Formatting of the note's text. */
+    private RichEdit noteRich;
     private CheckBox include;
     private ActivityResultLauncher<Uri> takePicture;
     private ActivityResultLauncher<String> pickImages;
@@ -111,7 +113,10 @@ public class NoteActivity extends AppCompatActivity {
         note = findViewById(R.id.note);
         include = findViewById(R.id.include);
         ((TextView) findViewById(R.id.topProject)).setText(project.name);
-        if (savedInstanceState == null) note.setText(n.text);
+        // Always set: a rebuilt screen then restores its own text on top, and the formatting follows the change.
+        note.setText(n.text);
+        noteRich = RichEdit.attach(note, n.text, n.textStyle, true);
+        noteRich.addToolbarAbove((View) note.getParent(), this::persist);
 
         findViewById(R.id.back).setOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
         findViewById(R.id.addPhotos).setOnClickListener(v -> photoSource());
@@ -170,8 +175,11 @@ public class NoteActivity extends AppCompatActivity {
     private void persist() {
         if (n == null || note == null) return;
         String text = note.getText().toString().trim();
-        boolean changed = !text.equals(n.text);
+        // Trimming moves the formatting with the text.
+        List<Rich.Run> style = noteRich != null ? noteRich.trimmedRuns() : n.textStyle;
+        boolean changed = !text.equals(n.text) || !style.equals(n.textStyle);
         n.text = text;
+        n.textStyle = style;
         if (isNew) {
             if (n.isEmpty()) return;
             project.notes.add(0, n);

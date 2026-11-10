@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -12,7 +13,9 @@ import '../data/store.dart';
 import '../services/done_text.dart';
 import '../services/photos.dart';
 import '../services/sms.dart';
+import '../data/rich.dart';
 import '../ui/common.dart';
+import '../ui/rich_text.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
 import 'load_secure_sheet.dart';
@@ -149,7 +152,7 @@ class TaskScreen extends StatefulWidget {
 }
 
 class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
-  late final TextEditingController title, notes;
+  late final RichController title, notes;
   var closing = false;
 
   Store get store => Store.instance;
@@ -161,8 +164,8 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     final t = task;
-    title = TextEditingController(text: t?.title ?? '');
-    notes = TextEditingController(text: t?.notes ?? '');
+    title = RichController(text: t?.title ?? '', formatting: false); // shows Delay / on hold only
+    notes = RichController(text: t?.notes ?? '', runs: t?.notesStyle);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -185,13 +188,16 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     final t = task;
     if (t == null || closing) return false;
     final ti = title.text.trim(), n = notes.text.trim();
+    // Trimming moves the text, so the formatting moves with it.
+    final style = Rich.afterEdit(notes.text, n, notes.runs, null);
     var changed = false;
     if (ti.isNotEmpty && ti != t.title) {
       t.title = ti;
       changed = true;
     }
-    if (n != t.notes) {
+    if (n != t.notes || !listEquals(style, t.notesStyle)) {
       t.notes = n;
+      t.notesStyle = style;
       changed = true;
     }
     return changed;
@@ -553,6 +559,10 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
       ),
     Padding(
       padding: const EdgeInsets.only(top: 14),
+      child: FormatBar(controller: notes, onChanged: _saveText),
+    ),
+    Padding(
+      padding: const EdgeInsets.only(top: 6),
       child: TextField(
         controller: notes,
         minLines: 2,

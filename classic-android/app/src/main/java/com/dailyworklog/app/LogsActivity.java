@@ -957,7 +957,8 @@ public class LogsActivity extends AppCompatActivity {
                 nh.del.setVisibility(View.VISIBLE);
                 nh.del.setOnClickListener(v -> deleteNote(n));
                 nh.title.setText(Fmt.longStamp(n.createdAt));
-                nh.note.setText(n.text.isEmpty() ? Fmt.plural(n.photos.size(), "photo", "photos") : n.text);
+                nh.note.setText(n.text.isEmpty() ? Fmt.plural(n.photos.size(), "photo", "photos")
+                        : RichEdit.spanned(n.text, n.textStyle, true));
                 String by = n.by.isEmpty() || "Me".equals(n.by) ? "" : "By " + n.by;
                 String pics = n.photos.isEmpty() ? "" : Fmt.plural(n.photos.size(), "photo", "photos");
                 nh.when.setText(by.isEmpty() || pics.isEmpty() ? by + pics : by + ", " + pics);

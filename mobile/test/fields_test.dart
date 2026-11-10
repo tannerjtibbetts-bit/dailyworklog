@@ -14,6 +14,8 @@ import 'package:dailyworklog/ui/common.dart';
 import 'package:dailyworklog/ui/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dailyworklog/data/rich.dart';
+import 'package:dailyworklog/ui/rich_text.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
@@ -523,6 +525,21 @@ void main() {
       await tester.tap(find.text('Put load securement photos in the report'));
       await tester.pump();
       expect(t.securedPhotosInReport, isFalse);
+
+      // Notes: select a word and make it bold; "delayed" shows red without doing anything.
+      final notesBox = find.widgetWithText(TextField, 'Add notes…');
+      await tester.ensureVisible(notesBox);
+      await tester.enterText(notesBox, 'Crane delayed');
+      final ctl = tester.widget<TextField>(notesBox).controller! as RichController;
+      ctl.selection = const TextSelection(baseOffset: 0, extentOffset: 5);
+      await tester.ensureVisible(find.byTooltip('Bold'));
+      await tester.tap(find.byTooltip('Bold'));
+      await tester.pump();
+      expect(t.notes, 'Crane delayed');
+      expect(t.notesStyle, [const Run(0, 5, RichStyle(bold: true))]);
+      await tester.tap(find.byTooltip('Red'));
+      await tester.pump();
+      expect(t.notesStyle, [const Run(0, 5, RichStyle(bold: true, colour: 'red'))]);
 
       await tester.enterText(find.byType(TextField).first, 'North one, bay 2');
       await tester.pumpAndSettle();

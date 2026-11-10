@@ -15,7 +15,7 @@ final class ReportXlsx {
 
     /** Cell styles (cellXfs) in styles.xml. */
     private static final int NORMAL = 0, BOLD = 1, TITLE = 2, META = 3, HEAD = 4, CELL = 5, GREEN = 6, RED = 7,
-            SECTION = 8, NUM = 9, AREA = 10;
+            SECTION = 8, NUM = 9, AREA = 10, CELL_HOLD = 11, NORMAL_HOLD = 12;
     private static final String COLS = "ABCDEFGHIJ";
     private static final int[] WIDTHS = {12, 40, 11, 18, 20, 22, 26, 11, 40, 9};
 
@@ -55,6 +55,30 @@ final class ReportXlsx {
             sb.append("<c r=\"").append(ref).append("\" t=\"inlineStr\"");
             if (style != NORMAL) sb.append(" s=\"").append(style).append("\"");
             sb.append("><is><t xml:space=\"preserve\">").append(esc(text)).append("</t></is></c>");
+            return this;
+        }
+
+        /**
+         * Text with its formatting and Delay / on hold, as a rich inline string. Excel can't highlight
+         * part of a cell, so a cell with "on hold" gets a light yellow fill.
+         */
+        Sheet rich(int col, String text, List<Rich.Run> runs, int style) {
+            if (Rich.hasOnHold(text)) style = style == CELL ? CELL_HOLD : NORMAL_HOLD;
+            List<Rich.Segment> segs = Rich.segments(text, runs, true);
+            boolean plain = true;
+            for (Rich.Segment x : segs) if (!x.style.isPlain()) plain = false;
+            if (plain) return text(col, text, style);
+            sb.append("<c r=\"").append(COLS.charAt(col)).append(r).append("\" t=\"inlineStr\"");
+            if (style != NORMAL) sb.append(" s=\"").append(style).append("\"");
+            sb.append("><is>");
+            for (Rich.Segment x : segs) {
+                Rich.Style st = x.style;
+                sb.append("<r><rPr><rFont val=\"Calibri\"/>").append(st.bold ? "<b/>" : "")
+                        .append("<color rgb=\"FF").append(st.colour.isEmpty() ? "000000" : Rich.hex(st.colour)).append("\"/>")
+                        .append("<sz val=\"11\"/>").append(st.underline ? "<u/>" : "")
+                        .append("</rPr><t xml:space=\"preserve\">").append(esc(x.text)).append("</t></r>");
+            }
+            sb.append("</is></c>");
             return this;
         }
 
@@ -98,7 +122,7 @@ final class ReportXlsx {
             for (Models.Task t : g.getValue()) {
                 s.row();
                 s.text(0, g.getKey(), AREA);
-                s.text(1, t.title, CELL);
+                s.rich(1, t.title, null, CELL);
                 s.text(2, t.done ? "Done" : "Not done", t.done ? GREEN : RED);
                 s.text(3, t.done ? t.completedBy : "", CELL);
                 s.text(4, t.done && t.completedAt > 0 ? Fmt.stamp(t.completedAt) : "", CELL);
@@ -114,7 +138,8 @@ final class ReportXlsx {
                 }
                 s.text(6, secured, CELL);
                 s.text(7, t.nextShift ? "Yes" : "", NUM);
-                s.text(8, t.notes.trim(), CELL);
+                String notes = t.notes.trim();
+                s.rich(8, notes, notes.equals(t.notes) ? t.notesStyle : null, CELL);
                 if (!t.photos.isEmpty()) s.num(9, String.valueOf(t.photos.size()), NUM);
                 else if (t.photosRequired) s.text(9, "Required, none", RED);
                 else s.text(9, "", NUM);
@@ -130,7 +155,7 @@ final class ReportXlsx {
                 s.row();
                 s.text(0, new java.text.SimpleDateFormat("h:mm a", Locale.US).format(new java.util.Date(e.at)), CELL);
                 s.text(1, e.label(), CELL);
-                s.text(2, Models.Extra.TEMPLATE.equals(e.type) ? "" : e.detail.trim(), CELL);
+                s.rich(2, Models.Extra.TEMPLATE.equals(e.type) ? "" : e.detail.trim(), noteRuns(p, e), CELL);
             }
         }
 
@@ -149,7 +174,7 @@ final class ReportXlsx {
             }
             s.row().text(0, "Yes total", BOLD);
             for (int d = 0; d < 3; d++) s.num(1 + d, String.valueOf(ot.yesCount(d)), NUM);
-            if (!ot.notes.trim().isEmpty()) s.row().text(0, "Notes: " + ot.notes.trim(), NORMAL);
+            if (!ot.notes.trim().isEmpty()) s.row().rich(0, "Notes: " + ot.notes.trim(), null, NORMAL);
         }
 
         Models.Attendance att = p.attendance;
@@ -161,10 +186,10 @@ final class ReportXlsx {
                 s.row();
                 s.text(0, a.name, CELL);
                 s.text(1, a.status, Models.Attendance.AWOL.equals(a.status) ? RED : yesNoStyle(a.status));
-                s.text(2, a.comment.trim(), CELL);
+                s.rich(2, a.comment.trim(), null, CELL);
             }
             if (!att.summary().isEmpty()) s.row().text(0, att.summary(), BOLD);
-            if (!att.notes.trim().isEmpty()) s.row().text(0, "Notes: " + att.notes.trim(), NORMAL);
+            if (!att.notes.trim().isEmpty()) s.row().rich(0, "Notes: " + att.notes.trim(), null, NORMAL);
         }
 
         List<Models.SeaCanMove> cans = p.filledSeaCans();
@@ -204,12 +229,13 @@ final class ReportXlsx {
                 + font(false, 11, null) + font(true, 11, null) + font(true, 16, "FF14233A") + font(false, 11, "FF6B7685")
                 + font(true, 11, "FFFFFFFF") + font(true, 11, "FF1DB04B") + font(true, 11, "FFD93B3F") + font(true, 13, "FF14233A")
                 + "</fonts>"
-                + "<fills count=\"4\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill>"
+                + "<fills count=\"5\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill>"
                 + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF14233A\"/><bgColor indexed=\"64\"/></patternFill></fill>"
-                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFEEF2F7\"/><bgColor indexed=\"64\"/></patternFill></fill></fills>"
+                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFEEF2F7\"/><bgColor indexed=\"64\"/></patternFill></fill>"
+                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFFF59D\"/><bgColor indexed=\"64\"/></patternFill></fill></fills>"
                 + "<borders count=\"2\"><border><left/><right/><top/><bottom/><diagonal/></border>" + border + "</borders>"
                 + "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>"
-                + "<cellXfs count=\"11\">"
+                + "<cellXfs count=\"13\">"
                 + xf(0, 0, 0, null, "top", true)       // 0 normal
                 + xf(1, 0, 0, null, null, false)       // 1 bold
                 + xf(2, 0, 0, null, null, false)       // 2 title
@@ -221,6 +247,8 @@ final class ReportXlsx {
                 + xf(7, 0, 0, null, null, false)       // 8 section heading
                 + xf(0, 0, 1, "center", "top", false)  // 9 number cell
                 + xf(1, 3, 1, null, "top", false)      // 10 area cell
+                + xf(0, 4, 1, null, "top", true)       // 11 table cell with "on hold" (light yellow)
+                + xf(0, 4, 0, null, "top", true)       // 12 normal with "on hold" (light yellow)
                 + "</cellXfs><cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles>"
                 + "</styleSheet>";
 
@@ -249,6 +277,13 @@ final class ReportXlsx {
             put(zip, "xl/styles.xml", styles);
             put(zip, "xl/worksheets/sheet1.xml", sheet);
         }
+    }
+
+    /** A Notes-tab note in "Also today" keeps its formatting when it's found and unchanged. */
+    static List<Rich.Run> noteRuns(Models.Project p, Models.Extra e) {
+        if (!Models.Extra.NOTE.equals(e.type)) return null;
+        Models.Note n = p.findNote(e.refId);
+        return n != null && n.text.equals(e.detail.trim()) ? n.textStyle : null;
     }
 
     private static int yesNoStyle(String v) {

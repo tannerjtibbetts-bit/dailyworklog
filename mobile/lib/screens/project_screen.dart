@@ -7,11 +7,13 @@ import 'package:share_plus/share_plus.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/project_search.dart';
+import '../data/rich.dart';
 import '../data/store.dart';
 import '../export/export.dart';
 import '../services/form_prefill.dart';
 import '../services/sms.dart';
 import '../ui/common.dart';
+import '../ui/rich_text.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
 import 'field_widgets.dart' show ProgressRing;
@@ -809,6 +811,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     required IconData icon,
     required String title,
     required String text,
+    List<Run> runs = const [],
     required String when,
     required Widget include,
     required List<Photo> photos,
@@ -835,8 +838,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   style: const TextStyle(color: C.navy, fontSize: 19, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 3),
-                Text(
+                RichView(
                   text,
+                  runs: runs,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: C.text, fontSize: 16),
@@ -883,6 +887,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       icon: Icons.edit_outlined,
       title: Fmt.longStamp(n.createdAt),
       text: n.text.isEmpty ? Fmt.plural(n.photos.length, 'photo', 'photos') : n.text,
+      runs: n.textStyle,
       when: by.isEmpty || pics.isEmpty ? by + pics : '$by, $pics',
       include: _include(Extra.note, n.id, n.by, n.text, n.photos, 0),
       photos: n.photos,

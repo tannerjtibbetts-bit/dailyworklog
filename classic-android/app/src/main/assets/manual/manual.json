@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-11-02",
+  "updated": "2026-11-10",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -1500,6 +1500,88 @@
           "type": "see",
           "id": "text-when-completed",
           "text": "Related: Texting someone when a field is done"
+        },
+        {
+          "type": "see",
+          "id": "formatting-notes",
+          "text": "Related: Bold, underline and colour in notes"
+        }
+      ]
+    },
+    {
+      "id": "formatting-notes",
+      "title": "Bold, underline and colour in notes",
+      "group": "Fields",
+      "summary": "Make chosen words bold, underlined or coloured. \"Delay\" turns red and \"on hold\" is highlighted by itself.",
+      "keywords": [
+        "bold",
+        "underline",
+        "colour",
+        "color",
+        "font",
+        "format",
+        "highlight",
+        "delay",
+        "delayed",
+        "on hold",
+        "red",
+        "yellow",
+        "orange"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Above a field's notes box, and above the note box on the Notes tab, there's a row of buttons: \"B\" (bold), \"U\" (underline) and four colour dots: black, yellow, orange and red."
+        },
+        {
+          "type": "image",
+          "file": "format_notes.png",
+          "caption": "Formatted notes on a field"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Type your note.",
+            "Select the words you want to change: press and hold a word, then drag the handles.",
+            "Tap \"B\" to make them bold, \"U\" to underline them, or a colour dot to colour them. Tap \"B\" or \"U\" again to take it off. Tap the black dot to go back to normal colour."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "With nothing selected, tap \"B\", \"U\" or a colour first, then type. What you type next comes out that way."
+        },
+        {
+          "type": "text",
+          "text": "Some words stand out by themselves, without doing anything:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "\"Delay\" (also \"Delays\" and \"Delayed\") always shows in red and bold.",
+            "\"On hold\" always shows in bold with a yellow highlight.",
+            "This works in field titles, field notes and notes, on the checklist, and in the PDF, Word and Excel reports."
+          ]
+        },
+        {
+          "type": "image",
+          "file": "format_log.png",
+          "caption": "Delay and on hold stand out on the checklist too"
+        },
+        {
+          "type": "text",
+          "text": "Your bold, underline and colours print in the reports as well. In Excel, a cell with \"on hold\" gets a light yellow background, because Excel can't highlight only part of a cell."
+        },
+        {
+          "type": "see",
+          "id": "editing-a-field",
+          "text": "Related: Editing a field: title, notes and area"
+        },
+        {
+          "type": "see",
+          "id": "notes-tab",
+          "text": "Related: Notes: writing and deleting notes"
         }
       ]
     },
@@ -2759,6 +2841,11 @@
         {
           "type": "tip",
           "text": "\"Clear all notes\" deletes every note in the project, not just the ones a search shows. It can't be undone."
+        },
+        {
+          "type": "see",
+          "id": "formatting-notes",
+          "text": "Related: Bold, underline and colour in notes"
         }
       ]
     },

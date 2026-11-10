@@ -45,6 +45,8 @@ public class TaskActivity extends AppCompatActivity {
 
     private CheckCircle check;
     private EditText title, notes;
+    /** Formatting of the notes (and Delay / on hold in the title). */
+    private RichEdit notesRich;
     private TextView stamp, created;
     private LinearLayout assignees, photos;
     private MaterialSwitch required;
@@ -129,6 +131,9 @@ public class TaskActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.topLog)).setText(log.displayTitle());
         title.setText(task.title);
         notes.setText(task.notes);
+        RichEdit.attach(title, task.title, java.util.Collections.emptyList(), false);
+        notesRich = RichEdit.attach(notes, task.notes, task.notesStyle, true);
+        notesRich.addToolbarAbove((View) notes.getParent(), this::saveText);
         check.setChecked(task.done, false);
         required.setChecked(task.photosRequired);
         secured.setChecked(task.loadSecured);
@@ -196,6 +201,8 @@ public class TaskActivity extends AppCompatActivity {
         String t = title.getText().toString().trim();
         if (!t.isEmpty()) task.title = t;
         task.notes = notes.getText().toString().trim();
+        // Trimming moves the formatting with the text.
+        if (notesRich != null) task.notesStyle = notesRich.trimmedRuns();
         store.save();
     }
 
