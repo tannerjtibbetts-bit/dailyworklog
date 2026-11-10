@@ -530,6 +530,8 @@ public final class Models {
             public String name = "", fri = "", sat = "", sun = "";
             /** Hours willing to work, 1 to 10 (blank if not given). */
             public String hours = "";
+            /** Overtime confirmed: "", "Yes" or "No". */
+            public String confirmed = "";
 
             JSONObject toJson() throws JSONException {
                 JSONObject o = new JSONObject();
@@ -538,6 +540,7 @@ public final class Models {
                 o.put("sat", sat);
                 o.put("sun", sun);
                 o.put("hours", hours);
+                o.put("confirmed", confirmed);
                 return o;
             }
 
@@ -548,6 +551,7 @@ public final class Models {
                 r.sat = o.optString("sat", "");
                 r.sun = o.optString("sun", "");
                 r.hours = o.optString("hours", "");
+                r.confirmed = o.optString("confirmed", "");
                 return r;
             }
         }
@@ -568,6 +572,13 @@ public final class Models {
             return n;
         }
 
+        /** Filled rows with Confirmed "Yes". */
+        public int confirmedCount() {
+            int n = 0;
+            for (OtRow r : filled()) if (YES.equals(r.confirmed)) n++;
+            return n;
+        }
+
         /** Drops rows with no name and no answers. */
         public void removeEmptyRows() {
             rows.removeIf(Overtime::isBlank);
@@ -581,7 +592,8 @@ public final class Models {
 
         /** True when the row has no name, answers or hours. */
         public static boolean isBlank(OtRow r) {
-            return r.name.isEmpty() && r.fri.isEmpty() && r.sat.isEmpty() && r.sun.isEmpty() && r.hours.isEmpty();
+            return r.name.isEmpty() && r.fri.isEmpty() && r.sat.isEmpty() && r.sun.isEmpty() && r.hours.isEmpty()
+                    && r.confirmed.isEmpty();
         }
 
         /** Fresh weekend: keep the names, clear the Yes/No answers and hours. */
@@ -592,6 +604,7 @@ public final class Models {
                 r.sat = "";
                 r.sun = "";
                 r.hours = "";
+                r.confirmed = "";
             }
         }
 

@@ -255,8 +255,14 @@ class _OvertimePaneState extends State<OvertimePane> {
         ]),
       );
 
-  static Widget _label(String s, {Color color = C.grey}) => Text(s,
-      textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.bold));
+  /// A column heading or total, kept on one line (it shrinks a little if the column is narrow).
+  static Widget _label(String s, {Color color = C.grey}) => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(s,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.bold)),
+      );
 
   /// One table row: Name, Fri, Sat, Sun dropdowns and the Hours box.
   Widget _line(OtRow r, List<String> names, {Key? key}) => KeyedSubtree(
@@ -272,8 +278,14 @@ class _OvertimePaneState extends State<OvertimePane> {
               store.save();
             }, yesNo: true, arrow: false),
           _hoursBox(r),
+          // Confirmed for the weekend: Yes / No.
+          sheetDropdown(const [_blank, Overtime.yes, Overtime.no], r.confirmed.isEmpty ? _blank : r.confirmed, (v) {
+            r.confirmed = v == _blank ? '' : v;
+            store.save();
+          }, yesNo: true, arrow: false),
         ], end: removeRowButton(() {
-          final empty = r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty;
+          final empty =
+              r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty && r.confirmed.isEmpty;
           confirmRemoveRow(context, r.name, empty, () {
             ot.rows.remove(r);
             store.save();
@@ -354,13 +366,27 @@ class _OvertimePaneState extends State<OvertimePane> {
                 ]),
               ),
             ),
-            _row([_label('Name'), _label('Fri'), _label('Sat'), _label('Sun'), _label('Hours')]),
+            _row([
+              _label('Name'),
+              _label('Fri'),
+              _label('Sat'),
+              _label('Sun'),
+              _label('Hours'),
+              // Split over two lines so it can be read in the narrow column.
+              const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Con-\nfirmed',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, height: 1.05, color: C.grey, fontWeight: FontWeight.bold)),
+              ),
+            ]),
             for (final r in ot.rows) _line(r, names, key: ObjectKey(r)),
             // Totals sit under the table; after adding rows the screen scrolls here.
             KeyedSubtree(key: _lastRow, child: _row([
               _label('Yes total'),
               for (var d = 0; d < 3; d++) _label('${ot.yesCount(d)}', color: C.green),
               const SizedBox(),
+              _label('${ot.confirmedCount()}', color: C.green),
             ])),
             if (p.crew.isEmpty)
               const Padding(

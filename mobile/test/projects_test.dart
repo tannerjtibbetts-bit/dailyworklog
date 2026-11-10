@@ -148,6 +148,27 @@ void main() {
       expect(p.overtime.rows.length, 2);
     });
 
+    test('Confirmed: saved, counted, cleared with the answers', () {
+      final ot = Overtime()
+        ..rows = [
+          OtRow()
+            ..name = 'Al'
+            ..confirmed = 'Yes',
+          OtRow()..confirmed = 'Yes', // no name: not counted, not empty
+          OtRow()
+            ..name = 'Bo'
+            ..confirmed = 'No',
+        ];
+      expect(ot.confirmedCount(), 1);
+      final again = Overtime.fromJson(ot.toJson());
+      expect(again.rows.map((r) => r.confirmed), ['Yes', 'Yes', 'No']);
+      expect(OtRow.fromJson({'name': 'x'}).confirmed, '');
+      again.removeEmptyRows();
+      expect(again.rows.length, 3);
+      again.startWeekend('2026-11-13');
+      expect(again.rows.every((r) => r.confirmed.isEmpty), true);
+    });
+
     test('yes totals count only named rows', () {
       final ot = Overtime();
       ot.rows.add(OtRow()

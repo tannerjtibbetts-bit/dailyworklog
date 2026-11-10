@@ -119,13 +119,13 @@ final class ReportDocx {
                 + "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>";
         body.append("<w:tbl><w:tblPr><w:tblW w:w=\"10080\" w:type=\"dxa\"/><w:tblBorders>").append(b)
                 .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"4080\"/>")
-                .append("<w:gridCol w:w=\"1500\"/><w:gridCol w:w=\"1500\"/><w:gridCol w:w=\"1500\"/><w:gridCol w:w=\"1500\"/></w:tblGrid>");
-        String[] head = {"Name", "Fri", "Sat", "Sun", "Hours"};
+                .append("<w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/></w:tblGrid>");
+        String[] head = {"Name", "Fri", "Sat", "Sun", "Hours", "Confirmed"};
         otRow(head, true, "E4E7EC", true);
         for (Models.Overtime.OtRow r : rows) {
-            otRow(new String[]{r.name, dash(r.fri), dash(r.sat), dash(r.sun), dash(r.hours)}, false, null, true);
+            otRow(new String[]{r.name, dash(r.fri), dash(r.sat), dash(r.sun), dash(r.hours), dash(r.confirmed)}, false, null, true);
         }
-        otRow(new String[]{"Yes total", String.valueOf(ot.yesCount(0)), String.valueOf(ot.yesCount(1)), String.valueOf(ot.yesCount(2)), ""}, true, null, false);
+        otRow(new String[]{"Yes total", String.valueOf(ot.yesCount(0)), String.valueOf(ot.yesCount(1)), String.valueOf(ot.yesCount(2)), "", String.valueOf(ot.confirmedCount())}, true, null, false);
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
         overtimeNotes(notes);
     }
@@ -236,7 +236,7 @@ final class ReportDocx {
     }
 
     private void otRow(String[] cells, boolean bold, String shade, boolean keep) {
-        int[] widths = {4080, 1500, 1500, 1500, 1500};
+        int[] widths = {4080, 1200, 1200, 1200, 1200, 1200};
         body.append("<w:tr><w:trPr><w:cantSplit/></w:trPr>");
         for (int i = 0; i < cells.length; i++) {
             body.append("<w:tc><w:tcPr><w:tcW w:w=\"").append(widths[i]).append("\" w:type=\"dxa\"/>");

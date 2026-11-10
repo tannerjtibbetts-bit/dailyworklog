@@ -29,6 +29,21 @@ class OtTest { public static void main(String[] a) throws Exception {
   NoteTest.check(o2.rows.size()==3 && o2.weekOf.equals("2026-10-30"), "prepare makes one row per crew member");
   o2.rows.remove(1); o2.prepare(3, "2026-11-06"); NoteTest.check(o2.rows.size()==2 && o2.weekOf.equals("2026-10-30"), "prepare does not top up");
   o2.rows.clear(); o2.prepare(0, "x"); NoteTest.check(o2.rows.size()==1, "at least one row");
+  // Confirmed column
+  Models.Overtime c = new Models.Overtime();
+  Models.Overtime.OtRow c1 = new Models.Overtime.OtRow(); c1.name = "Al"; c1.confirmed = "Yes"; c.rows.add(c1);
+  Models.Overtime.OtRow c2 = new Models.Overtime.OtRow(); c2.name = "Bo"; c2.confirmed = "No"; c.rows.add(c2);
+  Models.Overtime.OtRow c3 = new Models.Overtime.OtRow(); c3.confirmed = "Yes"; c.rows.add(c3);  // no name: not counted
+  Models.Overtime.OtRow c4 = new Models.Overtime.OtRow(); c.rows.add(c4);
+  Models.Overtime cq = Models.Overtime.fromJson(c.toJson());
+  NoteTest.check(cq.rows.get(0).confirmed.equals("Yes") && cq.rows.get(1).confirmed.equals("No") && cq.rows.get(3).confirmed.isEmpty(), "confirmed saved");
+  org.json.JSONObject oldRow = c1.toJson(); oldRow.remove("confirmed");
+  NoteTest.check(Models.Overtime.OtRow.fromJson(oldRow).confirmed.isEmpty(), "old row: confirmed blank");
+  NoteTest.check(c.confirmedCount() == 1, "confirmedCount counts named Yes rows");
+  NoteTest.check(!Models.Overtime.isBlank(c3) && Models.Overtime.isBlank(c4), "confirmed makes a row not empty");
+  cq.removeEmptyRows(); NoteTest.check(cq.rows.size() == 3, "remove empty rows keeps a confirmed-only row");
+  c.startWeekend("2026-11-13");
+  NoteTest.check(c1.confirmed.isEmpty() && c2.confirmed.isEmpty() && c.confirmedCount() == 0 && c1.name.equals("Al"), "clear answers clears confirmed");
   System.out.println("OT PASS"); } }
 class AttendanceTest { public static void main(String[] a) throws Exception {
   Models.Project p = new Models.Project(); p.name = "B44 Zone 2";
@@ -429,12 +444,26 @@ class ReportXlsxTest {
       && s.contains("<c r=\"B13\" t=\"inlineStr\" s=\"5\">" + t("Template used: Daily")) && s.contains("<c r=\"C13\" s=\"5\"/>"), "also today, template detail empty");
   NoteTest.check(!s.contains("Weekend overtime") && !s.contains("Attendance Tue") && !s.contains("Sea can movements"), "not ticked yet");
   p.overtime.include = true; p.overtime.notes = "Bring harness"; p.attendance.include = true; p.seaCanInclude = true;
+  o.confirmed = "Yes";
   s = parts(p, l).get("xl/worksheets/sheet1.xml");
   System.out.println(s.substring(s.indexOf("<row r=\"15\"")));
   NoteTest.check(s.contains("<c r=\"A15\" t=\"inlineStr\" s=\"8\">" + t("Weekend overtime")) && s.contains("<c r=\"E16\" t=\"inlineStr\" s=\"4\">" + t("Hours"))
       && s.contains("<c r=\"B17\" t=\"inlineStr\" s=\"6\">" + t("Yes")) && s.contains("<c r=\"C17\" t=\"inlineStr\" s=\"7\">" + t("No")) && s.contains("<c r=\"D17\" s=\"9\"/>")
       && s.contains("<c r=\"E17\" s=\"9\"><v>8</v></c>") && s.contains("<c r=\"A18\" t=\"inlineStr\" s=\"1\">" + t("Yes total")) && s.contains("<c r=\"B18\" s=\"9\"><v>1</v></c>")
       && s.contains("<c r=\"A19\" t=\"inlineStr\">" + t("Notes: Bring harness")), "overtime section");
+  NoteTest.check(s.contains("<c r=\"F16\" t=\"inlineStr\" s=\"4\">" + t("Confirmed")) && s.contains("<c r=\"F17\" t=\"inlineStr\" s=\"6\">" + t("Yes"))
+      && s.contains("<c r=\"F18\" s=\"9\"><v>1</v></c>"), "overtime Confirmed column");
+  java.io.ByteArrayOutputStream ob = new java.io.ByteArrayOutputStream();
+  OvertimeXlsx.write(p, "Tanner", 0L, ob);
+  String os = "";
+  try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(ob.toByteArray()))) {
+    for (java.util.zip.ZipEntry ze; (ze = z.getNextEntry()) != null; ) if (ze.getName().equals("xl/worksheets/sheet1.xml")) os = new String(z.readAllBytes(), "UTF-8");
+  }
+  NoteTest.check(os.contains("<c r=\"F5\" t=\"inlineStr\" s=\"2\">" + t("Confirmed")) && os.contains("<c r=\"F6\" t=\"inlineStr\" s=\"3\">" + t("Yes"))
+      && os.contains("<c r=\"F7\" s=\"3\"><v>1</v></c>") && os.contains("<col min=\"6\" max=\"6\" width=\"11\""), "overtime xlsx Confirmed column");
+  String doc = DelayTest.docx(p, l);
+  NoteTest.check(doc.contains("<w:gridCol w:w=\"4080\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/></w:tblGrid>")
+      && doc.contains(">Confirmed</w:t>") && doc.contains("<w:b/><w:color w:val=\"1DB04B\"/><w:sz w:val=\"20\"/><w:szCs w:val=\"20\"/></w:rPr><w:t xml:space=\"preserve\">Yes</w:t>"), "docx Confirmed column");
   NoteTest.check(s.contains("<c r=\"A21\" t=\"inlineStr\" s=\"8\">" + t("Attendance Tue Oct 27, 2026")) && s.contains("<c r=\"C22\" t=\"inlineStr\" s=\"4\">" + t("Comment"))
       && s.contains("<c r=\"B23\" t=\"inlineStr\" s=\"7\">" + t("AWOL")) && s.contains("<c r=\"C23\" t=\"inlineStr\" s=\"5\">" + t("no call"))
       && s.contains("<c r=\"A24\" t=\"inlineStr\" s=\"1\">" + t("AWOL 1")), "attendance section");

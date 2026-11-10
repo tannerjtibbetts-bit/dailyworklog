@@ -1,4 +1,4 @@
-// The Overtime tab as a small Excel (.xlsx) file: Name / Fri / Sat / Sun / Hours, totals and notes.
+// The Overtime tab as a small Excel (.xlsx) file: Name / Fri / Sat / Sun / Hours / Confirmed, totals and notes.
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -37,7 +37,7 @@ class OvertimeXlsx {
     row(['Weekend of ${Fmt.weekendDay(ot.weekOf, 0)} to ${Fmt.weekendDay(ot.weekOf, 2)}'], _normal);
     row(['Exported ${Fmt.longStamp(at)} by $by'], _normal);
     r++;
-    row(['Name', 'Fri', 'Sat', 'Sun', 'Hours'], _head);
+    row(['Name', 'Fri', 'Sat', 'Sun', 'Hours', 'Confirmed'], _head);
     for (final o in ot.filled()) {
       r++;
       rows.write('<row r="$r">');
@@ -50,6 +50,7 @@ class OvertimeXlsx {
       } else {
         cell('E', r, o.hours, _normal);
       }
+      cell('F', r, o.confirmed, _style(o.confirmed));
       rows.write('</row>');
     }
     r++;
@@ -59,6 +60,7 @@ class OvertimeXlsx {
     for (var d = 0; d < 3; d++) {
       rows.write('<c r="${cols[d]}$r" s="$_yes"><v>${ot.yesCount(d)}</v></c>');
     }
+    rows.write('<c r="F$r" s="$_yes"><v>${ot.confirmedCount()}</v></c>');
     rows.write('</row>');
     if (ot.notes.trim().isNotEmpty) {
       r++;
@@ -72,7 +74,8 @@ class OvertimeXlsx {
     final sheet =
         '$head<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         '<cols><col min="1" max="1" width="28" customWidth="1"/>'
-        '<col min="2" max="5" width="10" customWidth="1"/></cols>'
+        '<col min="2" max="5" width="10" customWidth="1"/>'
+        '<col min="6" max="6" width="11" customWidth="1"/></cols>'
         '<sheetData>$rows</sheetData></worksheet>';
 
     final zip = Archive()

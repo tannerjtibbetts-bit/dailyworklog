@@ -132,13 +132,15 @@ class ReportDocx {
     _body.write(
       '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
       '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4080"/>'
-      '<w:gridCol w:w="1500"/><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/></w:tblGrid>',
+      '<w:gridCol w:w="1200"/><w:gridCol w:w="1200"/><w:gridCol w:w="1200"/><w:gridCol w:w="1200"/>'
+      '<w:gridCol w:w="1200"/></w:tblGrid>',
     );
-    _otRow(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours'], true, 'E4E7EC', true);
+    _otRow(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours', 'Confirmed'], true, 'E4E7EC', true);
     for (final r in rows) {
-      _otRow([r.name, _dash(r.fri), _dash(r.sat), _dash(r.sun), _dash(r.hours)], false, null, true);
+      _otRow([r.name, _dash(r.fri), _dash(r.sat), _dash(r.sun), _dash(r.hours), _dash(r.confirmed)], false, null, true);
     }
-    _otRow(['Yes total', '${ot.yesCount(0)}', '${ot.yesCount(1)}', '${ot.yesCount(2)}', ''], true, null, false);
+    _otRow(['Yes total', '${ot.yesCount(0)}', '${ot.yesCount(1)}', '${ot.yesCount(2)}', '', '${ot.confirmedCount()}'],
+        true, null, false);
     _body.write('</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr></w:p>');
     _overtimeNotes(notes);
   }
@@ -238,7 +240,7 @@ class ReportDocx {
 
   /// [leftLast] keeps the last column (a comment) left-aligned and plain.
   void _otRow(List<String> cells, bool bold, String? shade, bool keep,
-      {List<int> widths = const [4080, 1500, 1500, 1500, 1500], bool leftLast = false}) {
+      {List<int> widths = const [4080, 1200, 1200, 1200, 1200, 1200], bool leftLast = false}) {
     _body.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
     for (var i = 0; i < cells.length; i++) {
       final plain = leftLast && i == cells.length - 1;

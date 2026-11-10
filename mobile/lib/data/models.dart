@@ -432,6 +432,9 @@ class OtRow {
   /// Hours willing to work, 1 to 10 (blank if not given).
   String hours = '';
 
+  /// Confirmed for the weekend: 'Yes', 'No' or '' (not answered).
+  String confirmed = '';
+
   String day(int d) => d == 0 ? fri : d == 1 ? sat : sun;
 
   void setDay(int d, String v) {
@@ -444,14 +447,16 @@ class OtRow {
     }
   }
 
-  Map<String, dynamic> toJson() => {'name': name, 'fri': fri, 'sat': sat, 'sun': sun, 'hours': hours};
+  Map<String, dynamic> toJson() =>
+      {'name': name, 'fri': fri, 'sat': sat, 'sun': sun, 'hours': hours, 'confirmed': confirmed};
 
   static OtRow fromJson(Map<String, dynamic> o) => OtRow()
     ..name = _s(o, 'name')
     ..fri = _s(o, 'fri')
     ..sat = _s(o, 'sat')
     ..sun = _s(o, 'sun')
-    ..hours = _s(o, 'hours');
+    ..hours = _s(o, 'hours')
+    ..confirmed = _s(o, 'confirmed');
 }
 
 /// Weekend overtime sign-up sheet: one row per crew member, Yes/No for Fri, Sat, Sun.
@@ -471,9 +476,12 @@ class Overtime {
 
   int yesCount(int day) => filled().where((r) => r.day(day) == yes).length;
 
+  /// How many are confirmed (Yes).
+  int confirmedCount() => filled().where((r) => r.confirmed == yes).length;
+
   /// Drops rows with no name and no answers.
   void removeEmptyRows() => rows.removeWhere(
-      (r) => r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty);
+      (r) => r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty && r.confirmed.isEmpty);
 
   /// Fresh weekend: keep the names, clear the Yes/No answers and hours.
   void startWeekend(String friday) {
@@ -483,6 +491,7 @@ class Overtime {
       r.sat = '';
       r.sun = '';
       r.hours = '';
+      r.confirmed = '';
     }
   }
 

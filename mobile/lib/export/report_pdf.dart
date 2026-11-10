@@ -190,7 +190,7 @@ class ReportPdf {
     final rows = ot.filled();
     final notes = ot.notes.trim();
     if ((!force && !ot.include) || (rows.isEmpty && notes.isEmpty)) return;
-    const w = _w - 2 * _m, rowH = 20.0, nameW = w * 0.40, dayW = (w - nameW) / 4;
+    const w = _w - 2 * _m, rowH = 20.0, nameW = w * 0.40, dayW = (w - nameW) / 5;
     _ensure(70 + rowH * 2);
     _y += 6;
     _text('Weekend overtime', _heading, _m, w, 8);
@@ -201,8 +201,8 @@ class ReportPdf {
     // header
     _fillRect(_m, _y, w, rowH, _barTrack);
     _drawString('Name', _otBold, _m + 6, _y + 13.5);
-    const heads = ['Fri', 'Sat', 'Sun', 'Hours'];
-    for (var d = 0; d < 4; d++) {
+    const heads = ['Fri', 'Sat', 'Sun', 'Hours', 'Confirmed'];
+    for (var d = 0; d < 5; d++) {
       _drawString(heads[d], _otBold, _m + nameW + d * dayW + (dayW - _measure(heads[d], _otBold)) / 2, _y + 13.5);
     }
     _y += rowH;
@@ -210,8 +210,8 @@ class ReportPdf {
       _ensure(rowH);
       _hLine(_m, _m + w, _y);
       _drawString(_ellipsize(r.name, _body, nameW - 10), _body, _m + 6, _y + 13.5);
-      final v = [r.fri, r.sat, r.sun, r.hours];
-      for (var d = 0; d < 4; d++) {
+      final v = [r.fri, r.sat, r.sun, r.hours, r.confirmed];
+      for (var d = 0; d < 5; d++) {
         final s = v[d].isEmpty ? '-' : v[d];
         final tp = v[d] == Overtime.yes
             ? _otYes
@@ -225,8 +225,9 @@ class ReportPdf {
     _ensure(rowH);
     _hLine(_m, _m + w, _y);
     _drawString('Yes total', _otBold, _m + 6, _y + 13.5);
-    for (var d = 0; d < 3; d++) {
-      final s = '${ot.yesCount(d)}';
+    for (var d = 0; d < 5; d++) {
+      if (d == 3) continue; // no total under Hours
+      final s = '${d == 4 ? ot.confirmedCount() : ot.yesCount(d)}';
       _drawString(s, _otYes, _m + nameW + d * dayW + (dayW - _measure(s, _otYes)) / 2, _y + 13.5);
     }
     _y += rowH + 10;

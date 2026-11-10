@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-/** Overtime tab: weekend sign-up table with Name / Fri / Sat / Sun dropdowns. */
+/** Overtime tab: weekend sign-up table with Name / Fri / Sat / Sun dropdowns, Hours and Confirmed. */
 final class OvertimePane {
     private OvertimePane() {}
 
@@ -77,6 +77,15 @@ final class OvertimePane {
         head.addView(cellLabel(a, "Name"), weight(a, NAME_W));
         for (String d : new String[]{"Fri", "Sat", "Sun"}) head.addView(cellLabel(a, d), weight(a, 1f));
         head.addView(cellLabel(a, "Hours"), weight(a, 1f));
+        // Split over two lines so it can be read in the narrow column.
+        TextView conf = cellLabel(a, "Con-\nfirmed");
+        conf.setTextSize(13);
+        conf.setLineSpacing(0f, 0.95f);
+        TextView hours = (TextView) head.getChildAt(head.getChildCount() - 1);
+        hours.setTextSize(12);  // one line in the narrower column
+        hours.setSingleLine(true);
+        hours.setEllipsize(null);
+        head.addView(conf, weight(a, 1f));
         head.addView(new View(a), removeSize(a));
         card.addView(head);
 
@@ -86,9 +95,11 @@ final class OvertimePane {
         for (Models.Overtime.OtRow r : ot.rows) if (!r.name.isEmpty() && !names.contains(r.name)) names.add(r.name);
 
         // Totals sit under the table and update as answers change.
-        TextView[] totalViews = new TextView[3];
+        // Fri, Sat, Sun, then Confirmed (nothing under Hours).
+        TextView[] totalViews = new TextView[4];
         Runnable refreshTotals = () -> {
             for (int d = 0; d < 3; d++) totalViews[d].setText(String.valueOf(ot.yesCount(d)));
+            totalViews[3].setText(String.valueOf(ot.confirmedCount()));
         };
 
         LinearLayout table = new LinearLayout(a);
@@ -105,6 +116,10 @@ final class OvertimePane {
             totals.addView(t, weight(a, 1f));
         }
         totals.addView(cellLabel(a, ""), weight(a, 1f));
+        TextView confTotal = cellLabel(a, "");
+        confTotal.setTextColor(a.getColor(R.color.green));
+        totalViews[3] = confTotal;
+        totals.addView(confTotal, weight(a, 1f));
         totals.addView(new View(a), removeSize(a));
         card.addView(totals);
         refreshTotals.run();
@@ -192,7 +207,7 @@ final class OvertimePane {
                 new android.graphics.Rect(0, 0, target.getWidth(), target.getHeight()), false));
     }
 
-    /** One table row: Name, Fri, Sat, Sun dropdowns, the Hours box and the remove button. */
+    /** One table row: Name, Fri, Sat, Sun dropdowns, the Hours box, Confirmed and the remove button. */
     private static LinearLayout line(Activity a, Store store, Models.Overtime ot, LinearLayout table,
                                      Models.Overtime.OtRow r, List<String> names, Runnable refreshTotals) {
         LinearLayout line = row(a);
@@ -218,6 +233,16 @@ final class OvertimePane {
             }, true, false), weight(a, 1f));
         }
         line.addView(hoursBox(a, store, r), weight(a, 1f));
+        List<String> yn = new ArrayList<>();
+        yn.add(BLANK);
+        yn.add(Models.Overtime.YES);
+        yn.add(Models.Overtime.NO);
+        line.addView(dropdown(a, yn, r.confirmed.isEmpty() ? BLANK : r.confirmed, (sp, v) -> {
+            r.confirmed = BLANK.equals(v) ? "" : v;
+            store.save();
+            sp.setBackgroundResource(cellBg(r.confirmed));
+            refreshTotals.run();
+        }, true, false), weight(a, 1f));
         line.addView(removeButton(a, () -> r.name, () -> Models.Overtime.isBlank(r), () -> {
             ot.rows.remove(r);
             table.removeView(line);

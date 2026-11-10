@@ -2635,7 +2635,7 @@
       "id": "overtime-tab",
       "title": "Overtime: the weekend sign-up sheet",
       "group": "Tabs",
-      "summary": "Weekend sign-up: Yes/No for Fri, Sat, Sun, hours 1 to 10, totals, export and Clear answers.",
+      "summary": "Weekend sign-up: Yes/No for Fri, Sat, Sun, hours 1 to 10, Confirmed, totals, export and Clear answers.",
       "keywords": [
         "overtime",
         "weekend",
@@ -2655,7 +2655,9 @@
         "reset weekend",
         "remove row",
         "delete row",
-        "x"
+        "x",
+        "confirmed",
+        "confirm"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2676,12 +2678,13 @@
             "In each row, tap \"Select…\" and pick a name.",
             "Under \"Fri\", \"Sat\" and \"Sun\", pick \"Yes\" or \"No\". Yes turns green, No turns red.",
             "Under \"Hours\", type the hours the person is willing to work, 1 to 10.",
+            "Under \"Confirmed\", pick \"Yes\" once the person has confirmed they're coming, or \"No\". Yes turns green, No turns red.",
             "Type anything else in the \"Notes\" box under the table."
           ]
         },
         {
           "type": "text",
-          "text": "The \"Yes total\" row counts the Yes answers for each day. Everything saves by itself."
+          "text": "The \"Yes total\" row counts the Yes answers for each day, and how many are confirmed. Everything saves by itself."
         },
         {
           "type": "bullets",
@@ -2715,7 +2718,7 @@
           "type": "steps",
           "items": [
             "For the next weekend, tap \"Clear answers\" at the bottom.",
-            "Tap \"Clear\". The Yes/No answers and hours are cleared. Names and notes stay in place."
+            "Tap \"Clear\". The Yes/No answers, hours and Confirmed are cleared. Names and notes stay in place."
           ]
         },
         {

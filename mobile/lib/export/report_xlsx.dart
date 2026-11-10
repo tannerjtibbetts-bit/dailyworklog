@@ -81,17 +81,20 @@ class ReportXlsx {
     if (ot.include && ot.filled().isNotEmpty) {
       b.skip();
       b.row(['Weekend overtime'], _section);
-      b.row(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours'], _head);
+      b.row(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours', 'Confirmed'], _head);
       for (final r in ot.filled()) {
         b.cells([
           _c(r.name, _cell),
           for (var d = 0; d < 3; d++) _c(r.day(d), _yesNo(r.day(d))),
           RegExp(r'^\d+$').hasMatch(r.hours) ? _n(int.parse(r.hours)) : _c(r.hours, _num),
+          _c(r.confirmed, _yesNo(r.confirmed)),
         ]);
       }
       b.cells([
         _c('Yes total', _bold),
         for (var d = 0; d < 3; d++) _n(ot.yesCount(d)),
+        _c('', _num),
+        _n(ot.confirmedCount()),
       ]);
       if (ot.notes.trim().isNotEmpty) b.cells([_rich('Notes: ${ot.notes.trim()}', const [], _normal)]);
     }

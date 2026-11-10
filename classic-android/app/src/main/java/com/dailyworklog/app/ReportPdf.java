@@ -279,7 +279,7 @@ final class ReportPdf {
         List<Models.Overtime.OtRow> rows = ot.filled();
         String notes = ot.notes.trim();
         if ((!force && !ot.include) || (rows.isEmpty() && notes.isEmpty())) return;
-        float w = W - 2 * M, rowH = 20, nameW = w * 0.40f, dayW = (w - nameW) / 4f;
+        float w = W - 2 * M, rowH = 20, nameW = w * 0.40f, dayW = (w - nameW) / 5f;
         ensure(70 + rowH * 2);
         y += 6;
         text("Weekend overtime", heading, M, w, 8);
@@ -293,8 +293,8 @@ final class ReportPdf {
         // header
         c.drawRect(M, y, M + w, y + rowH, barTrack);
         c.drawText("Name", M + 6, y + 13.5f, bold);
-        for (int d = 0; d < 4; d++) {
-            String h = new String[]{"Fri", "Sat", "Sun", "Hours"}[d];
+        for (int d = 0; d < 5; d++) {
+            String h = new String[]{"Fri", "Sat", "Sun", "Hours", "Confirmed"}[d];
             c.drawText(h, M + nameW + d * dayW + (dayW - bold.measureText(h)) / 2f, y + 13.5f, bold);
         }
         y += rowH;
@@ -302,8 +302,8 @@ final class ReportPdf {
             ensure(rowH);
             c.drawLine(M, y, M + w, y, line);
             c.drawText(r.name, M + 6, y + 13.5f, body);
-            String[] v = {r.fri, r.sat, r.sun, r.hours};
-            for (int d = 0; d < 4; d++) {
+            String[] v = {r.fri, r.sat, r.sun, r.hours, r.confirmed};
+            for (int d = 0; d < 5; d++) {
                 String s = v[d].isEmpty() ? "-" : v[d];
                 TextPaint tp = Models.Overtime.YES.equals(v[d]) ? yes : Models.Overtime.NO.equals(v[d]) ? no : small;
                 c.drawText(s, M + nameW + d * dayW + (dayW - tp.measureText(s)) / 2f, y + 13.5f, tp);
@@ -317,6 +317,8 @@ final class ReportPdf {
             String s = String.valueOf(ot.yesCount(d));
             c.drawText(s, M + nameW + d * dayW + (dayW - yes.measureText(s)) / 2f, y + 13.5f, yes);
         }
+        String conf = String.valueOf(ot.confirmedCount());
+        c.drawText(conf, M + nameW + 4 * dayW + (dayW - yes.measureText(conf)) / 2f, y + 13.5f, yes);
         y += rowH + 10;
         drawOvertimeNotes(notes, w);
     }
