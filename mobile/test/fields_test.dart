@@ -541,6 +541,32 @@ void main() {
       await tester.pump();
       expect(t.notesStyle, [const Run(0, 5, RichStyle(bold: true, colour: 'red'))]);
 
+      // Task is delayed: asks for a reason.
+      await tester.ensureVisible(find.text('Task is delayed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Task is delayed'));
+      await tester.pumpAndSettle();
+      expect(find.text('Why is it delayed?'), findsOneWidget);
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      expect(find.text('Enter a reason'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Reason, e.g. Waiting on crane'), ' Waiting on crane ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(t.delayed, isTrue);
+      expect(t.delayReason, 'Waiting on crane');
+      expect(t.delayedBy, 'Tanner');
+      expect(find.text('Waiting on crane'), findsOneWidget);
+      // Tap again: it can be taken off.
+      await tester.ensureVisible(find.text('Task is delayed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Task is delayed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Not delayed'));
+      await tester.pumpAndSettle();
+      expect(t.delayed, isFalse);
+      expect(t.delayReason, '');
+
       await tester.enterText(find.byType(TextField).first, 'North one, bay 2');
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Back'));

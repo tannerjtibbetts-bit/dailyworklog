@@ -43,13 +43,17 @@ class ReportXlsx {
         b.cells([
           _c(g.key, _area),
           _rich(t.title, const [], _cell),
-          t.done ? _c('Done', _green) : _c('Not done', _red),
+          t.done
+              ? _c('Done', _green)
+              : t.delayed
+              ? _c('Delayed', _red)
+              : _c('Not done', _red),
           _c(t.done ? t.completedBy : '', _cell),
           _c(t.done && t.completedAt > 0 ? Fmt.stamp(t.completedAt) : '', _cell),
           _c(Fmt.join(t.assignees), _cell),
           _c(secured, _cell),
           _c(t.nextShift ? 'Yes' : '', _num),
-          _rich(t.notes.trim(), t.notes.trim() == t.notes ? t.notesStyle : const [], _cell),
+          _notesCell(t),
           t.photos.isNotEmpty
               ? _n(t.photos.length)
               : t.photosRequired
@@ -135,6 +139,17 @@ class ReportXlsx {
     final hold = RegExp(r'\bon\s+hold\b', caseSensitive: false).hasMatch(text);
     final s = hold ? (style == _cell ? _cellHold : _normalHold) : style;
     return _Cell(text, s, runs: runs, rich: true);
+  }
+
+  /// The field's notes, starting with "Delayed: reason" when it's delayed (the formatting moves along).
+  static _Cell _notesCell(Task t) {
+    final notes = t.notes.trim();
+    final runs = notes == t.notes ? t.notesStyle : const <Run>[];
+    if (!t.delayed) return _rich(notes, runs, _cell);
+    final prefix = notes.isEmpty ? 'Delayed: ${t.delayReason}' : 'Delayed: ${t.delayReason}\n';
+    return _rich('$prefix$notes', [
+      for (final r in runs) Run(r.start + prefix.length, r.end + prefix.length, r.style),
+    ], _cell);
   }
 
   /// A Notes-tab note in "Also today" keeps its formatting when it's found and unchanged.

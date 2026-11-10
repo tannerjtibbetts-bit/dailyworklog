@@ -711,6 +711,16 @@ class _LogScreenState extends State<LogScreen> {
                                           style: const TextStyle(color: C.text, fontSize: 18, height: 1.3),
                                         ),
                                       ),
+                                    if (t.delayed)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 12),
+                                        child: FieldChip(
+                                          'Delayed: ${t.delayReason}',
+                                          bg: const Color(0xFFFDECEC),
+                                          fg: const Color(0xFFD93B3F),
+                                          border: const Color(0xFFF4C4C5),
+                                        ),
+                                      ),
                                     if (t.loadSecured)
                                       const Padding(
                                         padding: EdgeInsets.only(top: 12),

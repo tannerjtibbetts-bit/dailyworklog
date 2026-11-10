@@ -47,6 +47,7 @@ class ProjectSearch {
         final title = t.title.trim().isEmpty ? '(Untitled field)' : t.title.trim();
         if (has(t.title)) add('Field: $title');
         if (has(t.notes)) add('Notes on $title: ${snippet(t.notes, q)}');
+        if (t.delayed && has('Delayed: ${t.delayReason}')) add('$title: Delayed: ${t.delayReason}');
         for (final n in [...t.assignees, t.completedBy, t.securedBy]) {
           if (n.isNotEmpty && has(n)) {
             add('$title: $n');

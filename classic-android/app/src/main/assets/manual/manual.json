@@ -1738,6 +1738,81 @@
           "type": "see",
           "id": "starting-a-daily-log",
           "text": "Related: Starting a daily log"
+        },
+        {
+          "type": "see",
+          "id": "task-delayed",
+          "text": "Related: Marking a task as delayed"
+        }
+      ]
+    },
+    {
+      "id": "task-delayed",
+      "title": "Marking a task as delayed",
+      "group": "Fields",
+      "summary": "Tick \"Task is delayed\" on a field and give the reason. It shows in red on the checklist and in the reports.",
+      "keywords": [
+        "delay",
+        "delayed",
+        "reason",
+        "late",
+        "waiting",
+        "hold up",
+        "task is delayed",
+        "not delayed"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Each field has a \"Task is delayed\" tick box, under \"Load securement completed\"."
+        },
+        {
+          "type": "image",
+          "file": "delay_field.png",
+          "caption": "A delayed task with its reason"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the field.",
+            "Tap \"Task is delayed\".",
+            "In \"Why is it delayed?\", type the reason, for example \"Waiting on crane\".",
+            "Tap \"Save\". The box turns red and the reason shows under it in red, with your name and the time."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "To change the reason, tap \"Task is delayed\" again, edit it and tap \"Save\".",
+            "When it's no longer delayed, tap \"Task is delayed\" and tap \"Not delayed\".",
+            "If you tap \"Save\" with no reason, it says \"Enter a reason\"."
+          ]
+        },
+        {
+          "type": "image",
+          "file": "delay_log.png",
+          "caption": "The red \"Delayed\" label on the checklist"
+        },
+        {
+          "type": "text",
+          "text": "Where the delay shows:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "On the checklist, the field gets a red \"Delayed: …\" label with the reason.",
+            "In the PDF and Word reports, a red \"Delayed: …\" line goes under the field, with who marked it and when.",
+            "In the Excel report, the Status says \"Delayed\" and the Notes start with \"Delayed: …\".",
+            "If the field carries over to the next shift, it stays delayed until you untick it.",
+            "Searching \"delayed\" on the Checklists tab finds every day with a delayed task."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "formatting-notes",
+          "text": "Related: Bold, underline and colour in notes"
         }
       ]
     },

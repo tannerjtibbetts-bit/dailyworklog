@@ -616,3 +616,52 @@ class RichTest {
     NoteTest.check(doc.contains("<w:b/><w:color w:val=\"1B2533\"/><w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/><w:highlight w:val=\"yellow\"/></w:rPr><w:t xml:space=\"preserve\">on hold</w:t>"), "docx on hold highlighted");
     NoteTest.check(doc.contains("<w:color w:val=\"E8730C\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/><w:u w:val=\"single\"/></w:rPr><w:t xml:space=\"preserve\">replaced</w:t>"), "docx note underline orange");
     System.out.println("RICH PASS"); } }
+class DelayTest {
+  static String docx(Models.Project p, Models.DailyLog l) throws Exception {
+    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+    ReportDocx.write(p, l, "Tanner", 0L, new java.io.File("."), f -> null, bo);
+    try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bo.toByteArray()))) {
+      for (java.util.zip.ZipEntry ze; (ze = z.getNextEntry()) != null; ) if (ze.getName().equals("word/document.xml")) return new String(z.readAllBytes(), "UTF-8");
+    }
+    return "";
+  }
+  public static void main(String[] a) throws Exception {
+    Models.Project p = new Models.Project();
+    Models.DailyLog l = new Models.DailyLog(); l.date = "2026-11-10"; p.logs.add(l);
+    Models.Task t = new Models.Task(); t.title = "Lift pump"; t.notes = "Bring slings"; t.notesStyle = java.util.Arrays.asList(new Rich.Run(6, 12, RichTest.B));
+    t.delayed = true; t.delayReason = "Waiting on crane"; t.delayedBy = "Sam"; t.delayedAt = 1000; l.tasks.add(t);
+    Models.Task t2 = new Models.Task(); t2.title = "Sweep"; l.tasks.add(t2);
+    // JSON round trip and old data
+    Models.Task q = Models.Project.fromJson(p.toJson()).logs.get(0).tasks.get(0);
+    NoteTest.check(q.delayed && q.delayReason.equals("Waiting on crane") && q.delayedBy.equals("Sam") && q.delayedAt == 1000, "delay saved");
+    org.json.JSONObject old = t.toJson(); old.remove("delayed"); old.remove("delayReason"); old.remove("delayedBy"); old.remove("delayedAt");
+    Models.Task o = Models.Task.fromJson(old);
+    NoteTest.check(!o.delayed && o.delayReason.isEmpty() && o.delayedBy.isEmpty() && o.delayedAt == 0, "old data: not delayed");
+    Models.Task c = t.carryCopy(), f = t.freshCopy();
+    NoteTest.check(c.delayed && c.delayReason.equals(t.delayReason) && c.delayedBy.equals("Sam") && c.delayedAt == 1000, "carryCopy keeps the delay");
+    NoteTest.check(!f.delayed && f.delayReason.isEmpty() && f.delayedBy.isEmpty() && f.delayedAt == 0, "freshCopy drops it");
+    // Excel: status Delayed (red), notes start with the reason, notes formatting shifted
+    String s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains("<c r=\"C8\" t=\"inlineStr\" s=\"7\">" + ReportXlsxTest.t("Delayed")) && s.contains("<c r=\"C9\" t=\"inlineStr\" s=\"7\">" + ReportXlsxTest.t("Not done")), "xlsx status Delayed / Not done");
+    String r = "<r><rPr><rFont val=\"Calibri\"/>";
+    NoteTest.check(s.contains("<c r=\"I8\" t=\"inlineStr\" s=\"5\"><is>" + r + "<b/><color rgb=\"FFD93B3F\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">Delayed</t></r>"
+        + r + "<color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">: Waiting on crane\nBring </t></r>"
+        + r + "<b/><color rgb=\"FF000000\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">slings</t></r></is></c>"), "xlsx notes prefix, runs shifted");
+    t.notes = ""; t.notesStyle = new java.util.ArrayList<>();
+    s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains("<t xml:space=\"preserve\">: Waiting on crane</t></r></is></c>"), "xlsx no notes: just the reason");
+    t.notes = "Bring slings";
+    // Word: red bold line then grey who/when
+    String d = docx(p, l);
+    NoteTest.check(d.contains("<w:b/><w:color w:val=\"D93B3F\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr><w:t xml:space=\"preserve\">Delayed: Waiting on crane</w:t></w:r>"
+        + "<w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\" w:cs=\"Calibri\"/><w:color w:val=\"6B7685\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr><w:t xml:space=\"preserve\"> (Sam, " + Fmt.stamp(1000) + ")</w:t>"), "docx delayed line");
+    t.delayedBy = "";
+    NoteTest.check(docx(p, l).contains(">Delayed: Waiting on crane</w:t></w:r></w:p>"), "docx no who: no brackets");
+    // Search
+    java.util.List<String> lines = ProjectSearch.run(p, "crane").days.get(0).lines;
+    NoteTest.check(lines.equals(java.util.Arrays.asList("Lift pump: Delayed: Waiting on crane")), "search reason " + lines);
+    lines = ProjectSearch.run(p, "delayed").days.get(0).lines;
+    NoteTest.check(lines.equals(java.util.Arrays.asList("Lift pump: Delayed: Waiting on crane")), "search delayed " + lines);
+    t.delayed = false;
+    NoteTest.check(ProjectSearch.run(p, "crane").isEmpty(), "not delayed: no line");
+    System.out.println("DELAY PASS"); } }

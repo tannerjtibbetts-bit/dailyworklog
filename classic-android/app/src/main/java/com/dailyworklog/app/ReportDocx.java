@@ -263,6 +263,12 @@ final class ReportDocx {
         } else {
             para("Not completed", false, 9, RED, 40, true, null);
         }
+        if (t.delayed) {
+            body.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"40\"/><w:ind w:left=\"440\"/></w:pPr>");
+            run(t.delayLine(), true, 9, RED, null);
+            if (!t.delayedBy.isEmpty()) run(" (" + t.delayedBy + ", " + Fmt.stamp(t.delayedAt) + ")", false, 9, GREY, null);
+            body.append("</w:p>");
+        }
         if (t.loadSecured) {
             body.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"40\"/><w:ind w:left=\"440\"/></w:pPr>");
             run("\u2714 ", true, 9, GREEN, "Segoe UI Symbol");

@@ -31,6 +31,47 @@ List<String> newlyAssigned(List<String> before, List<String> after) => [
 /// Only people ticked for assignment texts in Manage crew get one; never yourself.
 bool getsAssignText(Project p, String name, String me) => name != me && p.assignTexts.contains(name);
 
+/// Red for delays.
+const delayRed = Color(0xFFD93B3F);
+
+/// "Why is it delayed?" (or, with a [current] reason, change it). Returns the reason, '' for "Not delayed",
+/// or null if cancelled.
+Future<String?> delayDialog(BuildContext context, String? current) {
+  final ctl = TextEditingController(text: current ?? '');
+  String? error;
+  return showDialog<String>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, set) => AlertDialog(
+        title: Text(current == null ? 'Why is it delayed?' : 'Task is delayed'),
+        content: TextField(
+          controller: ctl,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 5,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(hintText: 'Reason, e.g. Waiting on crane', errorText: error),
+        ),
+        actions: [
+          if (current != null) TextButton(onPressed: () => Navigator.pop(c, ''), child: const Text('Not delayed')),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              final r = ctl.text.trim();
+              if (r.isEmpty) {
+                set(() => error = 'Enter a reason');
+                return;
+              }
+              Navigator.pop(c, r);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 /// Ticks or unticks "Load securement completed", stamping who and when.
 void toggleSecured(Task t, String me, int now) {
   t.loadSecured = !t.loadSecured;
@@ -362,6 +403,32 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
         store.save();
       });
 
+  // ----- delay -----
+
+  /// Asks why the task is delayed (or lets the reason be changed, or the delay taken off).
+  Future<void> _editDelay(Task t) async {
+    final r = await delayDialog(context, t.delayed ? t.delayReason : null);
+    if (r == null || !mounted) return;
+    if (r.isEmpty) {
+      t
+        ..delayed = false
+        ..delayReason = ''
+        ..delayedBy = ''
+        ..delayedAt = 0;
+    } else {
+      if (!t.delayed) {
+        t
+          ..delayedBy = store.me()
+          ..delayedAt = nowMs();
+      }
+      t
+        ..delayed = true
+        ..delayReason = r;
+    }
+    store.save();
+    HapticFeedback.selectionClick();
+  }
+
   // ----- delete -----
 
   void _confirmDelete() {
@@ -498,7 +565,7 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
     ),
   );
 
-  Widget _tickRow(bool value, VoidCallback onTap, String label, Widget? sub) => InkWell(
+  Widget _tickRow(bool value, VoidCallback onTap, String label, Widget? sub, {Color? tick}) => InkWell(
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -507,7 +574,7 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
           Transform.scale(
             scale: 1.25,
             child: IgnorePointer(
-              child: Checkbox(value: value, onChanged: (_) {}),
+              child: Checkbox(value: value, onChanged: (_) {}, activeColor: tick),
             ),
           ),
           const SizedBox(width: 10),
@@ -691,6 +758,23 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 8),
     ],
+    _divider,
+    // "Task is delayed": asks for the reason.
+    _tickRow(
+      t.delayed,
+      () => _editDelay(t),
+      'Task is delayed',
+      t.delayed
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.delayReason, style: const TextStyle(color: delayRed, fontSize: 16, fontWeight: FontWeight.bold)),
+                if (t.delayedBy.isNotEmpty) _stamp('${t.delayedBy}, ${Fmt.stamp(t.delayedAt)}', 15),
+              ],
+            )
+          : const Text('Tap to mark it delayed and give a reason', style: TextStyle(color: C.greyLight, fontSize: 15)),
+      tick: delayRed,
+    ),
     _divider,
     _tickRow(
       t.nextShift,

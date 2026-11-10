@@ -742,7 +742,7 @@ public class LogActivity extends AppCompatActivity {
     private class TaskVH extends RecyclerView.ViewHolder {
         final View accent;
         final CheckCircle check;
-        final TextView title, stamp, assigned, notes, required, secured, nextShift, side;
+        final TextView title, stamp, assigned, notes, required, secured, nextShift, side, delayed;
         final ImageButton open, camera;
         final HorizontalScrollView photoScroll;
         final LinearLayout photos;
@@ -758,6 +758,7 @@ public class LogActivity extends AppCompatActivity {
             notes = v.findViewById(R.id.notes);
             required = v.findViewById(R.id.required);
             secured = v.findViewById(R.id.secured);
+            delayed = v.findViewById(R.id.delayedChip);
             nextShift = v.findViewById(R.id.nextShiftChip);
             side = v.findViewById(R.id.sideChip);
             open = v.findViewById(R.id.open);
@@ -797,6 +798,8 @@ public class LogActivity extends AppCompatActivity {
             notes.setVisibility(t.notes.trim().isEmpty() ? View.GONE : View.VISIBLE);
             notes.setText(RichEdit.notes(t));
             secured.setVisibility(t.loadSecured ? View.VISIBLE : View.GONE);
+            delayed.setVisibility(t.delayed ? View.VISIBLE : View.GONE);
+            if (t.delayed) delayed.setText(t.delayLine());
             nextShift.setVisibility(t.nextShift ? View.VISIBLE : View.GONE);
             side.setVisibility(t.side.isEmpty() ? View.GONE : View.VISIBLE);
             side.setText(Models.Task.sideLabel(t.side));

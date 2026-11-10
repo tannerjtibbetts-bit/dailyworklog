@@ -123,7 +123,7 @@ final class ReportXlsx {
                 s.row();
                 s.text(0, g.getKey(), AREA);
                 s.rich(1, t.title, null, CELL);
-                s.text(2, t.done ? "Done" : "Not done", t.done ? GREEN : RED);
+                s.text(2, t.done ? "Done" : t.delayed ? "Delayed" : "Not done", t.done ? GREEN : RED);
                 s.text(3, t.done ? t.completedBy : "", CELL);
                 s.text(4, t.done && t.completedAt > 0 ? Fmt.stamp(t.completedAt) : "", CELL);
                 s.text(5, Fmt.join(t.assignees), CELL);
@@ -139,7 +139,18 @@ final class ReportXlsx {
                 s.text(6, secured, CELL);
                 s.text(7, t.nextShift ? "Yes" : "", NUM);
                 String notes = t.notes.trim();
-                s.rich(8, notes, notes.equals(t.notes) ? t.notesStyle : null, CELL);
+                List<Rich.Run> runs = notes.equals(t.notes) ? t.notesStyle : null;
+                if (t.delayed) {
+                    // "Delayed: reason" first; the notes' formatting moves along after it.
+                    String prefix = notes.isEmpty() ? t.delayLine() : t.delayLine() + "\n";
+                    List<Rich.Run> moved = new java.util.ArrayList<>();
+                    if (runs != null && !notes.isEmpty()) {
+                        for (Rich.Run r : runs) moved.add(new Rich.Run(r.start + prefix.length(), r.end + prefix.length(), r.style));
+                    }
+                    notes = prefix + notes;
+                    runs = moved;
+                }
+                s.rich(8, notes, runs, CELL);
                 if (!t.photos.isEmpty()) s.num(9, String.valueOf(t.photos.size()), NUM);
                 else if (t.photosRequired) s.text(9, "Required, none", RED);
                 else s.text(9, "", NUM);

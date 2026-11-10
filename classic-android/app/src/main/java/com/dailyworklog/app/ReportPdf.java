@@ -382,6 +382,7 @@ final class ReportPdf {
 
         if (t.done) text("Completed by " + t.completedBy + ", " + Fmt.stamp(t.completedAt), small, x, w, 2);
         else text("Not completed", smallRed, x, w, 2);
+        if (t.delayed) text(delayLine(t), small, x, w, 2);
         if (t.loadSecured) {
             String who = t.securedBy.isEmpty() ? "" : " by " + t.securedBy + ", " + Fmt.stamp(t.securedAt);
             text("\u2713 Load securement completed" + who, smallGreen, x, w, 2);
@@ -468,6 +469,16 @@ final class ReportPdf {
         String cap = PhotoLayout.caption(p, logIso);
         float room = Math.max(dw, PhotoLayout.REPORT_SLOT) + PHOTO_GAP - 2;
         c.drawText(TextUtils.ellipsize(cap, tiny, room, TextUtils.TruncateAt.END).toString(), left, y + dh + 9, tiny);
+    }
+
+    /** "Delayed: reason" in red bold, then " (who, when)" in the normal grey. */
+    private static CharSequence delayLine(Models.Task t) {
+        android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder(t.delayLine());
+        int f = android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE;
+        b.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, b.length(), f);
+        b.setSpan(new android.text.style.ForegroundColorSpan(0xFFD93B3F), 0, b.length(), f);
+        if (!t.delayedBy.isEmpty()) b.append(" (").append(t.delayedBy).append(", ").append(Fmt.stamp(t.delayedAt)).append(")");
+        return b;
     }
 
     // ----- layout helpers -----

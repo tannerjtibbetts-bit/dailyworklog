@@ -67,6 +67,10 @@ void main() {
     expect(ProjectSearch.run(p, 'sam').days.single.lines, ['Torque checks: Sam Maint']);
     expect(ProjectSearch.run(p, Fmt.logDate('2026-10-22')).days.single.lines,
         ['Checklist: Daily work log 22/10/2026']);
+    p.logs[0].tasks[1]
+      ..delayed = true
+      ..delayReason = 'Crane booked elsewhere';
+    expect(ProjectSearch.run(p, 'delayed').days.single.lines, ['Torque checks: Delayed: Crane booked elsewhere']);
     expect(ProjectSearch.run(p, '  ').isEmpty, true);
     expect(ProjectSearch.run(p, 'nothing like this').isEmpty, true);
   });

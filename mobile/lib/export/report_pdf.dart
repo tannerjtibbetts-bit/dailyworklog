@@ -423,6 +423,10 @@ class ReportPdf {
     } else {
       _text('Not completed', _smallRed, x, w, 2);
     }
+    if (t.delayed) {
+      final (line, runs) = Rich.delayLine(t.delayReason, t.delayedBy, Fmt.stamp(t.delayedAt));
+      _richText(line, runs, _small, x, w, 2);
+    }
     if (t.loadSecured) {
       final who = t.securedBy.isEmpty ? '' : ' by ${t.securedBy}, ${Fmt.stamp(t.securedAt)}';
       // Helvetica has no check mark character, so it's drawn.

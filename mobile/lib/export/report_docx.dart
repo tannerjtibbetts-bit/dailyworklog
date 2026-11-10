@@ -280,6 +280,10 @@ class ReportDocx {
     } else {
       _para('Not completed', false, 9, _red, 40, true);
     }
+    if (t.delayed) {
+      final (line, runs) = Rich.delayLine(t.delayReason, t.delayedBy, Fmt.stamp(t.delayedAt));
+      _richPara(line, runs, false, 9, _grey, 40, true);
+    }
     if (t.loadSecured) {
       _body.write('<w:p><w:pPr><w:spacing w:before="0" w:after="40"/><w:ind w:left="440"/></w:pPr>');
       _run('✔ ', true, 9, _green, 'Segoe UI Symbol');

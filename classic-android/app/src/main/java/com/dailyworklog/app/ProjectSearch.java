@@ -54,6 +54,7 @@ final class ProjectSearch {
                 String title = t.title.trim().isEmpty() ? "(Untitled field)" : t.title.trim();
                 if (has(t.title, q)) add(lines, "Field: " + title);
                 if (has(t.notes, q)) add(lines, "Notes on " + title + ": " + snippet(t.notes, q));
+                if (t.delayed && has(t.delayLine(), q)) add(lines, title + ": " + t.delayLine());
                 List<String> names = new ArrayList<>(t.assignees);
                 names.add(t.completedBy);
                 names.add(t.securedBy);

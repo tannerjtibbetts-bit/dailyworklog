@@ -83,6 +83,12 @@ class Task {
   /// Marked to carry over to the next shift's checklist; shown on the report.
   bool nextShift = false;
 
+  /// "Task is delayed", with the reason, who marked it and when.
+  bool delayed = false;
+  String delayReason = '';
+  String delayedBy = '';
+  int delayedAt = 0;
+
   /// south, north, unzoned or '' (not set). Reports list South, then North, then Unzoned.
   String side = '';
   List<String> assignees = [];
@@ -150,7 +156,11 @@ class Task {
   /// Unfinished field rolled into the next day: keeps the notes too.
   Task carryCopy() => freshCopy()
     ..notes = notes
-    ..notesStyle = List.of(notesStyle);
+    ..notesStyle = List.of(notesStyle)
+    ..delayed = delayed
+    ..delayReason = delayReason
+    ..delayedBy = delayedBy
+    ..delayedAt = delayedAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -167,6 +177,10 @@ class Task {
         'securedBy': securedBy,
         'securedAt': securedAt,
         'nextShift': nextShift,
+        'delayed': delayed,
+        'delayReason': delayReason,
+        'delayedBy': delayedBy,
+        'delayedAt': delayedAt,
         'side': side,
         'assignees': assignees,
         'photos': [for (final p in photos) p.toJson()],
@@ -191,6 +205,10 @@ class Task {
     ..securedBy = _s(o, 'securedBy')
     ..securedAt = _i(o, 'securedAt')
     ..nextShift = _b(o, 'nextShift')
+    ..delayed = _b(o, 'delayed')
+    ..delayReason = _s(o, 'delayReason')
+    ..delayedBy = _s(o, 'delayedBy')
+    ..delayedAt = _i(o, 'delayedAt')
     ..side = _s(o, 'side')
     ..assignees = _strings(o['assignees'])
     ..photos = _objects(o['photos'], Photo.fromJson)

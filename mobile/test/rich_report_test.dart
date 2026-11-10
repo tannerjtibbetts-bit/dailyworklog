@@ -56,7 +56,33 @@ void main() {
     expect(files['xl/styles.xml'], contains('FFFFF59D'));
   });
 
+  test('a delayed field: Word line, Excel status and notes, carried over, saved', () {
+    final t = log.tasks.single
+      ..delayed = true
+      ..delayReason = 'Waiting on crane'
+      ..delayedBy = 'Sam'
+      ..delayedAt = day;
+    final doc = _unzip(ReportDocx.write(p, log, 'Tester', day, '/nowhere'))['word/document.xml']!;
+    expect(doc, contains('<w:b/><w:color w:val="D93B3F"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve">Delayed: Waiting on crane</w:t>'));
+    expect(doc, contains('<w:t xml:space="preserve"> (Sam, 11/10/2026 at 7:30 AM)</w:t>'));
+    final sheet = _unzip(ReportXlsx.write(p, log, 'Tester', day))['xl/worksheets/sheet1.xml']!;
+    expect(sheet, contains('<c r="C8" s="7" t="inlineStr"><is><t xml:space="preserve">Delayed</t>'));
+    expect(sheet, contains('<t xml:space="preserve">Delayed</t></r><r><rPr><rFont val="Calibri"/><color rgb="FF000000"/><sz val="11"/></rPr><t xml:space="preserve">: Waiting on crane\nCrane </t>'));
+    // The formatting on "straps" moved along with the notes.
+    expect(sheet, contains('<color rgb="FFE8730C"/><sz val="11"/></rPr><t xml:space="preserve">straps</t>'));
+    final again = Task.fromJson(jsonDecode(jsonEncode(t.toJson())) as Map<String, dynamic>);
+    expect([again.delayed, again.delayReason, again.delayedBy, again.delayedAt], [true, 'Waiting on crane', 'Sam', day]);
+    expect(t.carryCopy().delayReason, 'Waiting on crane');
+    expect(t.freshCopy().delayed, isFalse);
+    expect(Task.fromJson({'title': 'old'}).delayed, isFalse);
+  });
+
   test('PDF builds with the formatted text', () async {
+    log.tasks.single
+      ..delayed = true
+      ..delayReason = 'Waiting on crane'
+      ..delayedBy = 'Sam'
+      ..delayedAt = day;
     final bytes = await ReportPdf.write(p, log, 'Tester', day, '/nowhere');
     final out = Platform.environment['EXPORT_TEST_OUT'];
     if (out != null && out.isNotEmpty) File('$out/rich.pdf').writeAsBytesSync(bytes);

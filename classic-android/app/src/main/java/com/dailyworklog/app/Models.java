@@ -77,6 +77,15 @@ public final class Models {
         public long securedAt;
         /** Marked to carry over to the next shift's checklist; shown on the report. */
         public boolean nextShift;
+        /** "Task is delayed" ticked, with the reason given and who ticked it when. */
+        public boolean delayed;
+        public String delayReason = "", delayedBy = "";
+        public long delayedAt;
+
+        /** "Delayed: reason" for the card, reports and search. */
+        public String delayLine() {
+            return "Delayed: " + delayReason;
+        }
         /** Who gets a text when this field is completed (blank: nobody). */
         public String doneTextName = "", doneTextPhone = "";
         /** SOUTH, NORTH, UNZONED or "" (not set). Reports list South, then North, then Unzoned. */
@@ -136,6 +145,11 @@ public final class Models {
             Task t = freshCopy();
             t.notes = notes;
             t.notesStyle = new ArrayList<>(notesStyle);
+            // An unfinished delayed field is still delayed next shift.
+            t.delayed = delayed;
+            t.delayReason = delayReason;
+            t.delayedBy = delayedBy;
+            t.delayedAt = delayedAt;
             return t;
         }
 
@@ -155,6 +169,10 @@ public final class Models {
             o.put("securedBy", securedBy);
             o.put("securedAt", securedAt);
             o.put("nextShift", nextShift);
+            o.put("delayed", delayed);
+            o.put("delayReason", delayReason);
+            o.put("delayedBy", delayedBy);
+            o.put("delayedAt", delayedAt);
             o.put("side", side);
             o.put("doneTextName", doneTextName);
             o.put("doneTextPhone", doneTextPhone);
@@ -185,6 +203,10 @@ public final class Models {
             t.securedBy = o.optString("securedBy", "");
             t.securedAt = o.optLong("securedAt", 0L);
             t.nextShift = o.optBoolean("nextShift", false);
+            t.delayed = o.optBoolean("delayed", false);
+            t.delayReason = o.optString("delayReason", "");
+            t.delayedBy = o.optString("delayedBy", "");
+            t.delayedAt = o.optLong("delayedAt", 0L);
             t.side = o.optString("side", "");
             t.doneTextName = o.optString("doneTextName", "");
             t.doneTextPhone = o.optString("doneTextPhone", "");

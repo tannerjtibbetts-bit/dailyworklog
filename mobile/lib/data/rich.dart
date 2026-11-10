@@ -81,6 +81,15 @@ class Segment {
 class Rich {
   Rich._();
 
+  /// "Delayed: reason (by, when)" for reports, with the "Delayed: reason" part red and bold.
+  static (String, List<Run>) delayLine(String reason, String by, String when) {
+    final head = 'Delayed: $reason';
+    return (
+      by.isEmpty ? head : '$head ($by, $when)',
+      [Run(0, head.length, const RichStyle(bold: true, colour: 'red'))],
+    );
+  }
+
   static final _delay = RegExp(r'\bdelay[a-z]*', caseSensitive: false);
   static final _onHold = RegExp(r'\bon\s+hold\b', caseSensitive: false);
 

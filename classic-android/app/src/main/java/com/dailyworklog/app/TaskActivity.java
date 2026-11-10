@@ -159,6 +159,7 @@ public class TaskActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.securedRow).setOnClickListener(v -> openLoadPopup());
+        findViewById(R.id.delayedRow).setOnClickListener(v -> editDelay());
         findViewById(R.id.nextShiftRow).setOnClickListener(v -> {
             task.nextShift = !task.nextShift;
             nextShift.setChecked(task.nextShift);
@@ -168,6 +169,7 @@ public class TaskActivity extends AppCompatActivity {
 
         bindStamp();
         bindSecured();
+        bindDelay();
         bindAssignees();
         bindPhotos();
         if (loadSession != null) openLoadPopup();  // came back after the phone rotated
@@ -358,6 +360,83 @@ public class TaskActivity extends AppCompatActivity {
         task.side = side;
         store.save();
         bindSide(south, north, unzoned);
+    }
+
+    // ----- task is delayed -----
+
+    private void bindDelay() {
+        CheckBox box = findViewById(R.id.delayed);
+        box.setChecked(task.delayed);
+        int red = 0xFFD93B3F;
+        box.setButtonTintList(new android.content.res.ColorStateList(
+                new int[][]{{android.R.attr.state_checked}, {}}, new int[]{red, getColor(R.color.grey_light)}));
+        TextView reason = findViewById(R.id.delayedReason);
+        TextView stampView = findViewById(R.id.delayedStamp);
+        if (task.delayed) {
+            reason.setText(task.delayReason);
+            reason.setTextColor(red);
+            reason.setTypeface(null, android.graphics.Typeface.BOLD);
+            boolean who = !task.delayedBy.isEmpty() || task.delayedAt > 0;
+            stampView.setVisibility(who ? View.VISIBLE : View.GONE);
+            stampView.setText(task.delayedBy + ", " + Fmt.stamp(task.delayedAt));
+        } else {
+            reason.setText("Tap to mark it delayed and give a reason");
+            reason.setTextColor(getColor(R.color.grey_light));
+            reason.setTypeface(null, android.graphics.Typeface.NORMAL);
+            stampView.setVisibility(View.GONE);
+        }
+    }
+
+    /** Off: ask why and tick it. On: change the reason, or untick with "Not delayed". */
+    private void editDelay() {
+        EditText et = new EditText(this);
+        et.setHint("Reason, e.g. Waiting on crane");
+        et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        et.setMinLines(2);
+        et.setText(task.delayed ? task.delayReason : "");
+        et.setSelection(et.getText().length());
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(Ui.dp(this, 22), Ui.dp(this, 8), Ui.dp(this, 22), 0);
+        box.addView(et);
+        com.google.android.material.dialog.MaterialAlertDialogBuilder b = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(task.delayed ? "Task is delayed" : "Why is it delayed?")
+                .setView(box)
+                .setPositiveButton("Save", null)
+                .setNegativeButton("Cancel", null);
+        if (task.delayed) {
+            b.setNeutralButton("Not delayed", (x, w) -> {
+                task.delayed = false;
+                task.delayReason = "";
+                task.delayedBy = "";
+                task.delayedAt = 0;
+                store.save();
+                bindDelay();
+            });
+        }
+        androidx.appcompat.app.AlertDialog d = b.create();
+        d.setOnShowListener(x -> d.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String s = et.getText().toString().trim();
+            if (s.isEmpty()) {
+                et.setError("Enter a reason");
+                return;
+            }
+            d.dismiss();
+            if (!task.delayed) {
+                task.delayed = true;
+                task.delayedBy = store.me();
+                task.delayedAt = System.currentTimeMillis();
+            }
+            task.delayReason = s;
+            store.save();
+            root.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+            bindDelay();
+        }));
+        if (d.getWindow() != null) {
+            d.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        }
+        d.show();
+        et.requestFocus();
     }
 
     // ----- load securement -----
