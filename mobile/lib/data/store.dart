@@ -29,6 +29,11 @@ class Store extends ChangeNotifier {
 
   /// Your email, work position and work location (the profile; changed any time from the person icon).
   String userEmail = '';
+
+  /// Choices for Trade and Union local on a crew member (app-wide, can be added to and removed).
+  static const defaultTrades = ['Boilermaker', 'Millwright', 'Teamster', 'Electrician', 'Labourer', 'Pipefitter'];
+  List<String> tradeOptions = List.of(defaultTrades);
+  List<String> localOptions = [];
   String workPosition = '';
   String workLocation = '';
 
@@ -124,6 +129,12 @@ class Store extends ChangeNotifier {
     contactPhone = (o['contactPhone'] ?? '').toString();
     loadEmailTo = (o['loadEmailTo'] ?? '').toString();
     userEmail = (o['userEmail'] ?? '').toString();
+    tradeOptions = o['tradeOptions'] is List
+        ? [for (final t in o['tradeOptions'] as List) t.toString().trim()].where((t) => t.isNotEmpty).toList()
+        : List.of(defaultTrades);
+    localOptions = o['localOptions'] is List
+        ? [for (final t in o['localOptions'] as List) t.toString().trim()].where((t) => t.isNotEmpty).toList()
+        : [];
     workPosition = (o['workPosition'] ?? '').toString();
     workLocation = (o['workLocation'] ?? '').toString();
     mailFrom = (o['mailFrom'] ?? '').toString();
@@ -159,6 +170,8 @@ class Store extends ChangeNotifier {
         'contactPhone': contactPhone,
         'loadEmailTo': loadEmailTo,
         'userEmail': userEmail,
+        'tradeOptions': tradeOptions,
+        'localOptions': localOptions,
         'workPosition': workPosition,
         'workLocation': workLocation,
         'mailFrom': mailFrom,

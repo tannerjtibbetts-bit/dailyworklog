@@ -2248,7 +2248,7 @@
       "id": "manage-crew",
       "title": "Managing your crew",
       "group": "Crew & texting",
-      "summary": "Add crew, phone numbers and groups (Crew, Techs, Supervision), and choose who gets assignment texts.",
+      "summary": "Add and edit crew, sort them into groups you name, and set each person's level, trade and union local.",
       "keywords": [
         "crew",
         "manage crew",
@@ -2259,41 +2259,96 @@
         "group",
         "add person",
         "remove person",
-        "contact"
+        "contact",
+        "groups",
+        "rename group",
+        "add group",
+        "delete group",
+        "drag",
+        "move",
+        "trade",
+        "apprentice",
+        "journeyman",
+        "union local",
+        "local",
+        "boilermaker",
+        "millwright",
+        "electrician",
+        "pipefitter",
+        "labourer",
+        "teamster"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "Each project has its own crew list."
+          "text": "Each project has its own crew list, sorted into groups."
         },
         {
           "type": "image",
           "file": "manage_crew.png",
-          "caption": "The Manage Crew sheet"
+          "caption": "Manage Crew with groups"
         },
         {
           "type": "steps",
           "items": [
             "Open the project and tap the three dots (⋯) at the top right.",
             "Tap \"Manage crew\".",
-            "People are grouped under \"Crew\", \"Techs\" and \"Supervision\". Each shows a number or \"No phone number\".",
+            "People are listed under their group: at first \"Crew\", \"Techs\" and \"Supervision\". Each shows a number or \"No phone number\", and their trade, level and union local if set.",
             "Tap a person to change their details. Tap \"+  Add crew member\" to add someone.",
             "Tap \"Done\" when finished."
           ]
         },
         {
           "type": "text",
+          "text": "Groups:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "To rename a group, tap the pencil next to its name, type the new name and tap \"Save\".",
+            "To add a group, tap \"+  Add group\" at the bottom, type a name (for example Night shift) and tap \"Add\".",
+            "To delete a group, tap the red trash can next to it and tap \"Delete\". Everyone in it moves to the first group.",
+            "To move someone to another group, press the six dots at the right of their name and drag them onto the other group. The group lights up blue; let go to drop them there.",
+            "You can also tap the person and change \"Group\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "If the group you want is off the screen, open the person and pick it in \"Group\" instead of dragging."
+        },
+        {
+          "type": "text",
           "text": "Each person's details:"
+        },
+        {
+          "type": "image",
+          "file": "crew_details.png",
+          "caption": "A crew member's details"
         },
         {
           "type": "bullets",
           "items": [
             "\"Name\"",
             "\"Phone number (optional)\"",
-            "\"Group\": \"Crew\", \"Tech\" or \"Supervision\"",
+            "\"Group\": pick one of your groups",
+            "\"Level\": tap \"Apprentice\" or \"Journeyman\" (tap it again to clear it)",
+            "\"Trade\": pick from the list, for example Millwright or Pipefitter",
+            "\"Union local\": pick from the list",
             "\"This contact will receive texts when assigned to a field or task\": tick it to text them when you assign them."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Changing the Trade and Union local lists:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the \"Trade\" (or \"Union local\") list.",
+            "Tap \"Add a trade…\" (or \"Add a union local…\"), type it and tap \"Add\". It's picked for this person and stays in the list for everyone.",
+            "To remove choices, tap \"Edit trades…\" (or \"Edit union locals…\"), tap the red × next to one, and tap \"Done\". People who already have it keep it."
           ]
         },
         {
@@ -2310,6 +2365,11 @@
         {
           "type": "tip",
           "text": "Renaming someone changes their name everywhere in the project. Your own name is added to the crew by itself."
+        },
+        {
+          "type": "see",
+          "id": "notify-sending",
+          "text": "Related: Sending a note to crew (Notify)"
         },
         {
           "type": "see",
@@ -2466,7 +2526,9 @@
         "broadcast",
         "select all",
         "everyone",
-        "all crew"
+        "all crew",
+        "group",
+        "notify group"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2485,7 +2547,7 @@
           "items": [
             "Open the project and tap \"Notify\".",
             "Tap the big \"+\" at the bottom.",
-            "The \"Send to\" list opens. Tick the people and tap \"Assign\". To pick everyone, tap \"Select all\" at the top of the list (tap it again to untick everyone).",
+            "The \"Send to\" list opens. Tick the people and tap \"Assign\". Tap \"Select all\" at the top to pick everyone, or \"Select all\" next to a group name to pick only that group. Tap it again to untick them.",
             "Type your note in \"Write your note…\".",
             "To add photos, tap \"Photos\" and pick \"Take photo\" or \"Choose from gallery\".",
             "Tap \"Send note\"."
@@ -2495,6 +2557,11 @@
           "type": "image",
           "file": "notify_select.png",
           "caption": "\"Select all\" ticks everyone in the list"
+        },
+        {
+          "type": "image",
+          "file": "notify_group.png",
+          "caption": "\"Select all\" next to Techs picks only that group"
         },
         {
           "type": "text",

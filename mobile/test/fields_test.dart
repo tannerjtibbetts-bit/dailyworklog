@@ -80,7 +80,7 @@ void main() {
       expect(p.roleOf('Jon Smith'), 'mgmt');
       expect(p.assignTexts.contains('Jon Smith'), isTrue);
       expect(l.crew.contains('Jon Smith') && t.assignees.contains('Jon Smith') && r.name == 'Jon Smith', isTrue);
-      expect(Project.roleLabel(Project.mgmtRole), 'Supervision');
+      expect(p.roleLabel(Project.mgmtRole), 'Supervision');
     });
   });
 

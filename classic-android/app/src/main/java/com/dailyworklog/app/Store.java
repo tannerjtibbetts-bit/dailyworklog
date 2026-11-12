@@ -37,6 +37,10 @@ public final class Store {
     public String mailFrom = "";
     /** Your profile: the task colours on the zone sheet that are your trade's (dark blue by default). */
     public final java.util.Set<String> myColours = new java.util.LinkedHashSet<>(java.util.Collections.singletonList(ZoneSheet.BLUE));
+    /** Drop-down choices for each person's trade and union local (app-wide; people can add and remove them). */
+    public final List<String> tradeOptions = new ArrayList<>(DEFAULT_TRADES), localOptions = new ArrayList<>();
+    static final List<String> DEFAULT_TRADES = java.util.Collections.unmodifiableList(java.util.Arrays.asList(
+            "Boilermaker", "Millwright", "Teamster", "Electrician", "Labourer", "Pipefitter"));
     /** Your usual answers for the Observation & Coaching form (Formstack links). */
     public final FormPrefill.Details formDetails = new FormPrefill.Details();
     /** Project tabs this person has hidden ("notify", "links", "overtime", "attendance", "notes", "seacans"). */
@@ -200,6 +204,13 @@ public final class Store {
             myColours.clear();
             for (int i = 0; i < mc.length(); i++) myColours.add(mc.optString(i));
         }
+        JSONArray to = o.optJSONArray("tradeOptions");
+        if (to != null) {  // present but empty: the person removed them all
+            tradeOptions.clear();
+            tradeOptions.addAll(Models.fromArray(to));
+        }
+        localOptions.clear();
+        localOptions.addAll(Models.fromArray(o.optJSONArray("localOptions")));
         JSONArray ht = o.optJSONArray("hiddenTabs");
         for (int i = 0; ht != null && i < ht.length(); i++) hiddenTabs.add(ht.optString(i));
         JSONObject fd = o.optJSONObject("formDetails");
@@ -243,6 +254,8 @@ public final class Store {
         JSONArray ht = new JSONArray();
         for (String t : hiddenTabs) ht.put(t);
         o.put("hiddenTabs", ht);
+        o.put("tradeOptions", Models.toArray(tradeOptions));
+        o.put("localOptions", Models.toArray(localOptions));
         JSONObject fd = new JSONObject();
         for (java.util.Map.Entry<String, String> e : formDetails.answers.entrySet()) fd.put(e.getKey(), e.getValue());
         o.put("formDetails", fd);

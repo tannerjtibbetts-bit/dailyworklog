@@ -24,39 +24,95 @@
         android:inputType="phone"
         android:singleLine="true" />
 
-    <RadioGroup
-        android:id="@+id/role"
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Group"
+        android:textColor="@color/grey"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/group"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:checkedButton="@+id/roleCrew"
+        android:minHeight="48dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Level"
+        android:textColor="@color/grey"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
-        <RadioButton
-            android:id="@+id/roleCrew"
+        <TextView
+            android:id="@+id/levelApprentice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="Crew" />
+            android:layout_marginEnd="10dp"
+            android:minHeight="44dp"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="Apprentice"
+            android:textSize="16sp" />
 
-        <RadioButton
-            android:id="@+id/roleTech"
+        <TextView
+            android:id="@+id/levelJourneyman"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="Tech" />
+            android:minHeight="44dp"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="Journeyman"
+            android:textSize="16sp" />
+    </LinearLayout>
 
-        <RadioButton
-            android:id="@+id/roleMgmt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Supervision" />
-    </RadioGroup>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Trade"
+        android:textColor="@color/grey"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/trade"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Union local"
+        android:textColor="@color/grey"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/local"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp" />
+
 
     <CheckBox
         android:id="@+id/texts"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="12dp"
         android:text="This contact will receive texts when assigned to a field or task" />
 </LinearLayout>

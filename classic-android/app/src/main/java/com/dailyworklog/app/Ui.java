@@ -39,10 +39,6 @@ final class Ui {
         void onText(String text);
     }
 
-    interface CrewCallback {
-        void onCrew(String name, String phone, String role, boolean texts);
-    }
-
     static final class SheetItem {
         final int icon;
         final String label;
@@ -79,6 +75,12 @@ final class Ui {
     }
 
     static void prompt(Context c, String title, String hint, String prefill, String positive, TextCallback cb) {
+        prompt(c, title, hint, prefill, positive, s -> !s.isEmpty(), "Required", cb);
+    }
+
+    /** A one-line prompt that refuses (showing error) anything valid says no to. The text is trimmed. */
+    static void prompt(Context c, String title, String hint, String prefill, String positive,
+                       java.util.function.Predicate<String> valid, String error, TextCallback cb) {
         EditText et = new EditText(c);
         et.setHint(hint);
         et.setText(prefill == null ? "" : prefill);
@@ -99,8 +101,8 @@ final class Ui {
             View ok = d.getButton(AlertDialog.BUTTON_POSITIVE);
             ok.setOnClickListener(v -> {
                 String s = et.getText().toString().trim();
-                if (s.isEmpty()) {
-                    et.setError("Required");
+                if (!valid.test(s)) {
+                    et.setError(error);
                     return;
                 }
                 d.dismiss();
@@ -144,50 +146,6 @@ final class Ui {
         if (d.getWindow() != null) d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         d.show();
         et.requestFocus();
-    }
-
-    /** Name + optional phone number for a new crew member. */
-    static void promptCrew(Context c, String prefillName, CrewCallback cb) {
-        crewDialog(c, "Add crew member", "Add", prefillName, "", Models.Project.CREW, false, null, cb);
-    }
-
-    /**
-     * One crew member's details: name, phone, group (Crew / Tech / Supervision) and whether
-     * they're texted when assigned. onRemove adds a Remove button when not null.
-     */
-    static void crewDialog(Context c, String title, String positive, String prefillName, String prefillPhone,
-                           String role, boolean texts, Runnable onRemove, CrewCallback cb) {
-        View v = LayoutInflater.from(c).inflate(R.layout.dialog_crew, null);
-        EditText name = v.findViewById(R.id.name);
-        EditText phone = v.findViewById(R.id.phone);
-        name.setText(prefillName == null ? "" : prefillName);
-        name.setSelection(name.getText().length());
-        phone.setText(prefillPhone == null ? "" : prefillPhone);
-        ((android.widget.RadioGroup) v.findViewById(R.id.role)).check(
-                Models.Project.TECH.equals(role) ? R.id.roleTech : Models.Project.MGMT.equals(role) ? R.id.roleMgmt : R.id.roleCrew);
-        ((android.widget.CheckBox) v.findViewById(R.id.texts)).setChecked(texts);
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(c)
-                .setTitle(title).setView(v)
-                .setPositiveButton(positive, null).setNegativeButton("Cancel", null);
-        if (onRemove != null) builder.setNeutralButton("Remove", (x, w) -> onRemove.run());
-        final AlertDialog d = builder.create();
-        d.setOnShowListener(x -> d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b -> {
-            String n = name.getText().toString().trim();
-            if (n.isEmpty()) {
-                name.setError("Enter a name");
-                return;
-            }
-            d.dismiss();
-            int r = ((android.widget.RadioGroup) v.findViewById(R.id.role)).getCheckedRadioButtonId();
-            String group = r == R.id.roleTech ? Models.Project.TECH : r == R.id.roleMgmt ? Models.Project.MGMT : Models.Project.CREW;
-            boolean textOn = ((android.widget.CheckBox) v.findViewById(R.id.texts)).isChecked();
-            cb.onCrew(Fmt.capitalize(n), phone.getText().toString().trim(), group, textOn);
-        }));
-        if (onRemove == null && d.getWindow() != null) {
-            d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-        }
-        d.show();
-        if (onRemove == null) name.requestFocus();
     }
 
     static void confirm(Context c, String title, String message, String positive, Runnable onYes) {

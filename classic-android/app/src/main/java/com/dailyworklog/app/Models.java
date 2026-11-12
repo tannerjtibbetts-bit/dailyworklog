@@ -27,6 +27,23 @@ public final class Models {
         return a;
     }
 
+    static JSONObject mapJson(Map<String, String> m) throws JSONException {
+        JSONObject o = new JSONObject();
+        for (Map.Entry<String, String> e : m.entrySet()) o.put(e.getKey(), e.getValue());
+        return o;
+    }
+
+    /** Non-blank string values from a JSON object into the map. */
+    static void readMap(JSONObject o, Map<String, String> into) {
+        if (o == null) return;
+        Iterator<String> keys = o.keys();
+        while (keys.hasNext()) {
+            String k = keys.next();
+            String v = o.optString(k, "").trim();
+            if (!v.isEmpty()) into.put(k, v);
+        }
+    }
+
     static List<String> fromArray(JSONArray a) {
         List<String> out = new ArrayList<>();
         if (a == null) return out;
@@ -900,8 +917,15 @@ public final class Models {
         public List<String> emails = new ArrayList<>();
         public Overtime overtime = new Overtime();
         public Attendance attendance = new Attendance();
-        /** Crew, Techs or Supervision, by name. Anyone not listed is Crew. */
+        /** Group id by name. Anyone not listed, or in a group that's gone, is in the first group. */
         public Map<String, String> roles = new LinkedHashMap<>();
+        /** Crew groups in display order (renamed, added, deleted and reordered by people in Manage Crew). */
+        public List<Group> groups = defaultGroups();
+        /** Apprentice or Journeyman, by name. */
+        public Map<String, String> levels = new LinkedHashMap<>();
+        /** Trade and union local by name (free text, picked from the app-wide lists). */
+        public Map<String, String> trades = new LinkedHashMap<>();
+        public Map<String, String> unionLocals = new LinkedHashMap<>();
         /** People who get a text when assigned to a field. Nobody does unless ticked. */
         public Set<String> assignTexts = new LinkedHashSet<>();
         /** Sea Can Movements tab, one line per sea can. */
@@ -923,6 +947,89 @@ public final class Models {
             return TECH.equals(role) ? "Techs" : MGMT.equals(role) ? "Supervision" : "Crew";
         }
 
+        public static final String APPRENTICE = "Apprentice", JOURNEYMAN = "Journeyman";
+        public static final List<String> LEVELS = java.util.Collections.unmodifiableList(java.util.Arrays.asList(APPRENTICE, JOURNEYMAN));
+
+        /** A crew group: a fixed id (what roles point at) and a name people can change. */
+        public static class Group {
+            public String id, name;
+
+            public Group(String id, String name) {
+                this.id = id;
+                this.name = name;
+            }
+        }
+
+        /** Crew, Techs, Supervision. */
+        public static List<Group> defaultGroups() {
+            List<Group> g = new ArrayList<>();
+            for (String r : ROLES) g.add(new Group(r, roleLabel(r)));
+            return g;
+        }
+
+        public Group group(String id) {
+            for (Group g : groups) if (g.id.equals(id)) return g;
+            return null;
+        }
+
+        /** Name of the group someone's in. */
+        public String groupName(String id) {
+            Group g = group(id);
+            return g == null ? groups.get(0).name : g.name;
+        }
+
+        /** True if another group (not exceptId) already has this name, any case. */
+        public boolean groupNameTaken(String name, String exceptId) {
+            for (Group g : groups) if (!g.id.equals(exceptId) && g.name.equalsIgnoreCase(name.trim())) return true;
+            return false;
+        }
+
+        public Group addGroup(String name) {
+            Group g = new Group(newId(), name.trim());
+            groups.add(g);
+            return g;
+        }
+
+        /** Deletes a group (never the last one); its people move to the first group left. */
+        public void deleteGroup(String id) {
+            Group g = group(id);
+            if (g == null || groups.size() <= 1) return;
+            List<String> members = new ArrayList<>();
+            for (String name : crew) if (roleOf(name).equals(id)) members.add(name);
+            groups.remove(g);
+            String to = groups.get(0).id;
+            for (String name : members) roles.put(name, to);
+            roles.values().removeIf(id::equals);
+        }
+
+        public String levelOf(String name) {
+            String v = levels.get(name);
+            return v == null ? "" : v;
+        }
+
+        public String tradeOf(String name) {
+            String v = trades.get(name);
+            return v == null ? "" : v;
+        }
+
+        public String localOf(String name) {
+            String v = unionLocals.get(name);
+            return v == null ? "" : v;
+        }
+
+        /** Stores a value, or removes the entry when it's blank. */
+        public static void putOrRemove(Map<String, String> m, String name, String value) {
+            if (value == null || value.trim().isEmpty()) m.remove(name);
+            else m.put(name, value.trim());
+        }
+
+        /** "Millwright · Journeyman · Local 1687" (what's set of trade, level, union local). */
+        public String personLine(String name) {
+            List<String> parts = new ArrayList<>();
+            for (String v : new String[]{tradeOf(name), levelOf(name), localOf(name)}) if (!v.isEmpty()) parts.add(v);
+            return String.join(" \u00B7 ", parts);
+        }
+
         /** Renames someone everywhere they appear: crew, checklists, fields, notes sent, overtime and attendance. */
         public void renamePerson(String from, String to) {
             if (from.equals(to)) return;
@@ -931,6 +1038,10 @@ public final class Models {
             if (ph != null) phones.put(to, ph);
             String r = roles.remove(from);
             if (r != null) roles.put(to, r);
+            for (Map<String, String> m : java.util.Arrays.asList(levels, trades, unionLocals)) {
+                String v = m.remove(from);
+                if (v != null) m.put(to, v);
+            }
             if (assignTexts.remove(from)) assignTexts.add(to);
             for (DailyLog l : logs) {
                 replaceIn(l.crew, from, to);
@@ -949,9 +1060,10 @@ public final class Models {
             else list.set(i, to);
         }
 
+        /** The id of someone's group: the first group if they have none or theirs is gone. */
         public String roleOf(String name) {
             String r = roles.get(name);
-            return r == null ? CREW : r;
+            return r != null && group(r) != null ? r : groups.get(0).id;
         }
 
         public String phoneOf(String name) {
@@ -1070,6 +1182,12 @@ public final class Models {
             JSONObject ro = new JSONObject();
             for (Map.Entry<String, String> e : roles.entrySet()) ro.put(e.getKey(), e.getValue());
             o.put("roles", ro);
+            JSONArray gr = new JSONArray();
+            for (Group g : groups) gr.put(new JSONObject().put("id", g.id).put("name", g.name));
+            o.put("groups", gr);
+            o.put("levels", mapJson(levels));
+            o.put("trades", mapJson(trades));
+            o.put("unionLocals", mapJson(unionLocals));
             o.put("assignTexts", toArray(new ArrayList<>(assignTexts)));
             JSONArray nt = new JSONArray();
             for (Note x : notes) nt.put(x.toJson());
@@ -1122,6 +1240,23 @@ public final class Models {
                     p.roles.put(k, ro.optString(k, CREW));
                 }
             }
+            JSONArray gr = o.optJSONArray("groups");
+            if (gr != null) {
+                List<Group> gs = new ArrayList<>();
+                Set<String> ids = new LinkedHashSet<>();
+                for (int i = 0; i < gr.length(); i++) {
+                    JSONObject g = gr.optJSONObject(i);
+                    if (g == null) continue;
+                    String gid = g.optString("id", "");
+                    if (gid.isEmpty() || !ids.add(gid)) continue;
+                    gs.add(new Group(gid, g.optString("name", "")));
+                }
+                if (!gs.isEmpty()) p.groups = gs;
+            }
+            readMap(o.optJSONObject("levels"), p.levels);
+            p.levels.values().removeIf(v -> !LEVELS.contains(v));
+            readMap(o.optJSONObject("trades"), p.trades);
+            readMap(o.optJSONObject("unionLocals"), p.unionLocals);
             p.assignTexts.addAll(fromArray(o.optJSONArray("assignTexts")));
             JSONArray nt = o.optJSONArray("notes");
             if (nt != null) {

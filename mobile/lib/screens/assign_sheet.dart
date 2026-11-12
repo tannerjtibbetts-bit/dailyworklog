@@ -9,16 +9,16 @@ import '../ui/common.dart';
 import '../ui/theme.dart';
 
 /// Crew grouped Crew, Techs, Supervision, filtered by [query] (any part of the name, any case).
-/// Groups with nobody in them are left out.
-List<MapEntry<String, List<String>>> crewGroups(Project p, String query) {
+/// Groups with nobody in them are left out, unless [empty].
+List<MapEntry<String, List<String>>> crewGroups(Project p, String query, {bool empty = false}) {
   final q = query.trim().toLowerCase();
   final out = <MapEntry<String, List<String>>>[];
-  for (final role in Project.allRoles) {
+  for (final role in p.allRoles) {
     final group = [
       for (final name in p.crew)
         if (p.roleOf(name) == role && (q.isEmpty || name.toLowerCase().contains(q))) name,
     ];
-    if (group.isNotEmpty) out.add(MapEntry(role, group));
+    if (group.isNotEmpty || empty) out.add(MapEntry(role, group));
   }
   return out;
 }
@@ -34,7 +34,7 @@ void addCrewMember(Project p, CrewDetails d, Set<String>? selected) {
   if (!p.crew.contains(d.name)) p.crew.add(d.name);
   selected?.add(d.name);
   if (d.phone.isNotEmpty) p.phones[d.name] = d.phone;
-  p.roles[d.name] = d.role;
+  _setDetails(p, d);
   if (d.texts) {
     p.assignTexts.add(d.name);
   } else {
@@ -52,7 +52,7 @@ bool updateCrewMember(Store store, Project p, String name, CrewDetails d) {
   } else {
     p.phones[d.name] = d.phone;
   }
-  p.roles[d.name] = d.role;
+  _setDetails(p, d);
   if (d.texts) {
     p.assignTexts.add(d.name);
   } else {
@@ -61,6 +61,28 @@ bool updateCrewMember(Store store, Project p, String name, CrewDetails d) {
   if (store.userName == name) store.userName = d.name;
   return true;
 }
+
+void _setDetails(Project p, CrewDetails d) {
+  p.roles[d.name] = d.role;
+  for (final (m, v) in [(p.levels, d.level), (p.trades, d.trade), (p.unionLocals, d.local)]) {
+    if (v.trim().isEmpty) {
+      m.remove(d.name);
+    } else {
+      m[d.name] = v.trim();
+    }
+  }
+}
+
+/// The details saved for [name], for the crew box.
+CrewDetails crewDetailsOf(Project p, String name) => CrewDetails(
+      name,
+      p.phoneOf(name),
+      p.roleOf(name),
+      p.assignTexts.contains(name),
+      level: p.levels[name] ?? '',
+      trade: p.trades[name] ?? '',
+      local: p.unionLocals[name] ?? '',
+    );
 
 /// "Assign Users" sheet. Returns the people ticked, or null if cancelled.
 /// [selectAll] adds a "Select all" row (the Notify "Send to" list).
@@ -125,7 +147,7 @@ class _AssignSheetState extends State<_AssignSheet> {
   void _render() => setState(() {});
 
   Future<void> _add(String q) async {
-    final d = await promptCrew(context, Fmt.capitalize(q));
+    final d = await promptCrew(context, p, Fmt.capitalize(q));
     if (d == null) return;
     addCrewMember(p, d, widget.manage ? null : selected);
     store.save();
@@ -163,16 +185,7 @@ class _AssignSheetState extends State<_AssignSheet> {
   }
 
   Future<void> _editPerson(String name) async {
-    final d = await crewDialog(
-      context,
-      name,
-      'Save',
-      name,
-      p.phoneOf(name),
-      p.roleOf(name),
-      p.assignTexts.contains(name),
-      () => _remove(name),
-    );
+    final d = await crewDialog(context, p, name, 'Save', crewDetailsOf(p, name), () => _remove(name));
     if (d == null || !mounted) return;
     if (!updateCrewMember(store, p, name, d)) {
       await showDialog<void>(
@@ -186,6 +199,120 @@ class _AssignSheetState extends State<_AssignSheet> {
     }
     store.save();
     _render();
+  }
+
+  // ----- groups -----
+
+  Future<void> _addGroup() async {
+    final n = await prompt(context, 'New group', 'e.g. Night shift', null, 'Add',
+        caps: TextCapitalization.words,
+        validate: (s) => s.trim().isEmpty || p.groupNameTaken(s) ? 'Enter a new group name' : null);
+    if (n == null || n.trim().isEmpty) return;
+    p.addGroup(n);
+    store.save();
+    _render();
+  }
+
+  Future<void> _renameGroup(String id) async {
+    final g = p.findGroup(id);
+    if (g == null) return;
+    final n = await prompt(context, 'Rename group', 'Group name', g.name, 'Save',
+        caps: TextCapitalization.words,
+        validate: (s) => s.trim().isEmpty || p.groupNameTaken(s, except: id) ? 'Enter a new group name' : null);
+    if (n == null || n.trim().isEmpty) return;
+    g.name = n.trim();
+    store.save();
+    _render();
+  }
+
+  void _deleteGroup(String id) {
+    final g = p.findGroup(id);
+    if (g == null || p.groups.length < 2) return;
+    final to = p.groups.firstWhere((x) => x.id != id).name;
+    confirm(context, 'Delete the ${g.name} group?', 'Everyone in it moves to $to.', 'Delete', () {
+      p.deleteGroup(id);
+      store.save();
+      _render();
+    });
+  }
+
+  void _moveTo(String name, String groupId) {
+    if (p.roleOf(name) == groupId) return;
+    p.roles[name] = groupId;
+    store.save();
+    _render();
+  }
+
+  /// One group in Manage Crew: people can be dragged onto it.
+  Widget _dropGroup(String id, List<Widget> children) => DragTarget<String>(
+        onWillAcceptWithDetails: (d) => p.roleOf(d.data) != id,
+        onAcceptWithDetails: (d) => _moveTo(d.data, id),
+        builder: (c, hovering, _) => AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          color: hovering.isNotEmpty ? C.sky : Colors.transparent,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            ...children,
+            if (children.length == 1)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 4, 24, 12),
+                child: Text('Nobody in this group yet', style: TextStyle(color: C.greyLight, fontSize: 15)),
+              ),
+          ]),
+        ),
+      );
+
+  Widget _manageHeading(String id) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 8, 0),
+        child: Row(children: [
+          Expanded(
+            child: Text(
+              p.roleLabel(id).toUpperCase(),
+              style: const TextStyle(color: C.grey, fontSize: 13, letterSpacing: 0.8, fontWeight: FontWeight.bold),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Rename group',
+            icon: const Icon(Icons.edit_outlined, color: C.grey, size: 22),
+            onPressed: () => _renameGroup(id),
+          ),
+          if (p.groups.length > 1)
+            IconButton(
+              tooltip: 'Delete group',
+              icon: const Icon(Icons.delete_outline, color: C.red, size: 22),
+              onPressed: () => _deleteGroup(id),
+            ),
+        ]),
+      );
+
+  /// Notify: a group heading with its own "Select all".
+  Widget _selectHeading(String id, List<String> names) {
+    final all = names.every(selected.contains);
+    void flip() => setState(() {
+          if (all) {
+            selected.removeAll(names);
+          } else {
+            selected.addAll(names);
+          }
+        });
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 12, 0),
+      child: Row(children: [
+        Expanded(
+          child: Text(
+            p.roleLabel(id).toUpperCase(),
+            style: const TextStyle(color: C.grey, fontSize: 13, letterSpacing: 0.8, fontWeight: FontWeight.bold),
+          ),
+        ),
+        InkWell(
+          key: ValueKey('select-$id'),
+          onTap: flip,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Checkbox(value: all, onChanged: (_) => flip()),
+            const Text('Select all', style: TextStyle(color: C.grey, fontSize: 15)),
+          ]),
+        ),
+      ]),
+    );
   }
 
   Widget _heading(String label) => Padding(
@@ -255,10 +382,32 @@ class _AssignSheetState extends State<_AssignSheet> {
                     children: [
                       Text(name, style: const TextStyle(color: C.text, fontSize: 20)),
                       phone,
+                      if (manage && p.tradeLine(name).isNotEmpty)
+                        Text(p.tradeLine(name), style: const TextStyle(color: C.grey, fontSize: 15)),
                     ],
                   ),
                 ),
               ),
+              if (manage)
+                Draggable<String>(
+                  data: name,
+                  feedback: Material(
+                    elevation: 6,
+                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      child: Text(name, style: const TextStyle(color: C.navy, fontSize: 19)),
+                    ),
+                  ),
+                  child: const Tooltip(
+                    message: 'Drag to another group',
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Icon(Icons.drag_indicator, color: C.grey, size: 28),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -270,7 +419,7 @@ class _AssignSheetState extends State<_AssignSheet> {
   Widget build(BuildContext context) {
     final q = search.text.trim();
     final rows = <Widget>[];
-    final groups = crewGroups(p, q);
+    final groups = crewGroups(p, q, empty: widget.manage);
     final shown = [for (final g in groups) ...g.value];
     if (widget.selectAll && !widget.manage && shown.isNotEmpty) {
       final all = shown.every(selected.contains);
@@ -294,10 +443,23 @@ class _AssignSheetState extends State<_AssignSheet> {
       ));
     }
     for (final g in groups) {
-      rows.add(_heading(Project.roleLabel(g.key)));
-      for (final name in g.value) {
-        rows.add(_row(name));
+      if (widget.manage) {
+        rows.add(_dropGroup(g.key, [_manageHeading(g.key), for (final name in g.value) _row(name)]));
+      } else {
+        rows.add(widget.selectAll ? _selectHeading(g.key, g.value) : _heading(p.roleLabel(g.key)));
+        for (final name in g.value) {
+          rows.add(_row(name));
+        }
       }
+    }
+    if (widget.manage && q.isEmpty) {
+      rows.add(InkWell(
+        onTap: _addGroup,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          child: Text('+  Add group', style: TextStyle(color: C.blue, fontSize: 19)),
+        ),
+      ));
     }
     if (offerAdd(p, q)) {
       rows.add(

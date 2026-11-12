@@ -835,3 +835,76 @@ class TagsTest {
     NoteTest.check(lines.contains("Note: Safety concern: Loose rail"), "search finds tag " + lines);
     System.out.println("TAGS PASS"); }
   static String show(java.util.List<Rich.Segment> s) { return RichTest.show(s); } }
+class GroupsTest {
+  public static void main(String[] a) throws Exception {
+    // Defaults and round trip
+    Models.Project p = new Models.Project();
+    java.util.List<String> names = new java.util.ArrayList<>(); for (Models.Project.Group g : p.groups) names.add(g.id + "=" + g.name);
+    RichTest.eq(names, java.util.Arrays.asList("crew=Crew", "tech=Techs", "mgmt=Supervision"), "default groups");
+    org.json.JSONObject j = p.toJson();
+    NoteTest.check(j.getJSONArray("groups").length() == 3, "groups written");
+    j.remove("groups"); j.remove("levels"); j.remove("trades"); j.remove("unionLocals");
+    Models.Project old = Models.Project.fromJson(j);
+    NoteTest.check(old.groups.size() == 3 && old.groups.get(1).name.equals("Techs") && old.levels.isEmpty() && old.trades.isEmpty() && old.unionLocals.isEmpty(), "old data: default groups, no details");
+    j.put("groups", new org.json.JSONArray());
+    NoteTest.check(Models.Project.fromJson(j).groups.size() == 3, "empty groups list: defaults");
+    p.crew.add("Al"); p.crew.add("Bo"); p.crew.add("Cy");
+    p.groups.get(1).name = "Mechanics";
+    Models.Project.Group night = p.addGroup("  Night shift ");
+    NoteTest.check(night.name.equals("Night shift") && !night.id.isEmpty() && p.groups.get(3) == night, "new group at the end, trimmed, new id");
+    p.roles.put("Bo", night.id); p.roles.put("Cy", "gone");
+    p.levels.put("Al", "Journeyman"); p.trades.put("Al", "Millwright"); p.unionLocals.put("Al", "Local 1687");
+    Models.Project q = Models.Project.fromJson(p.toJson());
+    NoteTest.check(q.groups.size() == 4 && q.groups.get(1).name.equals("Mechanics") && q.groups.get(3).id.equals(night.id) && q.roleOf("Bo").equals(night.id),
+        "groups round trip");
+    NoteTest.check(q.levelOf("Al").equals("Journeyman") && q.tradeOf("Al").equals("Millwright") && q.localOf("Al").equals("Local 1687"), "details round trip");
+    RichTest.eq(q.personLine("Al"), "Millwright · Journeyman · Local 1687", "person line");
+    NoteTest.check(q.personLine("Bo").isEmpty(), "person line empty");
+    // Unknown or missing group -> first group
+    NoteTest.check(q.roleOf("Cy").equals("crew") && q.roleOf("Nobody").equals("crew"), "unknown group -> first group");
+    // Levels filtering
+    org.json.JSONObject lj = p.toJson(); lj.put("levels", new org.json.JSONObject("{\"Al\":\"Journeyman\",\"Bo\":\"Foreman\",\"Cy\":\"apprentice\",\"Di\":\"Apprentice\"}"));
+    Models.Project lv = Models.Project.fromJson(lj);
+    RichTest.eq(new java.util.TreeMap<>(lv.levels).toString(), "{Al=Journeyman, Di=Apprentice}", "levels: only Apprentice / Journeyman");
+    // Names taken (any case)
+    NoteTest.check(p.groupNameTaken("night SHIFT", "") && !p.groupNameTaken("Night shift", night.id) && !p.groupNameTaken("Day", ""), "group name check");
+    // Delete group moves people to the first group left
+    p.deleteGroup(night.id);
+    NoteTest.check(p.groups.size() == 3 && p.group(night.id) == null && p.roleOf("Bo").equals("crew") && "crew".equals(p.roles.get("Bo")), "delete group moves people");
+    p.roles.put("Al", "crew"); p.roles.put("Cy", "tech");
+    p.deleteGroup("crew");
+    NoteTest.check(p.groups.get(0).id.equals("tech") && p.roleOf("Al").equals("tech") && p.roleOf("Bo").equals("tech") && p.roleOf("Cy").equals("tech"),
+        "deleting the first group: everyone to the new first");
+    p.deleteGroup("tech"); p.deleteGroup("mgmt");
+    NoteTest.check(p.groups.size() == 1, "the last group can't be deleted");
+    // renamePerson moves levels / trades / locals
+    Models.Project r = new Models.Project(); r.crew.add("Jon");
+    r.levels.put("Jon", "Apprentice"); r.trades.put("Jon", "Teamster"); r.unionLocals.put("Jon", "Local 128"); r.roles.put("Jon", "mgmt");
+    r.renamePerson("Jon", "Jon Smith");
+    NoteTest.check(r.levelOf("Jon Smith").equals("Apprentice") && r.tradeOf("Jon Smith").equals("Teamster") && r.localOf("Jon Smith").equals("Local 128")
+        && r.roleOf("Jon Smith").equals("mgmt") && r.levels.get("Jon") == null && r.trades.get("Jon") == null && r.unionLocals.get("Jon") == null, "rename moves details");
+    // putOrRemove: blank removes
+    Models.Project.putOrRemove(r.trades, "Jon Smith", "  ");
+    NoteTest.check(r.tradeOf("Jon Smith").isEmpty() && !r.trades.containsKey("Jon Smith"), "blank removes");
+    // Store: trade options default vs empty list; local options default []
+    Store s = new Store();
+    RichTest.eq(s.tradeOptions, java.util.Arrays.asList("Boilermaker", "Millwright", "Teamster", "Electrician", "Labourer", "Pipefitter"), "default trades");
+    NoteTest.check(s.localOptions.isEmpty(), "no locals by default");
+    org.json.JSONObject sj = s.toJson(); sj.remove("tradeOptions"); sj.remove("localOptions");
+    Store s2 = new Store(); s2.fromJson(sj);
+    NoteTest.check(s2.tradeOptions.size() == 6 && s2.localOptions.isEmpty(), "old file: default trades");
+    s.tradeOptions.clear(); s.localOptions.add("Local 128");
+    Store s3 = new Store(); s3.fromJson(new org.json.JSONObject(s.toJson().toString()));
+    NoteTest.check(s3.tradeOptions.isEmpty() && s3.localOptions.equals(java.util.Arrays.asList("Local 128")), "empty trade list stays empty; locals saved");
+    // Adding an option: no duplicates, any case
+    java.util.List<String> opts = new java.util.ArrayList<>(java.util.Arrays.asList("Millwright"));
+    NoteTest.check(CrewDialog.addOption(opts, " millwright ").equals("Millwright") && opts.size() == 1, "add trade: no duplicate");
+    NoteTest.check(CrewDialog.addOption(opts, "Ironworker").equals("Ironworker") && opts.size() == 2, "add trade");
+    // CrewDialog.Person save
+    Models.Project cp = new Models.Project(); cp.crew.add("Al");
+    CrewDialog.Person per = new CrewDialog.Person(); per.name = "Al"; per.group = "tech"; per.level = "Journeyman"; per.trade = "Pipefitter"; per.local = ""; per.phone = "555"; per.texts = true;
+    per.saveTo(cp, "Al");
+    CrewDialog.Person back = CrewDialog.Person.of(cp, "Al");
+    NoteTest.check(back.group.equals("tech") && back.level.equals("Journeyman") && back.trade.equals("Pipefitter") && back.local.isEmpty() && back.phone.equals("555")
+        && back.texts && !cp.unionLocals.containsKey("Al"), "person box saves group, level, trade, local");
+    System.out.println("GROUPS PASS"); } }

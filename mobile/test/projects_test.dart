@@ -13,7 +13,9 @@ import 'package:dailyworklog/screens/notify_screen.dart';
 import 'package:dailyworklog/screens/overtime_pane.dart';
 import 'package:dailyworklog/screens/project_screen.dart';
 import 'package:dailyworklog/screens/projects_screen.dart';
+import 'package:dailyworklog/ui/common.dart';
 import 'package:dailyworklog/ui/theme.dart';
+import 'package:dailyworklog/screens/assign_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -695,13 +697,135 @@ void main() {
       Store.instance.projects.add(p);
       await tester.pumpWidget(app(NotifyScreen(projectId: p.id)));
       await tester.pumpAndSettle();
-      expect(find.text('Select all'), findsOneWidget);
-      await tester.tap(find.text('Select all'));
+      expect(find.text('Select all'), findsNWidgets(2)); // everyone, and the Crew group
+      await tester.tap(find.text('Select all').first);
       await tester.pump();
       await tester.tap(find.text('Assign'));
       await tester.pumpAndSettle();
       final st = tester.state(find.byType(NotifyScreen)) as dynamic;
       expect((st.to as List<String>).toSet(), p.crew.toSet());
+    });
+
+    test('crew groups, levels, trades and union locals are saved and follow renames', () {
+      final p = Project()..crew = ['Al', 'Bo'];
+      expect(p.groups.map((g) => g.name), ['Crew', 'Techs', 'Supervision']);
+      final night = p.addGroup('Night shift');
+      p.roles['Al'] = night.id;
+      p.roles['Bo'] = 'gone';
+      p.levels['Al'] = 'Journeyman';
+      p.trades['Al'] = 'Millwright';
+      p.unionLocals['Al'] = 'Local 1687';
+      final q = Project.fromJson(p.toJson());
+      expect(q.groups.map((g) => g.name), ['Crew', 'Techs', 'Supervision', 'Night shift']);
+      expect(q.roleOf('Al'), night.id);
+      expect(q.roleOf('Bo'), Project.crewRole);
+      expect(q.tradeLine('Al'), 'Millwright · Journeyman · Local 1687');
+      expect(Project.fromJson({'levels': {'Al': 'Boss'}}).levels, isEmpty);
+      expect(Project.fromJson({'groups': []}).groups.length, 3);
+      expect(q.groupNameTaken('night SHIFT'), isTrue);
+      expect(q.groupNameTaken('Night shift', except: night.id), isFalse);
+      q.renamePerson('Al', 'Al Smith');
+      expect(q.tradeLine('Al Smith'), 'Millwright · Journeyman · Local 1687');
+      expect(q.roleOf('Al Smith'), night.id);
+      q.deleteGroup(night.id);
+      expect(q.roleOf('Al Smith'), Project.crewRole);
+      expect(q.groups.length, 3);
+    });
+
+    test('trade and union local choices: defaults, and an emptied list stays empty', () {
+      final st = Store.instance;
+      st.fromJson({});
+      expect(st.tradeOptions, Store.defaultTrades);
+      expect(st.localOptions, isEmpty);
+      st.fromJson({'tradeOptions': [], 'localOptions': ['Local 128']});
+      expect(st.tradeOptions, isEmpty);
+      expect(st.localOptions, ['Local 128']);
+      st.fromJson({});
+    });
+
+    testWidgets('manage crew: drag a person into another group, add and rename groups', (tester) async {
+      tester.view.physicalSize = const Size(1080, 3000);
+      tester.view.devicePixelRatio = 2.75;
+      addTearDown(tester.view.reset);
+      final p = sample();
+      Store.instance.projects.add(p);
+      await tester.pumpWidget(app(Builder(
+        builder: (c) => TextButton(onPressed: () => showManageCrew(c, p), child: const Text('open')),
+      )));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.text('TECHS'), findsOneWidget); // empty groups show in Manage Crew
+      expect(find.text('Nobody in this group yet'), findsWidgets);
+      final handle = find.descendant(
+          of: find.ancestor(of: find.text('Bo Jones'), matching: find.byType(Row)).first,
+          matching: find.byIcon(Icons.drag_indicator));
+      final g = await tester.startGesture(tester.getCenter(handle));
+      await tester.pump();
+      await g.moveTo(tester.getCenter(find.text('SUPERVISION')));
+      await tester.pump();
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(p.roleOf('Bo Jones'), Project.mgmtRole);
+
+      await tester.tap(find.text('+  Add group'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'crew');
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a new group name'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'Night shift');
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      expect(p.groups.last.name, 'Night shift');
+      expect(find.text('NIGHT SHIFT'), findsOneWidget);
+      await tester.tap(find.byTooltip('Rename group').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Days');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(p.groups.last.name, 'Days');
+    });
+
+    testWidgets('crew box: group, level, trade and a new union local', (tester) async {
+      tester.view.physicalSize = const Size(1080, 3000);
+      tester.view.devicePixelRatio = 2.75;
+      addTearDown(tester.view.reset);
+      Store.instance.fromJson({});
+      final p = sample();
+      Store.instance.projects.add(p);
+      CrewDetails? got;
+      await tester.pumpWidget(app(Builder(
+        builder: (c) => TextButton(
+            onPressed: () async => got = await crewDialog(c, p, 'Al Smith', 'Save', crewDetailsOf(p, 'Al Smith'), null),
+            child: const Text('open')),
+      )));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Journeyman'));
+      await tester.pump();
+      await tester.tap(find.text('Crew').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Techs').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<String>).at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Millwright').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<String>).at(2));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add a union local…').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Local 1687');
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      expect(Store.instance.localOptions, ['Local 1687']);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(got!.role, Project.techRole);
+      expect(got!.level, 'Journeyman');
+      expect(got!.trade, 'Millwright');
+      expect(got!.local, 'Local 1687');
+      Store.instance.fromJson({});
     });
   });
 }

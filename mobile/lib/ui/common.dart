@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/store.dart';
 import 'theme.dart';
 
 class SheetItem {
@@ -104,22 +105,66 @@ class CrewDetails {
   final String name, phone, role;
   final bool texts;
 
-  const CrewDetails(this.name, this.phone, this.role, this.texts);
+  /// "Apprentice", "Journeyman" or ''; trade and union local, '' for none.
+  final String level, trade, local;
+
+  const CrewDetails(this.name, this.phone, this.role, this.texts, {this.level = '', this.trade = '', this.local = ''});
 }
 
 /// Name + optional phone number for a new crew member.
-Future<CrewDetails?> promptCrew(BuildContext context, String prefillName) =>
-    crewDialog(context, 'Add crew member', 'Add', prefillName, '', Project.crewRole, false, null);
+Future<CrewDetails?> promptCrew(BuildContext context, Project project, String prefillName) => crewDialog(
+    context, project, 'Add crew member', 'Add', CrewDetails(prefillName, '', project.groups.first.id, false), null);
 
-/// One crew member's details: name, phone, group (Crew / Tech / Supervision) and whether
-/// they're texted when assigned. [onRemove] adds a Remove button when not null.
-Future<CrewDetails?> crewDialog(BuildContext context, String title, String positive, String prefillName,
-    String prefillPhone, String role, bool texts, VoidCallback? onRemove) {
-  final name = TextEditingController(text: prefillName);
-  final phone = TextEditingController(text: prefillPhone);
-  var group = role;
-  var textOn = texts;
+/// One crew member's details: name, phone, group, level, trade, union local and whether they're texted when
+/// assigned. [onRemove] adds a Remove button when not null.
+Future<CrewDetails?> crewDialog(BuildContext context, Project project, String title, String positive, CrewDetails start,
+    VoidCallback? onRemove) {
+  final store = Store.instance;
+  final name = TextEditingController(text: start.name);
+  final phone = TextEditingController(text: start.phone);
+  var group = project.findGroup(start.role) != null ? start.role : project.groups.first.id;
+  var level = start.level, trade = start.trade, local = start.local;
+  var textOn = start.texts;
   String? error;
+  const add = '\u0000add', edit = '\u0000edit';
+
+  Widget pickList(BuildContext c, void Function(void Function()) set, String label, String value, List<String> options,
+      String addLabel, String editLabel, String addTitle, String addHint, String editTitle, void Function(String) pick) {
+    final items = [...options, if (value.isNotEmpty && !options.contains(value)) value];
+    return DropdownButtonFormField<String>(
+      key: ValueKey('$label|$value|${options.length}'),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        const DropdownMenuItem(value: '', child: Text('None')),
+        for (final o in items) DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis)),
+        DropdownMenuItem(value: add, child: Text(addLabel, style: const TextStyle(color: C.blue))),
+        DropdownMenuItem(value: edit, child: Text(editLabel, style: const TextStyle(color: C.blue))),
+      ],
+      onChanged: (v) async {
+        if (v == add) {
+          set(() {}); // put the drop-down back while asking
+          final t = await prompt(c, addTitle, addHint, null, 'Add', caps: TextCapitalization.words);
+          final n = t?.trim() ?? '';
+          if (n.isEmpty) return;
+          final have = options.where((o) => o.toLowerCase() == n.toLowerCase());
+          if (have.isEmpty) {
+            options.add(n);
+            store.save();
+          }
+          set(() => pick(have.isEmpty ? n : have.first));
+        } else if (v == edit) {
+          set(() {});
+          if (c.mounted) await editOptions(c, editTitle, addHint, options);
+          set(() {});
+        } else {
+          set(() => pick(v ?? ''));
+        }
+      },
+    );
+  }
+
   return showDialog<CrewDetails>(
     context: context,
     builder: (c) => StatefulBuilder(
@@ -141,26 +186,30 @@ Future<CrewDetails?> crewDialog(BuildContext context, String title, String posit
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'Phone number (optional)'),
               ),
-              const SizedBox(height: 12),
-              const Text('Group', style: TextStyle(color: C.grey)),
-              RadioGroup<String>(
-                groupValue: group,
-                onChanged: (v) => set(() => group = v ?? Project.crewRole),
-                child: Wrap(
-                  children: [
-                    for (final r in const [
-                      [Project.crewRole, 'Crew'],
-                      [Project.techRole, 'Tech'],
-                      [Project.mgmtRole, 'Supervision'],
-                    ])
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Radio<String>(value: r[0]),
-                        GestureDetector(onTap: () => set(() => group = r[0]), child: Text(r[1])),
-                        const SizedBox(width: 8),
-                      ]),
-                  ],
-                ),
+              DropdownButtonFormField<String>(
+                initialValue: group,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Group'),
+                items: [
+                  for (final g in project.groups)
+                    DropdownMenuItem(value: g.id, child: Text(g.name, overflow: TextOverflow.ellipsis)),
+                ],
+                onChanged: (v) => set(() => group = v ?? group),
               ),
+              const SizedBox(height: 12),
+              const Text('Level', style: TextStyle(color: C.grey)),
+              Wrap(spacing: 8, children: [
+                for (final l in Project.levelOptions)
+                  ChoiceChip(
+                    label: Text(l),
+                    selected: level == l,
+                    onSelected: (_) => set(() => level = level == l ? '' : l),
+                  ),
+              ]),
+              pickList(c, set, 'Trade', trade, store.tradeOptions, 'Add a trade…', 'Edit trades…', 'Add a trade',
+                  'e.g. Ironworker', 'Trades', (v) => trade = v),
+              pickList(c, set, 'Union local', local, store.localOptions, 'Add a union local…', 'Edit union locals…',
+                  'Add a union local', 'e.g. Local 128', 'Union locals', (v) => local = v),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
@@ -188,12 +237,74 @@ Future<CrewDetails?> crewDialog(BuildContext context, String title, String posit
                 set(() => error = 'Enter a name');
                 return;
               }
-              Navigator.pop(c, CrewDetails(Fmt.capitalize(n), phone.text.trim(), group, textOn));
+              Navigator.pop(
+                  c,
+                  CrewDetails(Fmt.capitalize(n), phone.text.trim(), group, textOn,
+                      level: level, trade: trade, local: local));
             },
             child: Text(positive),
           ),
         ],
       ),
+    ),
+  );
+}
+
+/// "Trades" / "Union locals": remove choices with ×, add new ones. Changes [options] and saves.
+Future<void> editOptions(BuildContext context, String title, String hint, List<String> options) {
+  final box = TextEditingController();
+  return showDialog<void>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, set) {
+        void addIt() {
+          final n = box.text.trim();
+          if (n.isEmpty || options.any((o) => o.toLowerCase() == n.toLowerCase())) return;
+          set(() => options.add(n));
+          box.clear();
+          Store.instance.save();
+        }
+
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                if (options.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('Nothing in the list yet.', style: TextStyle(color: C.grey)),
+                  ),
+                for (final o in List.of(options))
+                  Row(children: [
+                    Expanded(child: Text(o, style: const TextStyle(fontSize: 17))),
+                    IconButton(
+                      tooltip: 'Remove $o',
+                      icon: const Icon(Icons.close, color: C.red),
+                      onPressed: () {
+                        set(() => options.remove(o));
+                        Store.instance.save();
+                      },
+                    ),
+                  ]),
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: box,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(hintText: hint),
+                      onSubmitted: (_) => addIt(),
+                    ),
+                  ),
+                  TextButton(onPressed: addIt, child: const Text('Add')),
+                ]),
+              ]),
+            ),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Done'))],
+        );
+      },
     ),
   );
 }

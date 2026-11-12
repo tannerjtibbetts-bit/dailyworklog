@@ -699,9 +699,22 @@ class SeaCanMove {
     ..weight = _s(o, 'weight');
 }
 
+/// A crew group in Manage Crew ("Crew", "Techs", "Night shift"…).
+class CrewGroup {
+  final String id;
+  String name;
+
+  CrewGroup(this.id, this.name);
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+}
+
 class Project {
   static const crewRole = 'crew', techRole = 'tech', mgmtRole = 'mgmt';
-  static const allRoles = [crewRole, techRole, mgmtRole];
+  static const levelOptions = ['Apprentice', 'Journeyman'];
+
+  static List<CrewGroup> defaultGroups() =>
+      [CrewGroup(crewRole, 'Crew'), CrewGroup(techRole, 'Techs'), CrewGroup(mgmtRole, 'Supervision')];
 
   String id = newId();
   String name = '';
@@ -723,8 +736,14 @@ class Project {
   Overtime overtime = Overtime();
   Attendance attendance = Attendance();
 
-  /// Crew, Techs or Supervision, by name. Anyone not listed is Crew.
+  /// Crew groups in order; never empty.
+  List<CrewGroup> groups = defaultGroups();
+
+  /// Group id by name. Anyone not listed (or in a group that's gone) is in the first group.
   Map<String, String> roles = {};
+
+  /// "Apprentice" or "Journeyman", trade and union local, by name.
+  Map<String, String> levels = {}, trades = {}, unionLocals = {};
 
   /// People who get a text when assigned to a field. Nobody does unless ticked.
   Set<String> assignTexts = {};
@@ -738,8 +757,39 @@ class Project {
   /// Sea cans with a number typed in, in order.
   List<SeaCanMove> filledSeaCans() => seaCans.where((m) => m.can.trim().isNotEmpty).toList();
 
-  static String roleLabel(String role) =>
-      role == techRole ? 'Techs' : role == mgmtRole ? 'Supervision' : 'Crew';
+  /// Group ids in order.
+  List<String> get allRoles => [for (final g in groups) g.id];
+
+  String roleLabel(String role) => (findGroup(role) ?? groups.first).name;
+
+  CrewGroup? findGroup(String id) {
+    for (final g in groups) {
+      if (g.id == id) return g;
+    }
+    return null;
+  }
+
+  /// True if another group (not [except]) already has this name, any case.
+  bool groupNameTaken(String name, {String? except}) =>
+      groups.any((g) => g.id != except && g.name.toLowerCase() == name.trim().toLowerCase());
+
+  CrewGroup addGroup(String name) {
+    final g = CrewGroup(newId(), name.trim());
+    groups.add(g);
+    return g;
+  }
+
+  /// Deletes a group (not the last one); its people move to the first group left.
+  void deleteGroup(String id) {
+    if (groups.length < 2) return;
+    groups.removeWhere((g) => g.id == id);
+    final to = groups.first.id;
+    roles.updateAll((k, v) => v == id ? to : v);
+  }
+
+  /// "Millwright · Journeyman · Local 1687", or ''.
+  String tradeLine(String name) =>
+      [trades[name], levels[name], unionLocals[name]].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
 
   /// Renames someone everywhere they appear: crew, checklists, fields, notes sent, overtime and attendance.
   void renamePerson(String from, String to) {
@@ -747,8 +797,10 @@ class Project {
     _replaceIn(crew, from, to);
     final ph = phones.remove(from);
     if (ph != null) phones[to] = ph;
-    final r = roles.remove(from);
-    if (r != null) roles[to] = r;
+    for (final m in [roles, levels, trades, unionLocals]) {
+      final v = m.remove(from);
+      if (v != null) m[to] = v;
+    }
     if (assignTexts.remove(from)) assignTexts.add(to);
     for (final l in logs) {
       _replaceIn(l.crew, from, to);
@@ -782,7 +834,10 @@ class Project {
     }
   }
 
-  String roleOf(String name) => roles[name] ?? crewRole;
+  String roleOf(String name) {
+    final r = roles[name];
+    return r != null && findGroup(r) != null ? r : groups.first.id;
+  }
 
   String phoneOf(String name) => phones[name] ?? '';
 
@@ -899,7 +954,11 @@ class Project {
         'emails': emails,
         'overtime': overtime.toJson(),
         'attendance': attendance.toJson(),
+        'groups': [for (final g in groups) g.toJson()],
         'roles': roles,
+        'levels': levels,
+        'trades': trades,
+        'unionLocals': unionLocals,
         'assignTexts': assignTexts.toList(),
         'notes': [for (final n in notes) n.toJson()],
         'seaCans': [for (final m in seaCans) m.toJson()],
@@ -918,10 +977,27 @@ class Project {
     ..emails = _strings(o['emails'])
     ..overtime = Overtime.fromJson(o['overtime'])
     ..attendance = Attendance.fromJson(o['attendance'])
+    ..groups = _groups(o['groups'])
     ..roles = _stringMap(o['roles'])
+    ..levels = (_stringMap(o['levels'])..removeWhere((k, v) => !levelOptions.contains(v)))
+    ..trades = (_stringMap(o['trades'])..removeWhere((k, v) => v.trim().isEmpty))
+    ..unionLocals = (_stringMap(o['unionLocals'])..removeWhere((k, v) => v.trim().isEmpty))
     ..assignTexts = _strings(o['assignTexts']).toSet()
     ..notes = _objects(o['notes'], Note.fromJson)
     ..notices = _objects(o['notices'], Notice.fromJson)
     ..seaCans = _objects(o['seaCans'], SeaCanMove.fromJson)
     ..seaCanInclude = _b(o, 'seaCanInclude');
+
+  static List<CrewGroup> _groups(dynamic list) {
+    final out = <CrewGroup>[];
+    if (list is List) {
+      for (final g in list) {
+        if (g is! Map) continue;
+        final id = (g['id'] ?? '').toString(), name = (g['name'] ?? '').toString().trim();
+        if (id.isEmpty || name.isEmpty || out.any((x) => x.id == id)) continue;
+        out.add(CrewGroup(id, name));
+      }
+    }
+    return out.isEmpty ? defaultGroups() : out;
+  }
 }

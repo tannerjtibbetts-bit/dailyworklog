@@ -1,12 +1,17 @@
 package com.dailyworklog.app;
 
+import android.content.ClipData;
 import android.content.Context;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.DragEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -38,7 +43,10 @@ final class AssignSheet {
         show(c, project, current, title, done, false, true);
     }
 
-    /** Manage crew: groups (Crew / Techs / Management) and who gets assignment texts. Saves as you go. */
+    /**
+     * Manage crew: every group (rename, delete, add; drag people between them), each person's details,
+     * and who gets assignment texts. Saves as you go.
+     */
     static void manage(Context c, Models.Project project) {
         show(c, project, new ArrayList<>(), "Manage Crew", sel -> {}, true, false);
     }
@@ -71,7 +79,11 @@ final class AssignSheet {
             // "Select all": everyone shown (after the search), ticked when they're all selected.
             List<String> shown = new ArrayList<>();
             for (String name : project.crew) if (ql.isEmpty() || name.toLowerCase(Locale.ROOT).contains(ql)) shown.add(name);
-            final Runnable[] syncAll = {() -> {}};
+            // Everything that shows a "Select all" tick, kept in step when someone is ticked.
+            List<Runnable> syncs = new ArrayList<>();
+            Runnable syncAll = () -> {
+                for (Runnable x : syncs) x.run();
+            };
             if (selectAll && !shown.isEmpty()) {
                 View all = inf.inflate(R.layout.item_user_check, rows, false);
                 CheckBox allBox = all.findViewById(R.id.box);
@@ -80,8 +92,7 @@ final class AssignSheet {
                 TextView label = all.findViewById(R.id.name);
                 label.setText("Select all");
                 label.setTypeface(null, android.graphics.Typeface.BOLD);
-                syncAll[0] = () -> allBox.setChecked(selected.containsAll(shown));
-                syncAll[0].run();
+                syncs.add(() -> allBox.setChecked(selected.containsAll(shown)));
                 all.setOnClickListener(x -> {
                     if (selected.containsAll(shown)) selected.removeAll(shown);
                     else selected.addAll(shown);
@@ -89,20 +100,56 @@ final class AssignSheet {
                 });
                 rows.addView(all);
             }
-            for (String role : Models.Project.ROLES) {
+            for (Models.Project.Group g : project.groups) {
                 List<String> group = new ArrayList<>();
                 for (String name : project.crew) {
-                    if (!role.equals(project.roleOf(name))) continue;
+                    if (!g.id.equals(project.roleOf(name))) continue;
                     if (!ql.isEmpty() && !name.toLowerCase(Locale.ROOT).contains(ql)) continue;
                     group.add(name);
                 }
-                if (group.isEmpty()) continue;
-                rows.addView(heading(c, Models.Project.roleLabel(role)));
-                for (String name : group) {
-                    View r = row(c, inf, rows, store, project, name, selected, manage, render[0], syncAll[0]);
-                    if (name.equals(justAdded[0])) added = r;
-                    rows.addView(r);
+                // Manage Crew shows every group (so people can be dragged into an empty one); pickers hide empty ones.
+                if (group.isEmpty() && !manage) continue;
+                LinearLayout section = new LinearLayout(c);
+                section.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout head = heading(c, g.name);
+                section.addView(head);
+                if (manage) groupTools(c, store, project, g, head, render[0]);
+                if (selectAll && !group.isEmpty()) {
+                    CheckBox groupBox = new CheckBox(c);
+                    groupBox.setText("Select all");
+                    groupBox.setTextSize(13);
+                    groupBox.setTextColor(c.getColor(R.color.grey));
+                    groupBox.setOnClickListener(x -> {
+                        if (selected.containsAll(group)) selected.removeAll(group);
+                        else selected.addAll(group);
+                        render[0].run();
+                    });
+                    syncs.add(() -> groupBox.setChecked(selected.containsAll(group)));
+                    head.addView(groupBox);
                 }
+                for (String name : group) {
+                    View r = row(c, inf, section, store, project, name, selected, manage, render[0], syncAll);
+                    if (name.equals(justAdded[0])) added = r;
+                    section.addView(r);
+                }
+                if (manage) dropTarget(c, store, project, g, section, render[0]);
+                rows.addView(section);
+            }
+            syncAll.run();
+            if (manage) {
+                TextView addGroup = new TextView(c);
+                addGroup.setText("+  Add group");
+                addGroup.setTextColor(c.getColor(R.color.blue));
+                addGroup.setTextSize(19);
+                addGroup.setPadding(Ui.dp(c, 24), Ui.dp(c, 18), Ui.dp(c, 24), Ui.dp(c, 18));
+                addGroup.setBackgroundResource(android.R.drawable.list_selector_background);
+                addGroup.setOnClickListener(x -> Ui.prompt(c, "New group", "e.g. Night shift", "", "Add",
+                        n -> !n.isEmpty() && !project.groupNameTaken(n, ""), "Enter a new group name", n -> {
+                            project.addGroup(n);
+                            store.save();
+                            render[0].run();
+                        }));
+                rows.addView(addGroup);
             }
             if (!exact) {
                 TextView add = new TextView(c);
@@ -111,12 +158,10 @@ final class AssignSheet {
                 add.setTextSize(19);
                 add.setPadding(Ui.dp(c, 24), Ui.dp(c, 18), Ui.dp(c, 24), Ui.dp(c, 18));
                 add.setBackgroundResource(android.R.drawable.list_selector_background);
-                add.setOnClickListener(x -> Ui.promptCrew(c, Fmt.capitalize(q), (name, number, role, texts) -> {
+                add.setOnClickListener(x -> CrewDialog.add(c, project, Fmt.capitalize(q), person -> {
+                    String name = person.name;
                     addCrew(store, project, manage ? new LinkedHashSet<>() : selected, name);
-                    if (!number.isEmpty()) project.phones.put(name, number);
-                    project.roles.put(name, role);
-                    if (texts) project.assignTexts.add(name);
-                    else project.assignTexts.remove(name);
+                    person.saveTo(project, name);
                     store.save();
                     justAdded[0] = name;
                     if (search.getText().length() > 0) search.setText("");
@@ -154,15 +199,84 @@ final class AssignSheet {
         d.show();
     }
 
-    private static TextView heading(Context c, String label) {
+    /** A group's heading row: its name in grey capitals; tools or a "Select all" tick go on the right. */
+    private static LinearLayout heading(Context c, String label) {
+        LinearLayout row = new LinearLayout(c);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(0, 0, Ui.dp(c, 12), 0);
         TextView t = new TextView(c);
         t.setText(label.toUpperCase(Locale.ROOT));
         t.setTextColor(c.getColor(R.color.grey));
         t.setTextSize(13);
         t.setLetterSpacing(0.06f);
         t.setTypeface(null, android.graphics.Typeface.BOLD);
-        t.setPadding(Ui.dp(c, 24), Ui.dp(c, 16), Ui.dp(c, 24), Ui.dp(c, 4));
-        return t;
+        t.setPadding(Ui.dp(c, 24), Ui.dp(c, 16), Ui.dp(c, 12), Ui.dp(c, 4));
+        row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        return row;
+    }
+
+    /** Manage Crew: pencil (rename) and, when there's more than one group, trash (delete) on a group heading. */
+    private static void groupTools(Context c, Store store, Models.Project project, Models.Project.Group g,
+                                   LinearLayout head, Runnable render) {
+        head.addView(icon(c, R.drawable.ic_edit, "Rename group", x -> Ui.prompt(c, "Rename group", "Group name", g.name, "Save",
+                n -> !n.isEmpty() && !project.groupNameTaken(n, g.id), "Enter a new group name", n -> {
+                    g.name = n;
+                    store.save();
+                    render.run();
+                })));
+        if (project.groups.size() > 1) {
+            head.addView(icon(c, R.drawable.ic_delete, "Delete group", x -> {
+                Models.Project.Group to = null;
+                for (Models.Project.Group o : project.groups) if (o != g) { to = o; break; }
+                Ui.confirm(c, "Delete the " + g.name + " group?", "Everyone in it moves to " + to.name + ".", "Delete", () -> {
+                    project.deleteGroup(g.id);
+                    store.save();
+                    render.run();
+                });
+            }));
+        }
+    }
+
+    private static ImageView icon(Context c, int res, String tip, View.OnClickListener click) {
+        ImageView i = new ImageView(c);
+        i.setImageResource(res);
+        i.setColorFilter(c.getColor(R.color.grey));
+        i.setPadding(Ui.dp(c, 10), Ui.dp(c, 10), Ui.dp(c, 10), Ui.dp(c, 10));
+        i.setBackgroundResource(android.R.drawable.list_selector_background);
+        i.setContentDescription(tip);
+        if (android.os.Build.VERSION.SDK_INT >= 26) i.setTooltipText(tip);
+        i.setOnClickListener(click);
+        i.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(c, 44), Ui.dp(c, 44)));
+        return i;
+    }
+
+    /** Manage Crew: a person dragged by their handle onto a group (heading or people) joins it. */
+    private static void dropTarget(Context c, Store store, Models.Project project, Models.Project.Group g,
+                                   LinearLayout section, Runnable render) {
+        section.setOnDragListener((sv, e) -> {
+            switch (e.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    return e.getLocalState() instanceof String;
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    sv.setBackgroundColor(c.getColor(R.color.sky));
+                    return true;
+                case DragEvent.ACTION_DRAG_EXITED:
+                case DragEvent.ACTION_DRAG_ENDED:
+                    sv.setBackground(null);
+                    return true;
+                case DragEvent.ACTION_DROP:
+                    sv.setBackground(null);
+                    String who = (String) e.getLocalState();
+                    if (!g.id.equals(project.roleOf(who))) {
+                        project.roles.put(who, g.id);
+                        store.save();
+                        sv.post(render);  // redraw after the drag has finished
+                    }
+                    return true;
+                default:
+                    return true;
+            }
+        });
     }
 
     private static View row(Context c, LayoutInflater inf, LinearLayout parent, Store store, Models.Project project,
@@ -188,7 +302,28 @@ final class AssignSheet {
             phone.setText((number.isEmpty() ? "No phone number" : number)
                     + (project.assignTexts.contains(name) ? "  \u00B7  texted when assigned" : ""));
             phone.setTextColor(c.getColor(R.color.grey));
+            String details = project.personLine(name);
+            if (!details.isEmpty()) {
+                TextView more = new TextView(c);
+                more.setText(details);
+                more.setTextColor(c.getColor(R.color.grey));
+                more.setTextSize(14);
+                ((ViewGroup) phone.getParent()).addView(more);
+            }
             r.setOnClickListener(x -> editPerson(c, store, project, name, render));
+            // Drag handle: hold and move to drop this person on another group.
+            ImageView handle = new ImageView(c);
+            handle.setImageResource(R.drawable.ic_drag);
+            handle.setColorFilter(c.getColor(R.color.grey_light));
+            handle.setPadding(Ui.dp(c, 10), Ui.dp(c, 12), Ui.dp(c, 4), Ui.dp(c, 12));
+            handle.setContentDescription("Drag to another group");
+            if (android.os.Build.VERSION.SDK_INT >= 26) handle.setTooltipText("Drag to another group");
+            handle.setOnTouchListener((hv, ev) -> {
+                if (ev.getActionMasked() != MotionEvent.ACTION_DOWN) return false;
+                r.startDragAndDrop(ClipData.newPlainText("crew", name), new View.DragShadowBuilder(r), name, 0);
+                return true;
+            });
+            ((ViewGroup) r).addView(handle, new LinearLayout.LayoutParams(Ui.dp(c, 40), Ui.dp(c, 48)));
         } else {
             box.setChecked(selected.contains(name));
             r.setOnClickListener(x -> {
@@ -217,18 +352,14 @@ final class AssignSheet {
                     store.save();
                     render.run();
                 });
-        Ui.crewDialog(c, name, "Save", name, project.phoneOf(name), project.roleOf(name),
-                project.assignTexts.contains(name), remove, (newName, number, role, texts) -> {
+        CrewDialog.show(c, project, name, "Save", CrewDialog.Person.of(project, name), remove, person -> {
+                    String newName = person.name;
                     if (!newName.equals(name) && project.crew.contains(newName)) {
                         android.widget.Toast.makeText(c, newName + " is already on the crew", android.widget.Toast.LENGTH_LONG).show();
                         return;
                     }
                     project.renamePerson(name, newName);
-                    if (number.isEmpty()) project.phones.remove(newName);
-                    else project.phones.put(newName, number);
-                    project.roles.put(newName, role);
-                    if (texts) project.assignTexts.add(newName);
-                    else project.assignTexts.remove(newName);
+                    person.saveTo(project, newName);
                     if (Store.get(c).userName.equals(name)) Store.get(c).userName = newName;
                     store.save();
                     render.run();
