@@ -2,6 +2,7 @@
 // or enter it. "Keep me signed in on this phone" skips the PIN next time.
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../support/support_screens.dart';
 import '../access/access.dart';
@@ -25,6 +26,9 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   Need? _need;
   bool _hadApproval = false;
+
+  /// The owner's email built into the app ('' = requests go by text).
+  String _ownerEmail = '';
   final _name = TextEditingController();
   final _code = TextEditingController();
   final _pin = TextEditingController();
@@ -65,9 +69,11 @@ class _SignInScreenState extends State<SignInScreen> {
     }
     final had = await Access.hadApproval();
     final saved = await Access.requestedName();
+    final email = await Access.ownerEmail();
     if (!mounted) return;
     setState(() {
       _need = n;
+      _ownerEmail = email;
       _hadApproval = had;
       _pin.clear();
       _again.clear();
@@ -106,6 +112,33 @@ class _SignInScreenState extends State<SignInScreen> {
 
   // ----- asking the owner for access -----
 
+  /// Emails the request to the owner (when [byEmail]), or opens the share menu to send it by text.
+  Future<void> _requestAccess({required bool byEmail}) async {
+    final n = _name.text.trim();
+    if (n.isEmpty) {
+      setState(() => _nameError = 'Enter your name');
+      return;
+    }
+    setState(() => _nameError = null);
+    final box = context.findRenderObject() as RenderBox?;
+    final code = await Access.requestCode(n);
+    if (byEmail) {
+      var ok = false;
+      try {
+        ok = await launchUrl(Access.requestEmail(_ownerEmail, n, code), mode: LaunchMode.externalApplication);
+      } catch (_) {}
+      if (ok) return;
+      if (mounted) toast(context, 'No email app found. Pick how to send it.');
+    }
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Daily Work Log access request from $n:\n$code',
+        title: 'Send your request to the app owner',
+        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      ),
+    );
+  }
+
   List<Widget> _request() => [
     accessTitle('Sign in'),
     accessPara(
@@ -115,24 +148,13 @@ class _SignInScreenState extends State<SignInScreen> {
     ),
     accessHeading('1. Ask for access'),
     accessInput(_name, 'Your full name', error: _nameError, caps: TextCapitalization.words),
-    BigButton('Request access', () async {
-      final n = _name.text.trim();
-      if (n.isEmpty) {
-        setState(() => _nameError = 'Enter your name');
-        return;
-      }
-      setState(() => _nameError = null);
-      final box = context.findRenderObject() as RenderBox?;
-      final code = await Access.requestCode(n);
-      await SharePlus.instance.share(
-        ShareParams(
-          text: 'Daily Work Log access request from $n:\n$code',
-          title: 'Send your request to the app owner',
-          sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-        ),
-      );
-    }),
-    accessPara("Send it to the app owner by text. They'll text back an approval code."),
+    BigButton('Request access', () => _requestAccess(byEmail: _ownerEmail.isNotEmpty)),
+    if (_ownerEmail.isNotEmpty) BigButton('Send by text instead', () => _requestAccess(byEmail: false), filled: false),
+    accessPara(
+      _ownerEmail.isNotEmpty
+          ? "Your request is emailed to the app owner ($_ownerEmail). They'll send back an approval code."
+          : "Send it to the app owner by text. They'll text back an approval code.",
+    ),
     accessHeading('2. Enter the approval code'),
     accessInput(_code, 'Paste the whole text you were sent', minLines: 3),
     BigButton('Paste', () async {

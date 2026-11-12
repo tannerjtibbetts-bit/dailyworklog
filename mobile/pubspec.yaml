@@ -71,6 +71,8 @@ flutter:
   assets:
     # The app owner's public key (same as the Android build's). Empty means anyone can use the app.
     - assets/owner_key.txt
+    # Where access requests are emailed (the owner's email; the Android build adds it). Empty means by text.
+    - assets/owner_email.txt
     # The user manual (also shown by the classic Android app) and its screenshots.
     - assets/manual/
 

@@ -270,6 +270,17 @@ void main() {
       expect(find.text('App created by Tanner Tibbetts'), findsOneWidget);
     });
 
+    testWidgets('sign-in emails the request when the owner email is built in', (tester) async {
+      freshPhone(builtInKey: rootText);
+      Access.debugReset(builtInKey: rootText, ownerEmail: 'boss@example.com');
+      await tester.pumpWidget(const MaterialApp(home: SignInScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Request access'), findsOneWidget);
+      expect(find.text('Send by text instead'), findsOneWidget);
+      expect(find.textContaining('emailed to the app owner (boss@example.com)'), findsOneWidget);
+      Access.debugReset(builtInKey: rootText);
+    });
+
     testWidgets('approvals offers setup when no owner is built in', (tester) async {
       freshPhone();
       await tester.pumpWidget(const MaterialApp(home: ApprovalsScreen()));

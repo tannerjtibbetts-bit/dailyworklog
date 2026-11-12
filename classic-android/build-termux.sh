@@ -15,6 +15,18 @@ if [ -f ~/.dailyworklog-owner-key.txt ]; then
   mkdir -p app/src/main/assets
   cp ~/.dailyworklog-owner-key.txt app/src/main/assets/owner_key.txt
   echo "Owner key included: other phones will need your approval."
+  # Where access requests are emailed. Asked once; to change it run:  bash ~/DailyWorkLog/build-termux.sh --email
+  if [ "$1" = "--email" ] || [ ! -f ~/.dailyworklog-owner-email.txt ]; then
+    echo
+    echo "Type the email that access requests should go to (the email on your profile), then press Enter."
+    echo "(Leave it blank to keep sending requests by text only.)"
+    read -r OWNER_EMAIL
+    echo "$OWNER_EMAIL" | tr -d '[:space:]' > ~/.dailyworklog-owner-email.txt
+  fi
+  cp ~/.dailyworklog-owner-email.txt app/src/main/assets/owner_email.txt
+  if [ -s app/src/main/assets/owner_email.txt ]; then
+    echo "Access requests will be emailed to $(cat app/src/main/assets/owner_email.txt)"
+  fi
 fi
 termux-wake-lock 2>/dev/null || true
 ~/gradle-8.10.2/bin/gradle assembleDebug

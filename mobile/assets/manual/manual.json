@@ -114,7 +114,7 @@
       "id": "requesting-access",
       "title": "Asking for access (first time)",
       "group": "Getting started",
-      "summary": "A new phone must be approved by the app owner. Send a request by text with Request access.",
+      "summary": "A new phone must be approved by the app owner. Tap Request access to email (or text) the owner.",
       "keywords": [
         "request access",
         "approval",
@@ -122,14 +122,16 @@
         "first time",
         "sign up",
         "register",
-        "access request"
+        "access request",
+        "email request",
+        "send by text"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "The first time you use the app on a phone, the app owner has to approve it. You ask by text. It only takes a minute."
+          "text": "The first time you use the app on a phone, the app owner has to approve it. You ask by email or text. It only takes a minute."
         },
         {
           "type": "tip",
@@ -146,9 +148,9 @@
             "Tap \"Enter\" on the opening screen.",
             "Under \"1. Ask for access\", type your full name in \"Your full name\".",
             "Tap \"Request access\".",
-            "Your phone's share menu opens with the request text. Pick Messages (or another app).",
-            "Send it to the app owner.",
-            "Wait for the owner to text back an approval code."
+            "If the owner set up an email for requests, your email app opens with the request ready and addressed to them. Tap Send.",
+            "Otherwise (or if you tap \"Send by text instead\"), the share menu opens with the request text. Pick Messages and send it to the app owner.",
+            "Wait for the owner to send back an approval code."
           ]
         },
         {
@@ -3497,7 +3499,10 @@
         "owner",
         "access request",
         "new user",
-        "permission"
+        "permission",
+        "email",
+        "request email",
+        "access request email"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -3514,13 +3519,17 @@
         {
           "type": "steps",
           "items": [
-            "When someone texts you an access request, copy the whole text.",
+            "When an access request arrives by email (\"Daily Work Log access request from …\") or by text, open it and copy the whole message.",
             "In the app, tap the person icon on the \"Projects\" screen, then \"More…\", then \"Approvals / hand over\".",
             "Tap \"Paste\". The request appears in the box.",
             "Tap \"Approve\".",
             "Check the name in \"Approve …?\" and tap \"Approve\".",
-            "The share menu opens with the approval text. Send it back to that person by text."
+            "The share menu opens with the approval text. Send it back to that person: pick Gmail to reply by email, or Messages to text it."
           ]
+        },
+        {
+          "type": "text",
+          "text": "Getting requests by email: when you build the app in Termux, the build asks once for the email that requests should go to. Type the email on your profile. Every phone that installs that build emails its request there. To change it later, run: bash ~/DailyWorkLog/build-termux.sh --email"
         },
         {
           "type": "text",

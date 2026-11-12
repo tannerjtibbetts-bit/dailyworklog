@@ -57,6 +57,34 @@ class Access {
     }
   }
 
+  static Future<String>? _email;
+
+  /// The owner's email built into this copy (access requests are emailed there), or '' if none.
+  static Future<String> ownerEmail() => _email ??= _loadEmail();
+
+  static Future<String> _loadEmail() async {
+    try {
+      return cleanOwnerEmail(await rootBundle.loadString('assets/owner_email.txt'));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// The email from owner_email.txt, trimmed, or '' if it isn't an email.
+  static String cleanOwnerEmail(String? text) {
+    final t = (text ?? '').trim();
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t) ? t : '';
+  }
+
+  /// mailto: link for an access request to [email].
+  static Uri requestEmail(String email, String name, String code) {
+    String enc(String s) => Uri.encodeComponent(s);
+    final body = 'Daily Work Log access request from $name:\n$code\n\n'
+        'To approve: copy this whole email, open Daily Work Log, tap the person icon, More…, '
+        'Approvals / hand over, and paste it.';
+    return Uri.parse('mailto:$email?subject=${enc('Daily Work Log access request from $name')}&body=${enc(body)}');
+  }
+
   /// This phone's owner signing key (created here or handed over), or null.
   static Future<ECPrivateKey?> _softwareKey() async {
     final s = await _secure.read(key: '${_p}ownerKey');
@@ -435,7 +463,8 @@ class Access {
 
   /// Forgets cached state between tests.
   @visibleForTesting
-  static void debugReset({String? builtInKey}) {
+  static void debugReset({String? builtInKey, String ownerEmail = ''}) {
+    _email = Future.value(cleanOwnerEmail(ownerEmail));
     _unlocked = false;
     _migrating = null;
     _keystorePublic = null;

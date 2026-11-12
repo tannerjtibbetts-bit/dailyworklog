@@ -6,12 +6,36 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dailyworklog/access/access.dart';
 import 'package:dailyworklog/access/access_codes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List b(String s) => Uint8List.fromList(utf8.encode(s));
 
 void main() {
+  group('emailed access requests', () {
+    test('owner email from the build', () {
+      expect(Access.cleanOwnerEmail(null), '');
+      expect(Access.cleanOwnerEmail('  \n'), '');
+      expect(Access.cleanOwnerEmail('not an email'), '');
+      expect(Access.cleanOwnerEmail(' tanner@example.com\n'), 'tanner@example.com');
+    });
+
+    test('the request email, and finding the request in a pasted email', () {
+      final code = AccessCodes.requestCode('install-1', 'Sam Maint');
+      final uri = Access.requestEmail('boss@example.com', 'Sam Maint', code);
+      expect(uri.scheme, 'mailto');
+      expect(uri.path, 'boss@example.com');
+      expect(uri.toString(), isNot(contains('+')));
+      expect(uri.queryParameters['subject'], 'Daily Work Log access request from Sam Maint');
+      final body = uri.queryParameters['body']!;
+      expect(body, contains(code));
+      final pasted = 'From: Sam <sam@example.com>\nSubject: Daily Work Log access request from Sam Maint\n\n$body';
+      final r = AccessCodes.parseRequest(pasted)!;
+      expect([r.installId, r.name], ['install-1', 'Sam Maint']);
+    });
+  });
+
   group('AccessTest', () {
     final owner = AccessCodes.generateKeyPair(), stranger = AccessCodes.generateKeyPair();
     final built = AccessCodes.publicKey(AccessCodes.encodeKey(owner.publicKey))!;
