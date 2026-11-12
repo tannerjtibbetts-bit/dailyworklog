@@ -29,6 +29,8 @@ final class OvertimePane {
 
     private static final String PICK = "Select\u2026", BLANK = "\u2013";
     private static final float NAME_W = 2.2f;
+    /** The table is at least this wide (full names, "Training" at normal size); narrower phones slide it sideways. */
+    private static final int MIN_WIDTH_DP = 580;
 
     static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
@@ -87,7 +89,15 @@ final class OvertimePane {
         hours.setEllipsize(null);
         head.addView(conf, weight(a, 1f));
         head.addView(new View(a), removeSize(a));
-        card.addView(head);
+        // Headings, people (each with their comment) and totals slide sideways together.
+        LinearLayout grid = new LinearLayout(a);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        grid.setMinimumWidth(Ui.dp(a, MIN_WIDTH_DP));
+        android.widget.HorizontalScrollView sideways = new android.widget.HorizontalScrollView(a);
+        sideways.setFillViewport(true);  // as wide as the screen when that's wider
+        sideways.addView(grid, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(sideways);
+        grid.addView(head);
 
         List<String> names = new ArrayList<>();
         names.add(PICK);
@@ -104,7 +114,7 @@ final class OvertimePane {
 
         LinearLayout table = new LinearLayout(a);
         table.setOrientation(LinearLayout.VERTICAL);
-        card.addView(table);
+        grid.addView(table);
         for (Models.Overtime.OtRow r : ot.rows) table.addView(line(a, store, ot, table, r, names, refreshTotals));
 
         LinearLayout totals = row(a);
@@ -121,7 +131,7 @@ final class OvertimePane {
         totalViews[3] = confTotal;
         totals.addView(confTotal, weight(a, 1f));
         totals.addView(new View(a), removeSize(a));
-        card.addView(totals);
+        grid.addView(totals);
         refreshTotals.run();
 
         if (p.crew.isEmpty()) {
@@ -203,8 +213,9 @@ final class OvertimePane {
         }
         store.save();
         final View target = last;
+        // Only the row's start (the Name box), so the sideways scroller doesn't jump to the row's far end.
         target.post(() -> target.requestRectangleOnScreen(
-                new android.graphics.Rect(0, 0, target.getWidth(), target.getHeight()), false));
+                new android.graphics.Rect(0, 0, 1, target.getHeight()), false));
     }
 
     /**
