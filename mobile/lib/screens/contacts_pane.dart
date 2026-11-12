@@ -1,4 +1,4 @@
-// Organization Contacts tab: company contacts who aren't on the crew, shared by every project.
+// Additional Contacts tab: company contacts who aren't on the crew, shared by every project.
 // Call, text, email or open their link; add, edit and delete them.
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';

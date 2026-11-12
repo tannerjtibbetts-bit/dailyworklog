@@ -43,7 +43,6 @@ class AccessCodes {
 
   static const req = 'DWL-REQ-', ok = 'DWL-OK-', owner = 'DWL-OWNER-';
   static const rounds = 120000;
-  static final _reqCode = RegExp(r'DWL-REQ-([A-Za-z0-9_-]+)');
   static final _okCode = RegExp(r'DWL-OK-([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_.*-]+))?');
   static final _ownerCode = RegExp(r'DWL-OWNER-([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)~([A-Za-z0-9_-]+)~([A-Za-z0-9_.*-]+)');
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
@@ -53,10 +52,59 @@ class AccessCodes {
   /// Finds a request code anywhere in pasted text (e.g. the whole text message).
   static AccessRequest? parseRequest(String? text) {
     if (text == null) return null;
-    final m = _reqCode.firstMatch(text);
-    if (m == null) return null;
+    // Each DWL-REQ- in turn; a code an email wrapped onto the next line(s) is joined back up.
+    for (final m in RegExp('DWL-REQ-').allMatches(text)) {
+      final pieces = _codePieces(text, m.end);
+      for (var n = pieces.length; n >= 1; n--) {
+        final r = _decodeRequest(pieces.take(n).join());
+        if (r != null) return r;
+      }
+    }
+    return null;
+  }
+
+  static final _codeRun = RegExp(r'[A-Za-z0-9_-]+');
+
+  /// The code after [at], plus pieces carried onto following lines (as AccessCodes.java).
+  static List<String> _codePieces(String text, int at) {
+    final first = _codeRun.matchAsPrefix(text, at);
+    if (first == null) return const [];
+    final pieces = [first.group(0)!];
+    var end = first.end;
+    while (true) {
+      final lineEnd = text.indexOf('\n', end);
+      if (lineEnd < 0) break;
+      if (text.substring(end, lineEnd).trim().isNotEmpty) break; // words after the code: it ended
+      final lineStart = text.lastIndexOf('\n', end - 1) + 1;
+      final line = text.substring(lineStart, lineEnd).replaceAll('\r', '');
+      if (line.length < 60) break; // a short line wasn't wrapped
+      var i = lineEnd + 1;
+      while (i < text.length && (text[i] == '>' || text[i] == ' ' || text[i] == '\t')) {
+        i++;
+      }
+      final next = _codeRun.matchAsPrefix(text, i);
+      if (next == null) break;
+      final nextEnd = text.indexOf('\n', next.end);
+      final rest = text.substring(next.end, nextEnd < 0 ? text.length : nextEnd);
+      if (rest.trim().isNotEmpty) break;
+      pieces.add(next.group(0)!);
+      end = next.end;
+    }
+    return pieces;
+  }
+
+  static AccessRequest? _decodeRequest(String code) {
     try {
-      final p = _splitLimit(_utf8(unb64(m.group(1)!)), '|', 3);
+      final bytes = unb64(code);
+      if (b64url(bytes) != code) return null;
+      final String t;
+      try {
+        t = utf8.decode(bytes);
+      } on FormatException {
+        return null;
+      }
+      if (t.codeUnits.any((c) => c < 0x20)) return null;
+      final p = _splitLimit(t, '|', 3);
       if (p.length != 3 || p[0] != 'v1' || p[1].isEmpty || javaTrim(p[2]).isEmpty) return null;
       return AccessRequest(p[1], javaTrim(p[2]));
     } on FormatException {

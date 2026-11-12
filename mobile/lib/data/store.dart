@@ -17,7 +17,7 @@ class Store extends ChangeNotifier {
   final List<Project> projects = [];
   final List<Link> links = [];
 
-  /// Organization Contacts tab, shared by every project.
+  /// Additional Contacts tab, shared by every project.
   final List<Contact> contacts = [];
   String userName = '';
 

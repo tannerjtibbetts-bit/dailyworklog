@@ -1,8 +1,10 @@
 package com.dailyworklog.app;
 
 import android.content.ClipData;
+import android.content.ActivityNotFoundException;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
@@ -92,18 +94,34 @@ public class SignInActivity extends AppCompatActivity {
         EditText name = input("Your full name", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         String saved = Access.requestedName(this);
         name.setText(saved.isEmpty() ? Store.get(this).userName : saved);
-        button("Request access", true, () -> {
-            String n = name.getText().toString().trim();
-            if (n.isEmpty()) {
-                name.setError("Enter your name");
-                return;
-            }
-            String code = Access.requestCode(this, n);
-            Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_TEXT, "Daily Work Log access request from " + n + ":\n" + code);
-            startActivity(Intent.createChooser(send, "Send your request to the app owner"));
-        });
-        para("Send it to the app owner by text. They'll text back an approval code.");
+        String owner = Access.ownerEmail(this);
+        if (owner.isEmpty()) {
+            button("Request access", true, () -> {
+                String n = requestName(name);
+                if (n != null) shareRequest(n);
+            });
+            para("Send it to the app owner by text. They'll text back an approval code.");
+        } else {
+            // The owner's email is built in: the request goes there, with texting as a second way.
+            button("Request access", true, () -> {
+                String n = requestName(name);
+                if (n == null) return;
+                String code = Access.requestCode(this, n);
+                Intent mail = new Intent(Intent.ACTION_SENDTO, Uri.parse(AccessCodes.mailto(owner,
+                        AccessCodes.requestSubject(n), AccessCodes.requestEmailBody(n, code))));
+                try {
+                    startActivity(mail);
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(this, "No email app found. Pick how to send it.", Toast.LENGTH_LONG).show();
+                    shareRequest(n);
+                }
+            });
+            outlinedButton("Send by text instead", () -> {
+                String n = requestName(name);
+                if (n != null) shareRequest(n);
+            });
+            para("Your request is emailed to the app owner (" + owner + "). They'll send back an approval code.");
+        }
 
         heading("2. Enter the approval code");
         EditText code = input("Paste the whole text you were sent", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -130,6 +148,24 @@ public class SignInActivity extends AppCompatActivity {
         heading("Taking over as the app owner?");
         para("If the owner sent this phone a handover text, use this instead.");
         button("Take over as the app owner", false, () -> startActivity(new Intent(this, ApprovalsActivity.class)));
+    }
+
+    /** The name typed for the request, or null (with the box's error) if it's empty. */
+    private String requestName(EditText name) {
+        String n = name.getText().toString().trim();
+        if (n.isEmpty()) {
+            name.setError("Enter your name");
+            return null;
+        }
+        return n;
+    }
+
+    /** The share menu with the request text (for sending by text message). */
+    private void shareRequest(String n) {
+        String code = Access.requestCode(this, n);
+        Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_TEXT, AccessCodes.requestText(n, code));
+        startActivity(Intent.createChooser(send, "Send your request to the app owner"));
     }
 
     // ----- PIN -----
@@ -224,6 +260,13 @@ public class SignInActivity extends AppCompatActivity {
         e.setTextSize(18);
         body.addView(e, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return e;
+    }
+
+    /** A white button with a blue outline. */
+    private void outlinedButton(String label, Runnable run) {
+        button(label, false, run);
+        TextView b = (TextView) body.getChildAt(body.getChildCount() - 1);
+        b.setBackgroundResource(R.drawable.bg_pill_outline);
     }
 
     private void button(String label, boolean filled, Runnable run) {

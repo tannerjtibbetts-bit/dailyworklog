@@ -189,7 +189,7 @@
                 android:maxLines="1"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:text="Organization Contacts"
+                android:text="Additional Contacts"
                 android:textSize="14sp" />
 
             <TextView

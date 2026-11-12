@@ -5,7 +5,9 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,17 +51,118 @@ final class AccessCodes {
         return REQ + b64("v1|" + installId + "|" + name.trim());
     }
 
-    /** Finds a request code anywhere in pasted text (e.g. the whole text message). */
+    /**
+     * Finds a request code anywhere in pasted text: the whole text message, or a whole email, where the
+     * code may have been wrapped onto the next line and lines may start with "> " quote marks.
+     */
     static Request parseRequest(String text) {
         if (text == null) return null;
-        Matcher m = REQ_CODE.matcher(text);
-        if (!m.find()) return null;
+        for (int at = text.indexOf(REQ); at >= 0; at = text.indexOf(REQ, at + 1)) {
+            List<String> parts = requestParts(text, at);
+            // Longest first, so a wrapped code isn't read as a shorter one with a cut-off name.
+            for (int n = parts.size(); n >= 1; n--) {
+                Request r = decodeRequest(String.join("", parts.subList(0, n)));
+                if (r != null) return r;
+            }
+        }
+        return null;
+    }
+
+    /** A wrapped line is long; a short one ends the code. */
+    private static final int WRAPPED_LINE = 60;
+
+    /**
+     * The code's pieces starting at "DWL-REQ-": the rest of its line, then each following line that is
+     * nothing but code characters (after "> " quote marks and spaces), while the line before was long
+     * enough to have been wrapped. A blank line or any other text ends it.
+     */
+    static List<String> requestParts(String text, int at) {
+        List<String> parts = new ArrayList<>();
+        int i = at + REQ.length(), start = i;
+        while (i < text.length() && isCodeChar(text.charAt(i))) i++;
+        parts.add(text.substring(start, i));
+        int lineStart = text.lastIndexOf('\n', at) + 1;
+        while (true) {
+            int lineEnd = text.indexOf('\n', i);
+            if (lineEnd < 0) break;
+            // The code must run to the end of its line (only spaces after it) ...
+            if (!text.substring(i, lineEnd).trim().isEmpty()) break;
+            // ... and the line must be long enough to have been wrapped.
+            if (text.substring(lineStart, lineEnd).replace("\r", "").length() < WRAPPED_LINE) break;
+            int next = lineEnd + 1, j = next;
+            while (j < text.length() && (text.charAt(j) == '>' || text.charAt(j) == ' ' || text.charAt(j) == '\t')) j++;
+            int k = j;
+            while (k < text.length() && isCodeChar(text.charAt(k))) k++;
+            if (k == j) break;  // blank or not code
+            int end = text.indexOf('\n', k);
+            String rest = text.substring(k, end < 0 ? text.length() : end);
+            if (!rest.trim().isEmpty()) break;  // more words on that line: not part of the code
+            parts.add(text.substring(j, k));
+            lineStart = next;
+            i = k;
+        }
+        return parts;
+    }
+
+    private static boolean isCodeChar(char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-';
+    }
+
+    /** The request in a code's characters (after "DWL-REQ-"), or null if they aren't exactly a request. */
+    private static Request decodeRequest(String b64) {
+        if (b64.isEmpty()) return null;
         try {
-            String[] p = new String(unb64(m.group(1)), StandardCharsets.UTF_8).split("\\|", 3);
+            byte[] raw = unb64(b64);
+            // Exactly what an app would have written: same characters back, and proper text.
+            if (!b64(raw).equals(b64)) return null;
+            String s = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(raw)).toString();
+            for (int i = 0; i < s.length(); i++) if (s.charAt(i) < 0x20) return null;
+            String[] p = s.split("\\|", 3);
             if (p.length != 3 || !p[0].equals("v1") || p[1].isEmpty() || p[2].trim().isEmpty()) return null;
             return new Request(p[1], p[2].trim());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | java.nio.charset.CharacterCodingException e) {
             return null;
+        }
+    }
+
+    // ----- asking by email -----
+
+    /** The owner's email from assets/owner_email.txt: its first line, trimmed; "" if blank or not an email. */
+    static String ownerEmailFrom(String raw) {
+        if (raw == null) return "";
+        String line = raw.replace("\r", "").trim();
+        int nl = line.indexOf('\n');
+        if (nl >= 0) line = line.substring(0, nl).trim();
+        return Fmt.isEmail(line) ? line : "";
+    }
+
+    /** The text message (or share) version of a request, as before. */
+    static String requestText(String name, String code) {
+        return "Daily Work Log access request from " + name + ":\n" + code;
+    }
+
+    static String requestSubject(String name) {
+        return "Daily Work Log access request from " + name;
+    }
+
+    static String requestEmailBody(String name, String code) {
+        return requestText(name, code) + "\n\nTo approve: copy this whole email, open Daily Work Log, tap the person icon, "
+                + "More\u2026, Approvals / hand over, and paste it.";
+    }
+
+    /** mailto:email?subject=…&body=… with every special character percent-encoded (spaces as %20, not +). */
+    static String mailto(String email, String subject, String body) {
+        return "mailto:" + email + "?subject=" + enc(subject) + "&body=" + enc(body);
+    }
+
+    private static String enc(String s) {
+        try {
+            return java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20");
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new IllegalStateException(e);
         }
     }
 
@@ -209,7 +312,11 @@ final class AccessCodes {
     }
 
     private static String b64(String s) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(s.getBytes(StandardCharsets.UTF_8));
+        return b64(s.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String b64(byte[] b) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(b);
     }
 
     private static byte[] unb64(String s) {

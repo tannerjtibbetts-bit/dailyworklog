@@ -32,7 +32,7 @@ const _tabLabels = {
   ProjectTab.checklists: 'Checklists',
   ProjectTab.notify: 'Notify',
   ProjectTab.links: 'Links',
-  ProjectTab.contacts: 'Organization Contacts',
+  ProjectTab.contacts: 'Additional Contacts',
   ProjectTab.overtime: 'Overtime',
   ProjectTab.attendance: 'Attendance',
   ProjectTab.notes: 'Notes',

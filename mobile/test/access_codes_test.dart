@@ -34,6 +34,27 @@ void main() {
       final r = AccessCodes.parseRequest(pasted)!;
       expect([r.installId, r.name], ['install-1', 'Sam Maint']);
     });
+
+    test('a request code an email wrapped or quoted is joined back up', () {
+      final name = 'Jonathan Alexander Smithson-Whitfield of the Night Shift Crew';
+      final code = AccessCodes.requestCode('0f8b6a7c-1234-4cde-9abc-0123456789ab', name);
+      expect(code.length, greaterThan(100));
+      final cut = 70;
+      // Wrapped onto the next line (the first line is long, so it can have been wrapped).
+      final wrapped = 'Daily Work Log access request:\n${code.substring(0, cut)}\n${code.substring(cut)}\n\nThanks';
+      expect(AccessCodes.parseRequest(wrapped)!.name, name);
+      // Quoted by Gmail with CRLF line ends.
+      final quoted = '> Daily Work Log access request:\r\n> ${code.substring(0, cut)}\r\n> ${code.substring(cut)}\r\n';
+      expect(AccessCodes.parseRequest(quoted)!.name, name);
+      // A short code with a word on the next line isn't joined to it.
+      final short = AccessCodes.requestCode('id-1', 'Al');
+      expect(AccessCodes.parseRequest('$short\nThanks')!.name, 'Al');
+      expect(AccessCodes.parseRequest('$short thanks')!.name, 'Al');
+      // A broken first code, then a good one.
+      expect(AccessCodes.parseRequest('DWL-REQ-%%%\n$short')!.name, 'Al');
+      expect(AccessCodes.parseRequest('DWL-REQ-'), isNull);
+      expect(AccessCodes.parseRequest('nothing here'), isNull);
+    });
   });
 
   group('AccessTest', () {

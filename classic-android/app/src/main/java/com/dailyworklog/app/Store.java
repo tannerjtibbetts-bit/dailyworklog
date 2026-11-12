@@ -26,7 +26,7 @@ public final class Store {
 
     public final List<Models.Project> projects = new ArrayList<>();
     public final List<Models.Link> links = new ArrayList<>();
-    /** Organization Contacts tab (app-wide: the same list in every project). */
+    /** Additional Contacts tab (app-wide: the same list in every project). */
     public final List<Models.Contact> contacts = new ArrayList<>();
     public String userName = "";
     /** Number the crew should call or text you on; added under your name in texts. */

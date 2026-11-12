@@ -72,6 +72,17 @@ final class Access {
         }
     }
 
+    /** The app owner's email built in at build time (assets/owner_email.txt); "" if none or not an email. */
+    static String ownerEmail(Context c) {
+        try (InputStream in = c.getAssets().open("owner_email.txt")) {
+            byte[] b = new byte[1024];
+            int n = in.read(b);
+            return n <= 0 ? "" : AccessCodes.ownerEmailFrom(new String(b, 0, n, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     private static PublicKey myOwnerKey() {
         try {
             KeyStore ks = KeyStore.getInstance("AndroidKeyStore");

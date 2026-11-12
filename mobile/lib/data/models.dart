@@ -408,7 +408,7 @@ class Link {
     ..url = _s(o, 'url');
 }
 
-/// Someone on the Organization Contacts tab (not on the crew). Shared by every project.
+/// Someone on the Additional Contacts tab (not on the crew). Shared by every project.
 class Contact {
   String id = newId();
   String name = '', company = '', title = '', phone = '', email = '', link = '', notes = '';

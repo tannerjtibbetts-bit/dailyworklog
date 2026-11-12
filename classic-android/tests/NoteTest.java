@@ -326,7 +326,7 @@ class ManualTest { public static void main(String[] a) throws Exception {
 class HiddenTabsTest { public static void main(String[] a) throws Exception {
   NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
   NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,contacts,overtime,attendance,notes,seacans")
-      && LogsActivity.TAB_NAMES[4].equals("Attendance") && LogsActivity.TAB_NAMES[2].equals("Organization Contacts"), "contacts after links, attendance after overtime");
+      && LogsActivity.TAB_NAMES[4].equals("Attendance") && LogsActivity.TAB_NAMES[2].equals("Additional Contacts"), "contacts after links, attendance after overtime");
   NoteTest.check(LogsActivity.firstRowCount(7)==4 && LogsActivity.firstRowCount(6)==3 && LogsActivity.firstRowCount(2)==2, "pill rows");
   System.out.println("TABS PASS"); } }
 class DoneTextTest { public static void main(String[] a) throws Exception {
@@ -959,3 +959,59 @@ class ContactsTest {
     NoteTest.check(Fmt.webLink("") == null && Fmt.webLink("https://") == null && Fmt.webLink("not a{link") == null, "invalid links refused");
     RichTest.eq(Fmt.normalizeUrl("www.acme.com"), "https://www.acme.com", "normalize like Links");
     System.out.println("CONTACTS PASS"); } }
+class RequestEmailTest {
+  public static void main(String[] a) throws Exception {
+    // Owner email from assets/owner_email.txt
+    RichTest.eq(AccessCodes.ownerEmailFrom(null), "", "missing file: none");
+    RichTest.eq(AccessCodes.ownerEmailFrom(""), "", "empty: none");
+    RichTest.eq(AccessCodes.ownerEmailFrom("  \n "), "", "blank: none");
+    RichTest.eq(AccessCodes.ownerEmailFrom("tanner at example"), "", "not an email: none");
+    RichTest.eq(AccessCodes.ownerEmailFrom("tanner@example"), "", "no dot: none");
+    RichTest.eq(AccessCodes.ownerEmailFrom("  tanner@example.com \r\n"), "tanner@example.com", "valid, trimmed");
+    RichTest.eq(AccessCodes.ownerEmailFrom("tanner@example.com\nsecond line"), "tanner@example.com", "first line only");
+    // mailto
+    String code = AccessCodes.requestCode("3f2b8c1e-9a7d-4e21-b5c6-0d8e7f6a5b4c", "Jo Smith");
+    String body = AccessCodes.requestEmailBody("Jo Smith", code);
+    RichTest.eq(AccessCodes.requestSubject("Jo Smith"), "Daily Work Log access request from Jo Smith", "subject");
+    RichTest.eq(body, "Daily Work Log access request from Jo Smith:\n" + code + "\n\nTo approve: copy this whole email, open Daily Work Log, "
+        + "tap the person icon, More…, Approvals / hand over, and paste it.", "body");
+    RichTest.eq(AccessCodes.requestText("Jo Smith", code), "Daily Work Log access request from Jo Smith:\n" + code, "text as before");
+    String m = AccessCodes.mailto("tanner@example.com", "Hi Jo & Al", "a b\nc:d?e=f/…");
+    RichTest.eq(m, "mailto:tanner@example.com?subject=Hi%20Jo%20%26%20Al&body=a%20b%0Ac%3Ad%3Fe%3Df%2F%E2%80%A6", "mailto encoding");
+    NoteTest.check(!m.contains("+"), "no + for spaces");
+    android.net.Uri u = android.net.Uri.parse(AccessCodes.mailto("tanner@example.com", AccessCodes.requestSubject("Jo Smith"), body));
+    NoteTest.check("mailto".equals(u.getScheme()), "parses as mailto");
+    String full = AccessCodes.mailto("tanner@example.com", AccessCodes.requestSubject("Jo Smith"), body);
+    String q = full.substring(full.indexOf('?') + 1);
+    String[] kv = q.split("&");
+    RichTest.eq(java.net.URLDecoder.decode(kv[1].substring(5), "UTF-8"), body, "body decodes back");
+    // parseRequest: plain, emailed, wrapped, quoted
+    AccessCodes.Request r = AccessCodes.parseRequest(AccessCodes.requestText("Jo Smith", code));
+    NoteTest.check(r != null && r.name.equals("Jo Smith") && r.installId.equals("3f2b8c1e-9a7d-4e21-b5c6-0d8e7f6a5b4c"), "text message");
+    String email = "From: Jo <jo@example.com>\nSubject: " + AccessCodes.requestSubject("Jo Smith") + "\n\n" + body + "\n\nSent from my phone";
+    r = AccessCodes.parseRequest(email);
+    NoteTest.check(r != null && r.name.equals("Jo Smith"), "whole email");
+    String c = code;
+    String wrapped = "Daily Work Log access request from Jo Smith:\n" + c.substring(0, 70) + "\n" + c.substring(70) + "\n\nTo approve: copy";
+    r = AccessCodes.parseRequest(wrapped);
+    NoteTest.check(r != null && r.name.equals("Jo Smith"), "code wrapped onto the next line (" + c.length() + " chars)");
+    String quoted = "On Tue, Jo wrote:\n> Daily Work Log access request from Jo Smith:\n> " + c.substring(0, 66) + "\r\n> " + c.substring(66) + "\r\n>\n> To approve: copy this whole email";
+    r = AccessCodes.parseRequest(quoted);
+    NoteTest.check(r != null && r.name.equals("Jo Smith") && r.installId.equals("3f2b8c1e-9a7d-4e21-b5c6-0d8e7f6a5b4c"), "quoted and wrapped");
+    String nested = "> > " + c.substring(0, 64) + "\n> > " + c.substring(64, 72) + "\n> > " + c.substring(72) + "\n";
+    NoteTest.check(AccessCodes.parseRequest(nested) != null && AccessCodes.parseRequest(nested).name.equals("Jo Smith"), "split over three quoted lines");
+    // A short code followed by a word on the next line keeps its name
+    String shortCode = AccessCodes.requestCode("x1", "Al");
+    r = AccessCodes.parseRequest("request:\n" + shortCode + "\nThanks");
+    NoteTest.check(r != null && r.name.equals("Al") && r.installId.equals("x1"), "short code then Thanks");
+    // A long code line followed by a word: the word isn't taken as code
+    r = AccessCodes.parseRequest(code + "\nThanks\n");
+    NoteTest.check(r != null && r.name.equals("Jo Smith"), "long code then Thanks");
+    r = AccessCodes.parseRequest(code + " thanks");
+    NoteTest.check(r != null && r.name.equals("Jo Smith"), "code then words on the same line");
+    NoteTest.check(AccessCodes.parseRequest("nothing here") == null && AccessCodes.parseRequest("DWL-REQ-") == null
+        && AccessCodes.parseRequest("DWL-REQ-abc") == null, "no code / bad code");
+    // A second code is used if the first is broken
+    r = AccessCodes.parseRequest("DWL-REQ-zzzz\n" + code);
+    NoteTest.check(r != null && r.name.equals("Jo Smith"), "broken first code, good second");
+    System.out.println("REQUEST EMAIL PASS"); } }

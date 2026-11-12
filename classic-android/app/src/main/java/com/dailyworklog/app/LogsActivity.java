@@ -140,7 +140,7 @@ public class LogsActivity extends AppCompatActivity {
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
     static final String[] TAB_IDS = {"notify", "links", "contacts", "overtime", "attendance", "notes", "seacans"};
-    static final String[] TAB_NAMES = {"Notify", "Links", "Organization Contacts", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
+    static final String[] TAB_NAMES = {"Notify", "Links", "Additional Contacts", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
     private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_CONTACTS, MODE_OVERTIME, MODE_ATTENDANCE, MODE_NOTES, MODE_SEACANS};
 
     /** Pills per row: up to 6 tabs in rows of three, 7 as 4 + 3, 8 as 4 + 4, 9 or more in rows of three. */
