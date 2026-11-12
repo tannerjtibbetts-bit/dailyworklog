@@ -883,11 +883,12 @@ class _ProjectScreenState extends State<ProjectScreen> {
   Widget _noteRow(Note n) {
     final by = n.by.isEmpty || n.by == 'Me' ? '' : 'By ${n.by}';
     final pics = n.photos.isEmpty ? '' : Fmt.plural(n.photos.length, 'photo', 'photos');
+    final (tagged, runs) = n.tagged();
     return _noticeLike(
       icon: Icons.edit_outlined,
       title: Fmt.longStamp(n.createdAt),
-      text: n.text.isEmpty ? Fmt.plural(n.photos.length, 'photo', 'photos') : n.text,
-      runs: n.textStyle,
+      text: tagged.isEmpty ? Fmt.plural(n.photos.length, 'photo', 'photos') : tagged,
+      runs: runs,
       when: by.isEmpty || pics.isEmpty ? by + pics : '$by, $pics',
       include: _include(Extra.note, n.id, n.by, n.text, n.photos, 0),
       photos: n.photos,
@@ -910,7 +911,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       case ProjectTab.notes:
         return [
           for (final n in p.notes)
-            if (query.isEmpty || n.text.toLowerCase().contains(query)) _noteRow(n),
+            if (query.isEmpty || n.tagged().$1.toLowerCase().contains(query)) _noteRow(n),
         ];
       case ProjectTab.links:
         return [

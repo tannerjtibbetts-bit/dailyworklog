@@ -77,7 +77,9 @@ final class ProjectSearch {
                 if (hit) add(lines, "Sent note: " + snippet(n.note, q));
             }
             for (Models.Note n : p.notes) {
-                if (day(n.createdAt).equals(l.date) && has(n.text, q)) add(lines, "Note: " + snippet(n.text, q));
+                if (!day(n.createdAt).equals(l.date)) continue;
+                String text = Rich.tagged(n.text, null, n.tags).text;  // tags count too
+                if (has(text, q)) add(lines, "Note: " + snippet(text, q));
             }
             if (!lines.isEmpty()) out.days.add(new DayHit(l, lines));
         }

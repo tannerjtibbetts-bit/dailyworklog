@@ -534,6 +534,18 @@ public final class Models {
         public String text = "";
         /** Bold / underline / colour on words of the text (see Rich). */
         public List<Rich.Run> textStyle = new ArrayList<>();
+        /** Ticked tags, only from TAGS and always in that order. */
+        public List<String> tags = new ArrayList<>();
+
+        public static final List<String> TAGS = java.util.Collections.unmodifiableList(
+                java.util.Arrays.asList("Safety concern", "Training", "Crew concern"));
+
+        /** Known tags only, once each, in the fixed order. */
+        public static List<String> cleanTags(java.util.Collection<String> in) {
+            List<String> out = new ArrayList<>();
+            for (String t : TAGS) if (in.contains(t)) out.add(t);
+            return out;
+        }
         public String by = "";
         public long createdAt = System.currentTimeMillis();
         public long updatedAt = createdAt;
@@ -548,6 +560,7 @@ public final class Models {
             o.put("id", id);
             o.put("text", text);
             o.put("textStyle", Rich.toJson(textStyle));
+            o.put("tags", toArray(tags));
             o.put("by", by);
             o.put("createdAt", createdAt);
             o.put("updatedAt", updatedAt);
@@ -562,6 +575,7 @@ public final class Models {
             n.id = o.optString("id", newId());
             n.text = o.optString("text", "");
             n.textStyle = Rich.fromJson(o.optJSONArray("textStyle"), n.text.length());
+            n.tags = cleanTags(fromArray(o.optJSONArray("tags")));
             n.by = o.optString("by", "");
             n.createdAt = o.optLong("createdAt", 0L);
             n.updatedAt = o.optLong("updatedAt", n.createdAt);

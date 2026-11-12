@@ -77,7 +77,7 @@ class _NotifyScreenState extends State<NotifyScreen> {
   }
 
   Future<void> _chooseTo() async {
-    final sel = await showAssignSheet(context, project!, List.of(to), 'Send to');
+    final sel = await showAssignSheet(context, project!, List.of(to), 'Send to', selectAll: true);
     if (sel == null || !mounted) return;
     setState(() {
       to

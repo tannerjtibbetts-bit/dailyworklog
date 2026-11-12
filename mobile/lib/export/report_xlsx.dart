@@ -72,7 +72,7 @@ class ReportXlsx {
         b.cells([
           _c(DateFormat('h:mm a', 'en_US').format(DateTime.fromMillisecondsSinceEpoch(e.at)), _cell),
           _c(e.label(), _cell),
-          _rich(e.type == Extra.template ? '' : e.detail.trim(), _noteRuns(p, e), _cell),
+          _detail(p, e),
         ]);
       }
     }
@@ -164,11 +164,10 @@ class ReportXlsx {
     ], _cell);
   }
 
-  /// A Notes-tab note in "Also today" keeps its formatting when it's found and unchanged.
-  static List<Run> _noteRuns(Project p, Extra e) {
-    if (e.type != Extra.note) return const [];
-    final n = p.findNote(e.refId);
-    return n != null && n.text == e.detail.trim() ? n.textStyle : const [];
+  /// A Notes-tab note in "Also today" keeps its formatting and tags.
+  static _Cell _detail(Project p, Extra e) {
+    final (d, runs) = p.extraDetail(e);
+    return _rich(d, runs, _cell);
   }
 
   static _Cell _n(num v) => _Cell('$v', _num, number: true);

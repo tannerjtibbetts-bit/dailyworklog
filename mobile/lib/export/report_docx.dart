@@ -102,12 +102,9 @@ class ReportDocx {
       for (final e in extras) {
         final time = DateFormat('h:mm a', 'en_US').format(DateTime.fromMillisecondsSinceEpoch(e.at));
         _para('$time   ${e.label()}', false, 11, _text, 30, true);
-        if (e.detail.trim().isNotEmpty && e.type != Extra.template) {
-          // A note from the Notes tab keeps its formatting.
-          final note = e.type == Extra.note ? p.findNote(e.refId) : null;
-          final d = e.detail.trim();
-          _richPara(d, note != null && note.text == d ? note.textStyle : const [], false, 9, _grey, 40, true);
-        }
+        // A note from the Notes tab keeps its formatting and tags.
+        final (d, runs) = p.extraDetail(e);
+        if (d.isNotEmpty) _richPara(d, runs, false, 9, _grey, 40, true);
         if (e.photos.isNotEmpty) _photoTable(e.photos, photoDir);
       }
     }

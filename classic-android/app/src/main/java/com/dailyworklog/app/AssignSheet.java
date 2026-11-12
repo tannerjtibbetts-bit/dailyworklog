@@ -30,16 +30,21 @@ final class AssignSheet {
     }
 
     static void show(Context c, Models.Project project, List<String> current, String title, Done done) {
-        show(c, project, current, title, done, false);
+        show(c, project, current, title, done, false, false);
+    }
+
+    /** The Notify picker: the same sheet with a "Select all" row on top. */
+    static void showWithSelectAll(Context c, Models.Project project, List<String> current, String title, Done done) {
+        show(c, project, current, title, done, false, true);
     }
 
     /** Manage crew: groups (Crew / Techs / Management) and who gets assignment texts. Saves as you go. */
     static void manage(Context c, Models.Project project) {
-        show(c, project, new ArrayList<>(), "Manage Crew", sel -> {}, true);
+        show(c, project, new ArrayList<>(), "Manage Crew", sel -> {}, true, false);
     }
 
     private static void show(Context c, Models.Project project, List<String> current, String title, Done done,
-                             boolean manage) {
+                             boolean manage, boolean selectAll) {
         Store store = Store.get(c);
         if (!store.userName.isEmpty() && !project.crew.contains(store.userName)) {
             project.crew.add(0, store.userName);
@@ -63,6 +68,27 @@ final class AssignSheet {
             boolean exact = false;
             for (String name : project.crew) if (name.equalsIgnoreCase(q)) exact = true;
             View added = null;
+            // "Select all": everyone shown (after the search), ticked when they're all selected.
+            List<String> shown = new ArrayList<>();
+            for (String name : project.crew) if (ql.isEmpty() || name.toLowerCase(Locale.ROOT).contains(ql)) shown.add(name);
+            final Runnable[] syncAll = {() -> {}};
+            if (selectAll && !shown.isEmpty()) {
+                View all = inf.inflate(R.layout.item_user_check, rows, false);
+                CheckBox allBox = all.findViewById(R.id.box);
+                all.findViewById(R.id.badge).setVisibility(View.GONE);
+                all.findViewById(R.id.phone).setVisibility(View.GONE);
+                TextView label = all.findViewById(R.id.name);
+                label.setText("Select all");
+                label.setTypeface(null, android.graphics.Typeface.BOLD);
+                syncAll[0] = () -> allBox.setChecked(selected.containsAll(shown));
+                syncAll[0].run();
+                all.setOnClickListener(x -> {
+                    if (selected.containsAll(shown)) selected.removeAll(shown);
+                    else selected.addAll(shown);
+                    render[0].run();
+                });
+                rows.addView(all);
+            }
             for (String role : Models.Project.ROLES) {
                 List<String> group = new ArrayList<>();
                 for (String name : project.crew) {
@@ -73,7 +99,7 @@ final class AssignSheet {
                 if (group.isEmpty()) continue;
                 rows.addView(heading(c, Models.Project.roleLabel(role)));
                 for (String name : group) {
-                    View r = row(c, inf, rows, store, project, name, selected, manage, render[0]);
+                    View r = row(c, inf, rows, store, project, name, selected, manage, render[0], syncAll[0]);
                     if (name.equals(justAdded[0])) added = r;
                     rows.addView(r);
                 }
@@ -140,7 +166,7 @@ final class AssignSheet {
     }
 
     private static View row(Context c, LayoutInflater inf, LinearLayout parent, Store store, Models.Project project,
-                            String name, Set<String> selected, boolean manage, Runnable render) {
+                            String name, Set<String> selected, boolean manage, Runnable render, Runnable onToggle) {
         View r = inf.inflate(R.layout.item_user_check, parent, false);
         CheckBox box = r.findViewById(R.id.box);
         ((TextView) r.findViewById(R.id.badge)).setText(Fmt.initials(name));
@@ -168,6 +194,7 @@ final class AssignSheet {
             r.setOnClickListener(x -> {
                 if (!selected.remove(name)) selected.add(name);
                 box.setChecked(selected.contains(name));
+                onToggle.run();  // keeps "Select all" in step
             });
         }
         r.setOnLongClickListener(x -> {

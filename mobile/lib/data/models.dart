@@ -439,10 +439,24 @@ class Note {
 
   /// Bold, underline and colour on chosen words of [text].
   List<Run> textStyle = [];
+
+  /// Ticked tags, from [allTags] in that order.
+  List<String> tags = [];
   String by = '';
   int createdAt = nowMs();
   late int updatedAt = createdAt;
   List<Photo> photos = [];
+
+  static const allTags = ['Safety concern', 'Training', 'Crew concern'];
+
+  /// Only known tags, in the fixed order.
+  static List<String> cleanTags(Iterable<dynamic> list) {
+    final set = {for (final t in list) t.toString()};
+    return [for (final t in allTags) if (set.contains(t)) t];
+  }
+
+  /// The text with the tags in front ("Safety concern: …"), and its formatting.
+  (String, List<Run>) tagged() => Rich.tagged(text, textStyle, tags);
 
   bool get isEmpty => text.trim().isEmpty && photos.isEmpty;
 
@@ -450,6 +464,7 @@ class Note {
         'id': id,
         'text': text,
         'textStyle': Rich.toJson(textStyle),
+        'tags': tags,
         'by': by,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
@@ -465,6 +480,7 @@ class Note {
       ..photos = _objects(o['photos'], Photo.fromJson);
     n.updatedAt = o.containsKey('updatedAt') ? _i(o, 'updatedAt') : n.createdAt;
     n.textStyle = Rich.fromJson(o['textStyle'], n.text.length);
+    n.tags = o['tags'] is List ? cleanTags(o['tags'] as List) : [];
     return n;
   }
 }
@@ -769,6 +785,15 @@ class Project {
   String roleOf(String name) => roles[name] ?? crewRole;
 
   String phoneOf(String name) => phones[name] ?? '';
+
+  /// What's printed under an "Also today" item: a Notes-tab note keeps its formatting and gets its tags in front.
+  (String, List<Run>) extraDetail(Extra e) {
+    final d = e.type == Extra.template ? '' : e.detail.trim();
+    if (e.type != Extra.note) return (d, const []);
+    final n = findNote(e.refId);
+    if (n == null) return (d, const []);
+    return Rich.tagged(d, n.text == d ? n.textStyle : const [], n.tags);
+  }
 
   Note? findNote(String? id) {
     if (id == null) return null;

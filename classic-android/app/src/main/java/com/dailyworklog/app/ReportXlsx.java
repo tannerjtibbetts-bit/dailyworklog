@@ -180,7 +180,8 @@ final class ReportXlsx {
                 s.row();
                 s.text(0, new java.text.SimpleDateFormat("h:mm a", Locale.US).format(new java.util.Date(e.at)), CELL);
                 s.text(1, e.label(), CELL);
-                s.rich(2, Models.Extra.TEMPLATE.equals(e.type) ? "" : e.detail.trim(), noteRuns(p, e), CELL);
+                Rich.Tagged d = detail(p, e);
+                s.rich(2, Models.Extra.TEMPLATE.equals(e.type) ? "" : d.text, d.runs, CELL);
             }
         }
 
@@ -311,6 +312,17 @@ final class ReportXlsx {
         if (!Models.Extra.NOTE.equals(e.type)) return null;
         Models.Note n = p.findNote(e.refId);
         return n != null && n.text.equals(e.detail.trim()) ? n.textStyle : null;
+    }
+
+    /**
+     * An "Also today" entry's detail as printed: trimmed, and for a Notes-tab note with its formatting
+     * and its tags in front ("Safety concern: …").
+     */
+    static Rich.Tagged detail(Models.Project p, Models.Extra e) {
+        String d = e.detail.trim();
+        if (!Models.Extra.NOTE.equals(e.type)) return new Rich.Tagged(d, java.util.Collections.emptyList());
+        Models.Note n = p.findNote(e.refId);
+        return Rich.tagged(d, noteRuns(p, e), n == null ? java.util.Collections.emptyList() : n.tags);
     }
 
     private static int yesNoStyle(String v) {

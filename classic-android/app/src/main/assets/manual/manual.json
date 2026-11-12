@@ -2463,7 +2463,10 @@
         "sms",
         "photo",
         "send to",
-        "broadcast"
+        "broadcast",
+        "select all",
+        "everyone",
+        "all crew"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2482,11 +2485,16 @@
           "items": [
             "Open the project and tap \"Notify\".",
             "Tap the big \"+\" at the bottom.",
-            "The \"Send to\" list opens. Tick the people and tap \"Assign\".",
+            "The \"Send to\" list opens. Tick the people and tap \"Assign\". To pick everyone, tap \"Select all\" at the top of the list (tap it again to untick everyone).",
             "Type your note in \"Write your note…\".",
             "To add photos, tap \"Photos\" and pick \"Take photo\" or \"Choose from gallery\".",
             "Tap \"Send note\"."
           ]
+        },
+        {
+          "type": "image",
+          "file": "notify_select.png",
+          "caption": "\"Select all\" ticks everyone in the list"
         },
         {
           "type": "text",
@@ -2963,8 +2971,75 @@
         },
         {
           "type": "see",
+          "id": "note-tags",
+          "text": "Related: Marking a note: Safety concern, Training, Crew concern"
+        },
+        {
+          "type": "see",
           "id": "formatting-notes",
           "text": "Related: Bold, underline and colour in notes"
+        }
+      ]
+    },
+    {
+      "id": "note-tags",
+      "title": "Marking a note: Safety concern, Training, Crew concern",
+      "group": "Tabs",
+      "summary": "Tick \"Safety concern\", \"Training\" or \"Crew concern\" on a note. The words show in orange bold in front of the note, on the Notes tab and in reports.",
+      "keywords": [
+        "safety concern",
+        "safety",
+        "training",
+        "crew concern",
+        "concern",
+        "tag",
+        "label",
+        "orange",
+        "mark note"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Under the note box there are three tick boxes: \"Safety concern\", \"Training\" and \"Crew concern\". Tick any that fit. You can tick more than one."
+        },
+        {
+          "type": "image",
+          "file": "note_tags.png",
+          "caption": "The tick boxes under the note"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project and tap \"Notes\".",
+            "Tap the big \"+\" (or tap a note to open it).",
+            "Write your note.",
+            "Tick \"Safety concern\", \"Training\" or \"Crew concern\".",
+            "Tap \"Done\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The ticked words then show in orange bold in front of the note, for example \"Safety concern: Forklift battery low\". With more than one ticked they are joined: \"Safety concern, Crew concern: …\"."
+        },
+        {
+          "type": "image",
+          "file": "notes.png",
+          "caption": "Marked notes on the Notes tab"
+        },
+        {
+          "type": "text",
+          "text": "In the PDF, Word and Excel reports, a note you put in the report shows under \"Also today\": first its title line (\"Note\" or \"Note by …\"), then the note with the orange bold words in front."
+        },
+        {
+          "type": "tip",
+          "text": "Untick a box to take the word off again. Searching for \"safety\" or \"training\" finds marked notes too."
+        },
+        {
+          "type": "see",
+          "id": "notes-tab",
+          "text": "Related: Notes: writing and deleting notes"
         }
       ]
     },

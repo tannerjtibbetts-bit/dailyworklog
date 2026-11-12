@@ -367,11 +367,10 @@ class ReportPdf {
       _ensure(30);
       _text('$time   ${e.label()}', _body, x, iw, 2);
       if (e.type == Extra.link && e.detail.isNotEmpty) _text(e.detail, _small, x, iw, 2);
-      if ((e.type == Extra.notify || e.type == Extra.note) && e.detail.trim().isNotEmpty) {
-        // A note from the Notes tab keeps its formatting.
-        final note = e.type == Extra.note ? _project?.findNote(e.refId) : null;
-        final runs = note != null && note.text == e.detail.trim() ? note.textStyle : const <Run>[];
-        _richText(e.detail.trim(), runs, _small, x, iw, 2);
+      if (e.type == Extra.notify || e.type == Extra.note) {
+        // A note from the Notes tab keeps its formatting and tags.
+        final (d, runs) = _project?.extraDetail(e) ?? (e.detail.trim(), const <Run>[]);
+        if (d.isNotEmpty) _richText(d, runs, _small, x, iw, 2);
       }
       if (e.photos.isNotEmpty) {
         _y += 6;

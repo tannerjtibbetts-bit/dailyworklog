@@ -93,9 +93,10 @@ final class ReportDocx {
             for (Models.Extra e : extras) {
                 String time = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(new java.util.Date(e.at));
                 para(time + "   " + e.label(), false, 11, TEXT, 30, true, null);
-                if (!e.detail.trim().isEmpty() && !Models.Extra.TEMPLATE.equals(e.type)) {
-                    // A note from the Notes tab keeps its formatting.
-                    richPara(e.detail.trim(), ReportXlsx.noteRuns(p, e), false, 9, GREY, 40, true);
+                Rich.Tagged d = ReportXlsx.detail(p, e);
+                if (!d.text.isEmpty() && !Models.Extra.TEMPLATE.equals(e.type)) {
+                    // A note from the Notes tab keeps its formatting, with its tags in front.
+                    richPara(d.text, d.runs, false, 9, GREY, 40, true);
                 }
                 if (!e.photos.isEmpty()) photoTable(e.photos, photoDir);
             }

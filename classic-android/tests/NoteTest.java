@@ -787,3 +787,51 @@ class ProfileTest {
     NoteTest.check(FormPrefill.QUESTIONS[1].label.equals("Project") && FormPrefill.QUESTIONS[2].label.equals("Site")
         && FormPrefill.QUESTIONS[1].keys[0].equals("bruce power project"), "generic labels, real-form keywords kept");
     System.out.println("PROFILE PASS"); } }
+class TagsTest {
+  public static void main(String[] a) throws Exception {
+    // JSON: only known tags, fixed order, missing = []
+    Models.Note n = new Models.Note(); n.text = "Loose rail";
+    org.json.JSONObject j = n.toJson();
+    NoteTest.check(j.getJSONArray("tags").length() == 0, "tags always written");
+    j.put("tags", new org.json.JSONArray("[\"Crew concern\", \"Bogus\", \"Safety concern\", \"Crew concern\", \"training\"]"));
+    Models.Note q = Models.Note.fromJson(j);
+    RichTest.eq(q.tags, java.util.Arrays.asList("Safety concern", "Crew concern"), "unknown dropped, fixed order, no repeats");
+    RichTest.eq(Models.Note.fromJson(q.toJson()).tags, q.tags, "tags round trip");
+    j.remove("tags");
+    NoteTest.check(Models.Note.fromJson(j).tags.isEmpty(), "old note: no tags");
+    Models.Note only = new Models.Note(); only.tags = java.util.Arrays.asList("Training");
+    NoteTest.check(only.isEmpty(), "tags alone don't keep a new note");
+    // Rich.tagged
+    Rich.Style ob = new Rich.Style(true, false, "orange", false);
+    Rich.Tagged t = Rich.tagged("Loose rail", null, java.util.Arrays.asList("Safety concern", "Crew concern"));
+    RichTest.eq(t.text, "Safety concern, Crew concern: Loose rail", "tagged text");
+    RichTest.eq(t.runs, java.util.Arrays.asList(new Rich.Run(0, 28, ob)), "orange bold over the tag names only");
+    t = Rich.tagged("Loose rail", java.util.Arrays.asList(new Rich.Run(0, 5, RichTest.U)), java.util.Arrays.asList("Training"));
+    RichTest.eq(t.text, "Training: Loose rail", "one tag");
+    RichTest.eq(t.runs, java.util.Arrays.asList(new Rich.Run(0, 8, ob), new Rich.Run(10, 15, RichTest.U)), "note runs shifted by the prefix");
+    t = Rich.tagged("", null, java.util.Arrays.asList("Training", "Crew concern"));
+    RichTest.eq(t.text, "Training, Crew concern", "empty text: just the tags, no colon");
+    RichTest.eq(t.runs, java.util.Arrays.asList(new Rich.Run(0, 22, ob)), "empty text runs");
+    java.util.List<Rich.Run> own = java.util.Arrays.asList(new Rich.Run(1, 3, RichTest.B));
+    t = Rich.tagged("Loose rail", own, new java.util.ArrayList<>());
+    NoteTest.check(t.text.equals("Loose rail") && t.runs.equals(own), "no tags: unchanged");
+    RichTest.eq(show(Rich.segments(Rich.tagged("Loose rail", null, java.util.Arrays.asList("Safety concern")).text,
+        Rich.tagged("Loose rail", null, java.util.Arrays.asList("Safety concern")).runs, true)), "Safety concern[b,orange]|: Loose rail[]", "tagged segments");
+    // Reports and search
+    Models.Project p = new Models.Project();
+    Models.DailyLog l = new Models.DailyLog(); l.date = Fmt.todayIso(); p.logs.add(l);
+    Models.Note m = new Models.Note(); m.text = "Loose rail"; m.by = "Sam"; m.tags = java.util.Arrays.asList("Safety concern"); p.notes.add(m);
+    Models.Extra e = p.record(null, l.date, Models.Extra.NOTE, m.id, m.by, m.text, m.photos, "Sam", 1L); e.include = true;
+    String s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains("<b/><color rgb=\"FFE8730C\"/><sz val=\"11\"/></rPr><t xml:space=\"preserve\">Safety concern</t></r>")
+        && s.contains("<t xml:space=\"preserve\">: Loose rail</t>"), "xlsx also today: tags in front");
+    String d = DelayTest.docx(p, l);
+    NoteTest.check(d.contains("<w:b/><w:color w:val=\"E8730C\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr><w:t xml:space=\"preserve\">Safety concern</w:t>"), "docx also today: tags in front");
+    Models.Note photoOnly = new Models.Note(); photoOnly.tags = java.util.Arrays.asList("Crew concern"); photoOnly.by = "Sam";
+    Models.Photo ph = new Models.Photo(); ph.file = "a.jpg"; photoOnly.photos.add(ph); p.notes.add(photoOnly);
+    Models.Extra e2 = p.record(null, l.date, Models.Extra.NOTE, photoOnly.id, "Sam", "", photoOnly.photos, "Sam", 2L); e2.include = true;
+    NoteTest.check(ReportXlsx.detail(p, e2).text.equals("Crew concern") && DelayTest.docx(p, l).contains(">Crew concern</w:t>"), "tags-only note still printed");
+    java.util.List<String> lines = ProjectSearch.run(p, "safety").days.get(0).lines;
+    NoteTest.check(lines.contains("Note: Safety concern: Loose rail"), "search finds tag " + lines);
+    System.out.println("TAGS PASS"); }
+  static String show(java.util.List<Rich.Segment> s) { return RichTest.show(s); } }

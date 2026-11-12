@@ -105,6 +105,20 @@ class Rich {
     );
   }
 
+  /// [text] with [tags] in front: "Safety concern, Training: text", the tag names orange and bold.
+  static (String, List<Run>) tagged(String text, List<Run> runs, List<String> tags) {
+    if (tags.isEmpty) return (text, runs);
+    final names = tags.join(', ');
+    final prefix = text.isEmpty ? names : '$names: ';
+    return (
+      prefix + text,
+      [
+        Run(0, names.length, const RichStyle(bold: true, colour: 'orange')),
+        for (final r in runs) Run(r.start + prefix.length, r.end + prefix.length, r.style),
+      ],
+    );
+  }
+
   static final _delay = RegExp(r'\bdelay[a-z]*', caseSensitive: false);
   static final _onHold = RegExp(r'\bon\s+hold\b', caseSensitive: false);
 

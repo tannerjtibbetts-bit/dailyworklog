@@ -260,6 +260,32 @@ final class Rich {
         return out;
     }
 
+    /** Text with its runs (the result of tagged). */
+    static final class Tagged {
+        final String text;
+        final List<Run> runs;
+
+        Tagged(String text, List<Run> runs) {
+            this.text = text;
+            this.runs = runs;
+        }
+    }
+
+    /**
+     * A note's text with its tags in front: "Safety concern, Crew concern: Loose rail", the tag names in
+     * orange bold and the note's own runs moved along. Just the tags when the text is empty; unchanged with no tags.
+     */
+    static Tagged tagged(String text, List<Run> runs, List<String> tags) {
+        List<Run> own = runs == null ? Collections.emptyList() : runs;
+        if (tags == null || tags.isEmpty()) return new Tagged(text, own);
+        String names = String.join(", ", tags);
+        String prefix = text.isEmpty() ? names : names + ": ";
+        List<Run> out = new ArrayList<>();
+        out.add(new Run(0, names.length(), new Style(true, false, "orange", false)));
+        for (Run r : own) out.add(new Run(r.start + prefix.length(), r.end + prefix.length(), r.style));
+        return new Tagged(prefix + text, out);
+    }
+
     /** True if "delay" or "on hold" appears (so the text needs rich output at all). */
     static boolean hasKeywords(String text) {
         return text != null && (DELAY.matcher(text).find() || ON_HOLD.matcher(text).find());

@@ -70,7 +70,8 @@ class ProjectSearch {
         if (has(n.note) || n.to.any(has)) add('Sent note: ${snippet(n.note, q)}');
       }
       for (final n in p.notes) {
-        if (_day(n.createdAt) == l.date && has(n.text)) add('Note: ${snippet(n.text, q)}');
+        final (tagged, _) = n.tagged();
+        if (_day(n.createdAt) == l.date && has(tagged)) add('Note: ${snippet(tagged, q)}');
       }
       if (lines.isNotEmpty) days.add(DayHit(l, lines));
     }

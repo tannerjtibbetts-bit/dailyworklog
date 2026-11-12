@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:dailyworklog/data/fmt.dart';
 import 'package:dailyworklog/data/models.dart';
+import 'package:dailyworklog/data/project_search.dart';
+import 'package:dailyworklog/data/rich.dart';
 import 'package:dailyworklog/data/store.dart';
 import 'package:dailyworklog/export/export.dart';
 import 'package:dailyworklog/screens/attendance_pane.dart';
@@ -643,6 +645,63 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(p.notices.length, 1);
+    });
+
+    test('note tags: saved, cleaned, put in front in orange bold, and on reports', () {
+      final n = Note.fromJson({'text': 'Loose rail', 'tags': ['Crew concern', 'Bogus', 'Safety concern']});
+      expect(n.tags, ['Safety concern', 'Crew concern']);
+      expect(Note.fromJson(n.toJson()).tags, ['Safety concern', 'Crew concern']);
+      expect(Note.fromJson({'text': 'x'}).tags, isEmpty);
+      final (t, runs) = n.tagged();
+      expect(t, 'Safety concern, Crew concern: Loose rail');
+      expect(runs, [const Run(0, 28, RichStyle(bold: true, colour: 'orange'))]);
+      final (t2, _) = Rich.tagged('', const [], ['Training']);
+      expect(t2, 'Training');
+      final (t3, r3) = Rich.tagged('a', [const Run(0, 1, RichStyle(bold: true))], ['Training']);
+      expect(t3, 'Training: a');
+      expect(r3[1], const Run(10, 11, RichStyle(bold: true)));
+      final p = sample();
+      final note = p.notes[0]..tags = ['Training'];
+      final e = Extra()
+        ..type = Extra.note
+        ..refId = note.id
+        ..detail = note.text;
+      expect(p.extraDetail(e).$1, 'Training: Pump 3 leaking');
+      final hits = ProjectSearch.run(p, 'training');
+      expect(hits.days.single.lines, ['Note: Training: Pump 3 leaking']);
+    });
+
+    testWidgets('note screen tick boxes set the tags', (tester) async {
+      final p = sample();
+      Store.instance.projects.add(p);
+      final n = p.notes[0];
+      await tester.pumpWidget(app(NoteScreen(projectId: p.id, noteId: n.id)));
+      await tester.pumpAndSettle();
+      for (final t in Note.allTags) {
+        expect(find.text(t), findsOneWidget);
+      }
+      await tester.tap(find.text('Crew concern'));
+      await tester.pump();
+      await tester.tap(find.text('Safety concern'));
+      await tester.pump();
+      expect(n.tags, ['Safety concern', 'Crew concern']);
+      await tester.tap(find.text('Crew concern'));
+      await tester.pump();
+      expect(n.tags, ['Safety concern']);
+    });
+
+    testWidgets('notify Send to list has Select all', (tester) async {
+      final p = sample();
+      Store.instance.projects.add(p);
+      await tester.pumpWidget(app(NotifyScreen(projectId: p.id)));
+      await tester.pumpAndSettle();
+      expect(find.text('Select all'), findsOneWidget);
+      await tester.tap(find.text('Select all'));
+      await tester.pump();
+      await tester.tap(find.text('Assign'));
+      await tester.pumpAndSettle();
+      final st = tester.state(find.byType(NotifyScreen)) as dynamic;
+      expect((st.to as List<String>).toSet(), p.crew.toSet());
     });
   });
 }

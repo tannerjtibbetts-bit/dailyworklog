@@ -167,7 +167,7 @@ public class NotifyActivity extends AppCompatActivity {
     }
 
     private void chooseTo() {
-        AssignSheet.show(this, project, to, "Send to", sel -> {
+        AssignSheet.showWithSelectAll(this, project, to, "Send to", sel -> {
             to.clear();
             to.addAll(sel);
             bindRecipients();

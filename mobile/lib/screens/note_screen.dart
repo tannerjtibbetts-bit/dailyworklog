@@ -294,6 +294,35 @@ class _NoteScreenState extends State<NoteScreen> with WidgetsBindingObserver {
     });
   }
 
+  // ----- tags -----
+
+  /// A tick box for one tag ("Safety concern" …), shown in orange bold before the note.
+  Widget _tagBox(String tag) {
+    final x = n!;
+    final on = x.tags.contains(tag);
+    void flip(bool v) {
+      x.tags = Note.cleanTags([...x.tags.where((t) => t != tag), if (v) tag]);
+      if (!isNew) {
+        x.updatedAt = nowMs();
+        project!.syncNote(x);
+        store.save();
+      }
+      persist();
+      setState(() {});
+    }
+
+    return InkWell(
+      onTap: () => flip(!on),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(children: [
+          Checkbox(value: on, onChanged: (v) => flip(v ?? false)),
+          Expanded(child: Text(tag, style: const TextStyle(color: C.text, fontSize: 18))),
+        ]),
+      ),
+    );
+  }
+
   // ----- include in today's report -----
 
   Widget _include() {
@@ -398,6 +427,8 @@ class _NoteScreenState extends State<NoteScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     const Padding(padding: EdgeInsets.only(top: 14), child: Divider(height: 1, color: C.divider)),
+                    for (final tag in Note.allTags) _tagBox(tag),
+                    const Padding(padding: EdgeInsets.only(top: 4), child: Divider(height: 1, color: C.divider)),
                     addPhotosRow(_addPhotos),
                     PhotoStrip(
                       files: [for (final ph in x.photos) store.photoFile(ph.file)],

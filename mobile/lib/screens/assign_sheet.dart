@@ -63,15 +63,18 @@ bool updateCrewMember(Store store, Project p, String name, CrewDetails d) {
 }
 
 /// "Assign Users" sheet. Returns the people ticked, or null if cancelled.
-Future<List<String>?> showAssignSheet(BuildContext context, Project project, List<String> current, String title) =>
-    _show(context, project, current, title, false);
+/// [selectAll] adds a "Select all" row (the Notify "Send to" list).
+Future<List<String>?> showAssignSheet(BuildContext context, Project project, List<String> current, String title,
+        {bool selectAll = false}) =>
+    _show(context, project, current, title, false, selectAll: selectAll);
 
 /// Manage crew: groups and who gets assignment texts. Saves as you go.
 Future<void> showManageCrew(BuildContext context, Project project) async {
   await _show(context, project, const [], 'Manage Crew', true);
 }
 
-Future<List<String>?> _show(BuildContext context, Project project, List<String> current, String title, bool manage) {
+Future<List<String>?> _show(BuildContext context, Project project, List<String> current, String title, bool manage,
+    {bool selectAll = false}) {
   final store = Store.instance;
   if (store.userName.isNotEmpty && !project.crew.contains(store.userName)) {
     project.crew.insert(0, store.userName);
@@ -81,7 +84,8 @@ Future<List<String>?> _show(BuildContext context, Project project, List<String> 
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (c) => _AssignSheet(project: project, current: current, title: title, manage: manage),
+    builder: (c) =>
+        _AssignSheet(project: project, current: current, title: title, manage: manage, selectAll: selectAll),
   );
 }
 
@@ -89,9 +93,15 @@ class _AssignSheet extends StatefulWidget {
   final Project project;
   final List<String> current;
   final String title;
-  final bool manage;
+  final bool manage, selectAll;
 
-  const _AssignSheet({required this.project, required this.current, required this.title, required this.manage});
+  const _AssignSheet({
+    required this.project,
+    required this.current,
+    required this.title,
+    required this.manage,
+    this.selectAll = false,
+  });
 
   @override
   State<_AssignSheet> createState() => _AssignSheetState();
@@ -260,7 +270,30 @@ class _AssignSheetState extends State<_AssignSheet> {
   Widget build(BuildContext context) {
     final q = search.text.trim();
     final rows = <Widget>[];
-    for (final g in crewGroups(p, q)) {
+    final groups = crewGroups(p, q);
+    final shown = [for (final g in groups) ...g.value];
+    if (widget.selectAll && !widget.manage && shown.isNotEmpty) {
+      final all = shown.every(selected.contains);
+      void flip() => setState(() {
+            if (all) {
+              selected.removeAll(shown);
+            } else {
+              selected.addAll(shown);
+            }
+          });
+      rows.add(InkWell(
+        onTap: flip,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Row(children: [
+            Checkbox(value: all, onChanged: (_) => flip()),
+            const SizedBox(width: 4),
+            const Text('Select all', style: TextStyle(color: C.navy, fontSize: 19, fontWeight: FontWeight.bold)),
+          ]),
+        ),
+      ));
+    }
+    for (final g in groups) {
       rows.add(_heading(Project.roleLabel(g.key)));
       for (final name in g.value) {
         rows.add(_row(name));

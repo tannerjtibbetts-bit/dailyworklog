@@ -117,6 +117,7 @@ public class NoteActivity extends AppCompatActivity {
         note.setText(n.text);
         noteRich = RichEdit.attach(note, n.text, n.textStyle, true);
         noteRich.addToolbarAbove((View) note.getParent(), this::persist);
+        bindTags();
 
         findViewById(R.id.back).setOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
         findViewById(R.id.addPhotos).setOnClickListener(v -> photoSource());
@@ -177,7 +178,8 @@ public class NoteActivity extends AppCompatActivity {
         String text = note.getText().toString().trim();
         // Trimming moves the formatting with the text.
         List<Rich.Run> style = noteRich != null ? noteRich.trimmedRuns() : n.textStyle;
-        boolean changed = !text.equals(n.text) || !style.equals(n.textStyle);
+        boolean changed = !text.equals(n.text) || !style.equals(n.textStyle) || tagsChanged;
+        tagsChanged = false;
         n.text = text;
         n.textStyle = style;
         if (isNew) {
@@ -190,6 +192,30 @@ public class NoteActivity extends AppCompatActivity {
         n.updatedAt = System.currentTimeMillis();
         project.syncNote(n);
         store.save();
+    }
+
+    // ----- tags -----
+
+    /** Ticked since the last save (tags are kept on the note straight away). */
+    private boolean tagsChanged;
+
+    private void bindTags() {
+        int[] ids = {R.id.tagSafety, R.id.tagTraining, R.id.tagCrew};
+        for (int i = 0; i < ids.length; i++) {
+            String tag = Models.Note.TAGS.get(i);
+            CheckBox box = findViewById(ids[i]);
+            box.setText(tag);
+            box.setChecked(n.tags.contains(tag));
+            box.setOnCheckedChangeListener((b, on) -> {
+                if (n == null) return;
+                java.util.Set<String> set = new java.util.HashSet<>(n.tags);
+                if (on) set.add(tag);
+                else set.remove(tag);
+                n.tags = Models.Note.cleanTags(set);
+                tagsChanged = true;
+                persist();
+            });
+        }
     }
 
     // ----- include in today's report -----

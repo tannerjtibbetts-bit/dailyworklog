@@ -343,9 +343,10 @@ final class ReportPdf {
             ensure(30);
             text(time + "   " + e.label(), body, x, iw, 2);
             if (Models.Extra.LINK.equals(e.type) && !e.detail.isEmpty()) text(e.detail, small, x, iw, 2);
-            if ((Models.Extra.NOTIFY.equals(e.type) || Models.Extra.NOTE.equals(e.type)) && !e.detail.trim().isEmpty()) {
-                // A note from the Notes tab keeps its formatting.
-                text(RichEdit.spanned(e.detail.trim(), ReportXlsx.noteRuns(p, e), true), small, x, iw, 2);
+            Rich.Tagged d = ReportXlsx.detail(p, e);
+            if ((Models.Extra.NOTIFY.equals(e.type) || Models.Extra.NOTE.equals(e.type)) && !d.text.isEmpty()) {
+                // A note from the Notes tab keeps its formatting, with its tags in front.
+                text(RichEdit.spanned(d.text, d.runs, true), small, x, iw, 2);
             }
             if (!e.photos.isEmpty()) {
                 y += 6;

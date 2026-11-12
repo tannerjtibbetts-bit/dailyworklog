@@ -114,6 +114,45 @@
                     app:tint="@color/blue" />
             </LinearLayout>
 
+            <!-- Tags: any number can be ticked -->
+            <LinearLayout
+                android:id="@+id/tags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/tagSafety"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="-6dp"
+                    android:minHeight="48dp"
+                    android:text="Safety concern"
+                    android:textColor="@color/text"
+                    android:textSize="18sp" />
+
+                <CheckBox
+                    android:id="@+id/tagTraining"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="-6dp"
+                    android:minHeight="48dp"
+                    android:text="Training"
+                    android:textColor="@color/text"
+                    android:textSize="18sp" />
+
+                <CheckBox
+                    android:id="@+id/tagCrew"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="-6dp"
+                    android:minHeight="48dp"
+                    android:text="Crew concern"
+                    android:textColor="@color/text"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
