@@ -317,7 +317,10 @@ class ManualTest { public static void main(String[] a) throws Exception {
   java.util.List<org.json.JSONObject> list = new java.util.ArrayList<>();
   int newOnly = 0;
   for (int i = 0; i < arr.length(); i++) { org.json.JSONObject s = arr.getJSONObject(i); if (s.optBoolean("newAppOnly")) newOnly++; else list.add(s); }
-  NoteTest.check(newOnly > 0 && list.size() > 30, "backup topics hidden in the classic app");
+  NoteTest.check(list.size() > 30 && list.size() + newOnly == arr.length(), "new-app-only topics hidden in the classic app");
+  boolean backup = false;
+  for (org.json.JSONObject s : list) if (s.getString("id").equals("backup")) backup = true;
+  NoteTest.check(backup, "backup topic shown in the classic app (it has Back up now)");
   java.util.List<Object[]> hits = ManualActivity.search(list, "sea can");
   NoteTest.check(((org.json.JSONObject) hits.get(0)[0]).getString("id").equals("sea-can-movements"), "search sea can");
   NoteTest.check(ManualActivity.search(list, "zzzz").isEmpty(), "no match");
