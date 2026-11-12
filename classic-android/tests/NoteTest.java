@@ -756,3 +756,34 @@ class DelayTest {
     t.delayCleared = false;
     NoteTest.check(ProjectSearch.run(p, "cleared").isEmpty(), "not cleared: no line");
   } }
+class ProfileTest {
+  public static void main(String[] a) throws Exception {
+    // Store JSON round trip with the new profile details
+    Store s = new Store();
+    s.userName = "Tanner"; s.contactPhone = "5195550123"; s.userEmail = "tanner@example.com"; s.workPosition = "Foreman"; s.workLocation = "Main plant, Building 2";
+    s.formDetails.answers.put("project", "FCFR");
+    Models.Project p = new Models.Project(); p.name = "Warehouse expansion"; s.projects.add(p);
+    org.json.JSONObject j = s.toJson();
+    NoteTest.check(j.getString("userEmail").equals("tanner@example.com") && j.getString("workPosition").equals("Foreman") && j.getString("workLocation").equals("Main plant, Building 2"), "profile keys written");
+    Store t = new Store(); t.fromJson(new org.json.JSONObject(j.toString()));
+    NoteTest.check(t.userName.equals("Tanner") && t.contactPhone.equals("5195550123") && t.userEmail.equals("tanner@example.com")
+        && t.workPosition.equals("Foreman") && t.workLocation.equals("Main plant, Building 2") && t.projects.size() == 1
+        && t.formDetails.get("project").equals("FCFR"), "profile round trip");
+    j.remove("userEmail"); j.remove("workPosition"); j.remove("workLocation");
+    Store o = new Store(); o.fromJson(j);
+    NoteTest.check(o.userEmail.isEmpty() && o.workPosition.isEmpty() && o.workLocation.isEmpty() && o.userName.equals("Tanner"), "old data: profile blank");
+    // Email check
+    for (String good : new String[]{"tanner@example.com", "a.b@c.co", " x@y.z "}) NoteTest.check(Fmt.isEmail(good), "email ok: " + good);
+    for (String bad : new String[]{"", "tanner", "tanner@", "tanner@example", "@example.com", "tan ner@example.com", "a@b@c.com"}) NoteTest.check(!Fmt.isEmail(bad), "email bad: '" + bad + "'");
+    // Observation form: profile fills email / position / location when the saved answer is blank; a saved answer wins
+    FormPrefill.Details saved = new FormPrefill.Details();
+    saved.answers.put("position", "FM"); saved.answers.put("location", "  "); saved.answers.put("project", "FCFR");
+    FormPrefill.Details d = FormPrefill.withProfile(saved, "Tanner", "tanner@example.com", "Foreman", "B44 zone 2");
+    NoteTest.check(d.get("email").equals("tanner@example.com") && d.get("position").equals("FM") && d.get("location").equals("B44 zone 2")
+        && d.get("project").equals("FCFR") && d.name.equals("Tanner"), "form prefill falls back to profile");
+    NoteTest.check(saved.get("email").isEmpty() && saved.get("location").isEmpty(), "saved answers untouched");
+    NoteTest.check(FormPrefill.withProfile(new FormPrefill.Details(), "", "", "", "").isEmpty()
+        && !FormPrefill.withProfile(new FormPrefill.Details(), "", "", "Foreman", "").isEmpty(), "empty unless something is set");
+    NoteTest.check(FormPrefill.QUESTIONS[1].label.equals("Project") && FormPrefill.QUESTIONS[2].label.equals("Site")
+        && FormPrefill.QUESTIONS[1].keys[0].equals("bruce power project"), "generic labels, real-form keywords kept");
+    System.out.println("PROFILE PASS"); } }

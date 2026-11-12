@@ -5,6 +5,7 @@ import 'package:dailyworklog/data/models.dart';
 import 'package:dailyworklog/data/store.dart';
 import 'package:dailyworklog/export/export.dart';
 import 'package:dailyworklog/screens/attendance_pane.dart';
+import 'package:dailyworklog/services/form_prefill.dart';
 import 'package:dailyworklog/screens/note_screen.dart';
 import 'package:dailyworklog/screens/notify_screen.dart';
 import 'package:dailyworklog/screens/overtime_pane.dart';
@@ -327,11 +328,29 @@ void main() {
       expect(find.text('Your profile'), findsOneWidget);
       expect(find.text('My task colours on the zone sheet'), findsOneWidget);
       expect(find.text('More…'), findsOneWidget);
+      // Email, work position and work location.
+      await tester.enterText(find.widgetWithText(TextField, 'Email'), 'tanner@example');
+      await tester.enterText(find.widgetWithText(TextField, 'Work position'), 'Foreman');
+      await tester.enterText(find.widgetWithText(TextField, 'Work location'), 'Main plant');
+      await tester.ensureVisible(find.text('Orange (maintenance)'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Orange (maintenance)'));
       await tester.pump();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
+      expect(find.text('Enter a valid email address'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Email'), 'tanner@example.com');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
       expect(Store.instance.myColours, containsAll(['blue', 'orange']));
+      expect(Store.instance.userEmail, 'tanner@example.com');
+      expect(Store.instance.workPosition, 'Foreman');
+      expect(Store.instance.workLocation, 'Main plant');
+      expect(find.text('Signed in as Tanner · Foreman  ·  226-555-0123'), findsOneWidget);
+      // The Observation form uses them when its own answers are blank.
+      Store.instance.formAnswers['position'] = 'FM';
+      final d = FormPrefill.details();
+      expect([d.get('email'), d.get('location'), d.get('position')], ['tanner@example.com', 'Main plant', 'FM']);
     });
 
     testWidgets('empty projects list and new project', (tester) async {

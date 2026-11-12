@@ -11,7 +11,7 @@
         android:id="@+id/name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Project name, e.g. B44 Zone 2 Tool Readiness"
+        android:hint="Project name, e.g. Warehouse expansion"
         android:inputType="textCapWords"
         android:singleLine="true" />
 
@@ -20,7 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="Location, e.g. Kincardine, ON"
+        android:hint="Location, e.g. Main plant, Building 2"
         android:inputType="textCapWords"
         android:singleLine="true" />
 </LinearLayout>

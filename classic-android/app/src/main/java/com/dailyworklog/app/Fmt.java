@@ -20,6 +20,11 @@ final class Fmt {
     }
 
     /** "09/25/2026 at 2:03 PM" */
+    /** Looks like an email address: text@text.text with no spaces. */
+    static boolean isEmail(String s) {
+        return s != null && s.trim().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+");
+    }
+
     static String stamp(long t) {
         return new SimpleDateFormat("MM/dd/yyyy 'at' h:mm a", Locale.US).format(new Date(t));
     }

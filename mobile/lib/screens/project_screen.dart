@@ -290,7 +290,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         final n = await prompt(
           context,
           'Location',
-          'e.g. Kincardine, ON',
+          'e.g. Main plant, Building 2',
           p.location,
           'Save',
           caps: TextCapitalization.words,

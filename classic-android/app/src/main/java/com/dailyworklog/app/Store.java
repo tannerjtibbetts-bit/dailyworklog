@@ -29,6 +29,8 @@ public final class Store {
     public String userName = "";
     /** Number the crew should call or text you on; added under your name in texts. */
     public String contactPhone = "";
+    /** Profile: your email, work position and work location (all optional; prefill the Observation form). */
+    public String userEmail = "", workPosition = "", workLocation = "";
     /** Who load securement photos are emailed to, as typed (commas between several). App-wide. */
     public String loadEmailTo = "";
     /** The Gmail address the app sends from. The app password is kept apart (see mailPassword). */
@@ -48,6 +50,13 @@ public final class Store {
     public static synchronized Store get(Context c) {
         if (instance == null) instance = new Store(c.getApplicationContext());
         return instance;
+    }
+
+    /** A store with no file behind it, for tests of the JSON. */
+    Store() {
+        app = null;
+        dataFile = null;
+        photoDir = null;
     }
 
     private Store(Context c) {
@@ -168,46 +177,82 @@ public final class Store {
     private void load() {
         if (!dataFile.exists()) return;
         try {
-            JSONObject o = new JSONObject(read(dataFile));
-            userName = o.optString("userName", "");
-            contactPhone = o.optString("contactPhone", "");
-            loadEmailTo = o.optString("loadEmailTo", "");
-            mailFrom = o.optString("mailFrom", "");
-            JSONArray mc = o.optJSONArray("myColours");
-            if (mc != null) {
-                myColours.clear();
-                for (int i = 0; i < mc.length(); i++) myColours.add(mc.optString(i));
-            }
-            JSONArray ht = o.optJSONArray("hiddenTabs");
-            for (int i = 0; ht != null && i < ht.length(); i++) hiddenTabs.add(ht.optString(i));
-            JSONObject fd = o.optJSONObject("formDetails");
-            if (fd != null) {
-                java.util.Iterator<String> keys = fd.keys();
-                while (keys.hasNext()) {
-                    String k = keys.next();
-                    formDetails.answers.put(k, fd.optString(k, ""));
-                }
-            }
-            JSONArray a = o.optJSONArray("projects");
-            if (a != null) {
-                for (int i = 0; i < a.length(); i++) {
-                    JSONObject p = a.optJSONObject(i);
-                    if (p != null) projects.add(Models.Project.fromJson(p));
-                }
-            }
-            JSONArray ls = o.optJSONArray("links");
-            if (ls != null) {
-                for (int i = 0; i < ls.length(); i++) {
-                    JSONObject l = ls.optJSONObject(i);
-                    if (l != null) links.add(Models.Link.fromJson(l));
-                }
-            }
+            fromJson(new JSONObject(read(dataFile)));
         } catch (Exception e) {
             // Keep a copy of an unreadable file instead of overwriting it.
             //noinspection ResultOfMethodCallIgnored
             dataFile.renameTo(new File(dataFile.getParentFile(),
                     "worklog-unreadable-" + System.currentTimeMillis() + ".json"));
         }
+    }
+
+    /** Fills this store from worklog.json's contents. */
+    void fromJson(JSONObject o) {
+        userName = o.optString("userName", "");
+        contactPhone = o.optString("contactPhone", "");
+        userEmail = o.optString("userEmail", "");
+        workPosition = o.optString("workPosition", "");
+        workLocation = o.optString("workLocation", "");
+        loadEmailTo = o.optString("loadEmailTo", "");
+        mailFrom = o.optString("mailFrom", "");
+        JSONArray mc = o.optJSONArray("myColours");
+        if (mc != null) {
+            myColours.clear();
+            for (int i = 0; i < mc.length(); i++) myColours.add(mc.optString(i));
+        }
+        JSONArray ht = o.optJSONArray("hiddenTabs");
+        for (int i = 0; ht != null && i < ht.length(); i++) hiddenTabs.add(ht.optString(i));
+        JSONObject fd = o.optJSONObject("formDetails");
+        if (fd != null) {
+            java.util.Iterator<String> keys = fd.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                formDetails.answers.put(k, fd.optString(k, ""));
+            }
+        }
+        JSONArray a = o.optJSONArray("projects");
+        if (a != null) {
+            for (int i = 0; i < a.length(); i++) {
+                JSONObject p = a.optJSONObject(i);
+                if (p != null) projects.add(Models.Project.fromJson(p));
+            }
+        }
+        JSONArray ls = o.optJSONArray("links");
+        if (ls != null) {
+            for (int i = 0; i < ls.length(); i++) {
+                JSONObject l = ls.optJSONObject(i);
+                if (l != null) links.add(Models.Link.fromJson(l));
+            }
+        }
+    }
+
+    /** Everything as worklog.json's contents. */
+    JSONObject toJson() throws JSONException {
+        JSONObject o = new JSONObject();
+        o.put("version", 2);
+        o.put("userName", userName);
+        o.put("contactPhone", contactPhone);
+        o.put("userEmail", userEmail);
+        o.put("workPosition", workPosition);
+        o.put("workLocation", workLocation);
+        o.put("loadEmailTo", loadEmailTo);
+        o.put("mailFrom", mailFrom);
+        JSONArray mc = new JSONArray();
+        for (String c : myColours) mc.put(c);
+        o.put("myColours", mc);
+        JSONArray ht = new JSONArray();
+        for (String t : hiddenTabs) ht.put(t);
+        o.put("hiddenTabs", ht);
+        JSONObject fd = new JSONObject();
+        for (java.util.Map.Entry<String, String> e : formDetails.answers.entrySet()) fd.put(e.getKey(), e.getValue());
+        o.put("formDetails", fd);
+        JSONArray a = new JSONArray();
+        for (Models.Project p : projects) a.put(p.toJson());
+        o.put("projects", a);
+        JSONArray ls = new JSONArray();
+        for (Models.Link l : links) ls.put(l.toJson());
+        o.put("links", ls);
+        return o;
     }
 
     private static String read(File f) throws IOException {
@@ -223,28 +268,7 @@ public final class Store {
     public void save() {
         final String json;
         try {
-            JSONObject o = new JSONObject();
-            o.put("version", 2);
-            o.put("userName", userName);
-            o.put("contactPhone", contactPhone);
-            o.put("loadEmailTo", loadEmailTo);
-            o.put("mailFrom", mailFrom);
-            JSONArray mc = new JSONArray();
-            for (String c : myColours) mc.put(c);
-            o.put("myColours", mc);
-            JSONArray ht = new JSONArray();
-            for (String t : hiddenTabs) ht.put(t);
-            o.put("hiddenTabs", ht);
-            JSONObject fd = new JSONObject();
-            for (java.util.Map.Entry<String, String> e : formDetails.answers.entrySet()) fd.put(e.getKey(), e.getValue());
-            o.put("formDetails", fd);
-            JSONArray a = new JSONArray();
-            for (Models.Project p : projects) a.put(p.toJson());
-            o.put("projects", a);
-            JSONArray ls = new JSONArray();
-            for (Models.Link l : links) ls.put(l.toJson());
-            o.put("links", ls);
-            json = o.toString();
+            json = toJson().toString();
         } catch (JSONException e) {
             return;
         }

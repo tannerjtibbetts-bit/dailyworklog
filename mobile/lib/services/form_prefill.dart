@@ -51,8 +51,8 @@ class FormPrefill {
   /// For pick-one questions, typing part of the answer is enough (e.g. a gang number, or "Single").
   static const questions = [
     FormQuestion('observation', 'Single or Group Observation?', 'e.g. Single', ['single or group observation']),
-    FormQuestion('project', 'Bruce Power Project', 'e.g. FCFR', ['bruce power project']),
-    FormQuestion('site', 'Shoreline FCFR (site)', 'e.g. B44 - Warehouse', ['shoreline fcfr']),
+    FormQuestion('project', 'Project', 'e.g. the project code', ['bruce power project']),
+    FormQuestion('site', 'Site', 'e.g. Warehouse', ['shoreline fcfr']),
     FormQuestion('unit', 'Unit Number', 'e.g. Unit 5', ['unit number']),
     FormQuestion('location', 'Location / Area of Work', 'e.g. the area you work in',
         ['location / area of work', 'area of work']),
@@ -276,11 +276,16 @@ class FormPrefill {
 
   // ----- screens -----
 
-  /// Your saved answers plus your name from the Projects screen.
+  /// Your saved answers plus your name from the Projects screen. Email, position and location come from your
+  /// profile when they aren't set here.
   static FormDetails details() {
+    final store = Store.instance;
     final d = FormDetails();
-    d.answers.addAll(Store.instance.formAnswers);
-    d.name = Store.instance.userName;
+    d.answers.addAll(store.formAnswers);
+    for (final e in {'email': store.userEmail, 'position': store.workPosition, 'location': store.workLocation}.entries) {
+      if ((d.answers[e.key] ?? '').trim().isEmpty && e.value.trim().isNotEmpty) d.answers[e.key] = e.value.trim();
+    }
+    d.name = store.userName;
     return d;
   }
 

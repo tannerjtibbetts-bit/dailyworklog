@@ -27,6 +27,11 @@ class Store extends ChangeNotifier {
   /// Your usual answers for the Observation & Coaching form (Formstack links), by question id.
   final Map<String, String> formAnswers = {};
 
+  /// Your email, work position and work location (the profile; changed any time from the person icon).
+  String userEmail = '';
+  String workPosition = '';
+  String workLocation = '';
+
   /// Who gets load securement photos (one or more addresses, comma separated).
   String loadEmailTo = '';
 
@@ -118,6 +123,9 @@ class Store extends ChangeNotifier {
     userName = (o['userName'] ?? '').toString();
     contactPhone = (o['contactPhone'] ?? '').toString();
     loadEmailTo = (o['loadEmailTo'] ?? '').toString();
+    userEmail = (o['userEmail'] ?? '').toString();
+    workPosition = (o['workPosition'] ?? '').toString();
+    workLocation = (o['workLocation'] ?? '').toString();
     mailFrom = (o['mailFrom'] ?? '').toString();
     final mc = o['myColours'];
     if (mc is List) {
@@ -150,6 +158,9 @@ class Store extends ChangeNotifier {
         'userName': userName,
         'contactPhone': contactPhone,
         'loadEmailTo': loadEmailTo,
+        'userEmail': userEmail,
+        'workPosition': workPosition,
+        'workLocation': workLocation,
         'mailFrom': mailFrom,
         'myColours': myColours.toList(),
         'formDetails': formAnswers,

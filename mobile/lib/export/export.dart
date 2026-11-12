@@ -154,7 +154,7 @@ class Export {
     ]);
   }
 
-  /// e.g. "Sea can movements - B44 - 16-10-2026.csv" (the date written like the report titles).
+  /// e.g. "Sea can movements - Warehouse - 16-10-2026.csv" (the date written like the report titles).
   static String seaCanFileName(Project p, int at, String format) {
     final date = Fmt.logDate(Fmt.isoOf(DateTime.fromMillisecondsSinceEpoch(at)));
     return '${Fmt.fileSafe('Sea can movements${p.name.isEmpty ? '' : ' - ${p.name}'} - $date')}.$format';
@@ -210,7 +210,7 @@ class Export {
     return list;
   }
 
-  /// Email subject for a report, e.g. "Daily work log 05/10/2026 - B44 Zone 2".
+  /// Email subject for a report, e.g. "Daily work log 05/10/2026 - Warehouse expansion".
   static String emailSubject(Project p, DailyLog log) => log.displayTitle() + (p.name.isEmpty ? '' : ' - ${p.name}');
 
   /// Email body for a report.

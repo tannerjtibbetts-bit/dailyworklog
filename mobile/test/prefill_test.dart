@@ -59,7 +59,7 @@ void main() {
       ..answers['project'] = 'Nothing like it'
       ..answers['unit'] = 'Unit 5';
     final r = FormPrefill.build('https://x.formstack.com/forms/obs?a=1', html, d, DateTime(2026, 10, 9));
-    expect(r.missed, ['Bruce Power Project']);
+    expect(r.missed, ['Project']);
     expect(r.filled, ['Unit Number', 'Observation Date']);
     expect(r.url, startsWith('https://x.formstack.com/forms/obs?a=1&field111021=Unit%205'));
   });

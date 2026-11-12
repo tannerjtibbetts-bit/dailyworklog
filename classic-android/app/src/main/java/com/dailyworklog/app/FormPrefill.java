@@ -47,8 +47,9 @@ final class FormPrefill {
      */
     static final Question[] QUESTIONS = {
             new Question("observation", "Single or Group Observation?", "e.g. Single", "single or group observation"),
-            new Question("project", "Bruce Power Project", "e.g. FCFR", "bruce power project"),
-            new Question("site", "Shoreline FCFR (site)", "e.g. B44 - Warehouse", "shoreline fcfr"),
+            // The keywords match the real form's labels; the labels shown in the app are generic.
+            new Question("project", "Project", "e.g. the project code", "bruce power project"),
+            new Question("site", "Site", "e.g. Warehouse", "shoreline fcfr"),
             new Question("unit", "Unit Number", "e.g. Unit 5", "unit number"),
             new Question("location", "Location / Area of Work", "e.g. the area you work in", "location / area of work", "area of work"),
             new Question("workGroup", "Work Group Observed", "e.g. your trade", "work group observed"),
@@ -77,6 +78,21 @@ final class FormPrefill {
             for (String v : answers.values()) if (v != null && !v.trim().isEmpty()) return false;
             return true;
         }
+    }
+
+    /**
+     * Your saved answers, with your name, and your profile's email, work position and work location
+     * filling in those questions when their saved answer is blank (a saved answer wins).
+     */
+    static Details withProfile(Details saved, String name, String email, String position, String location) {
+        Details d = new Details();
+        d.answers.putAll(saved.answers);
+        d.name = name;
+        String[][] fallback = {{"email", email}, {"position", position}, {"location", location}};
+        for (String[] f : fallback) {
+            if (d.get(f[0]).isEmpty() && f[1] != null && !f[1].trim().isEmpty()) d.answers.put(f[0], f[1].trim());
+        }
+        return d;
     }
 
     static final class Result {

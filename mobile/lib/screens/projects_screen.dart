@@ -1,4 +1,4 @@
-// Home screen: the list of projects (e.g. "B44 Zone 2 Tool Readiness").
+// Home screen: the list of projects (e.g. "Warehouse expansion").
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -77,6 +77,9 @@ class ProjectsScreen extends StatefulWidget {
   State<ProjectsScreen> createState() => _ProjectsScreenState();
 }
 
+/// Looks like an email address (text@text.text).
+bool validEmail(String s) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s.trim());
+
 class _ProjectsScreenState extends State<ProjectsScreen> {
   Store get store => Store.instance;
 
@@ -93,12 +96,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   String _subtitle() => store.userName.isEmpty
       ? 'Tap the person icon to set your name'
       : 'Signed in as ${store.userName}'
+            '${store.workPosition.isEmpty ? '' : ' · ${store.workPosition}'}'
             '${store.contactPhone.isEmpty ? '' : '  ·  ${formatPhone(store.contactPhone)}'}';
 
   /// Your name, plus the number crew should reach you on (added to texts sent from this phone).
   Future<void> _askName() async {
     final name = TextEditingController(text: store.userName);
     final phone = TextEditingController(text: store.contactPhone);
+    final email = TextEditingController(text: store.userEmail);
+    final position = TextEditingController(text: store.workPosition);
+    final location = TextEditingController(text: store.workLocation);
+    String? emailError;
     final picked = {
       for (final c in myColourChoices) c[0]: store.myColours.contains(c[0]),
     };
@@ -118,20 +126,38 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   autofocus: true,
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
-                    hintText: 'Your name',
+                    labelText: 'Your name',
                     errorText: error,
                   ),
+                ),
+                TextField(
+                  controller: email,
+                  keyboardType: TextInputType.emailAddress,
+                  textCapitalization: TextCapitalization.none,
+                  autocorrect: false,
+                  decoration: InputDecoration(labelText: 'Email', errorText: emailError),
+                ),
+                TextField(
+                  controller: position,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(labelText: 'Work position', hintText: 'e.g. Foreman or Technician'),
+                ),
+                TextField(
+                  controller: location,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(labelText: 'Work location', hintText: 'e.g. Main plant, Building 2'),
                 ),
                 TextField(
                   controller: phone,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
-                    hintText: 'Number crew should call or text you on',
+                    labelText: 'Number crew should call or text you on',
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Your name is shown on completed fields and photos. The number is added under your name in texts.',
+                  'Your name is shown on completed fields and photos. The number is added under your name in texts. '
+                  'Tap the person icon any time to change these.',
                   style: TextStyle(color: C.grey, fontSize: 14),
                 ),
                 const Padding(
@@ -164,10 +190,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
             TextButton(
               onPressed: () {
-                if (name.text.trim().isEmpty) {
-                  set(() => error = 'Enter your name');
-                  return;
-                }
+                final e = email.text.trim();
+                set(() {
+                  error = name.text.trim().isEmpty ? 'Enter your name' : null;
+                  emailError = e.isEmpty || validEmail(e) ? null : 'Enter a valid email address';
+                });
+                if (error != null || emailError != null) return;
                 Navigator.pop(c, 'save');
               },
               child: const Text('Save'),
@@ -182,6 +210,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     } else if (result == 'save') {
       store.userName = name.text.trim();
       store.contactPhone = phone.text.trim();
+      store.userEmail = email.text.trim();
+      store.workPosition = position.text.trim();
+      store.workLocation = location.text.trim();
       store.myColours
         ..clear()
         ..addAll([
@@ -337,7 +368,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   autofocus: true,
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
-                    hintText: 'Project name, e.g. B44 Zone 2 Tool Readiness',
+                    hintText: 'Project name, e.g. Warehouse expansion',
                     errorText: error,
                   ),
                 ),
@@ -346,7 +377,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   controller: loc,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    hintText: 'Location, e.g. Kincardine, ON',
+                    hintText: 'Location, e.g. Main plant, Building 2',
                   ),
                   onSubmitted: (_) => submit(),
                 ),

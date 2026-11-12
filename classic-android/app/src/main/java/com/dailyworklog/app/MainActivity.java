@@ -22,7 +22,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Home screen: the list of projects (e.g. "B44 Zone 2 Tool Readiness"). */
+/** Home screen: the list of projects (e.g. "Warehouse expansion"). */
 public class MainActivity extends AppCompatActivity {
     private Store store;
     private ProjectAdapter adapter;
@@ -66,29 +66,49 @@ public class MainActivity extends AppCompatActivity {
         subtitle.setText(store.userName.isEmpty()
                 ? "Tap the person icon to set your name"
                 : "Signed in as " + store.userName
+                        + (store.workPosition.isEmpty() ? "" : " \u00B7 " + store.workPosition)
                         + (store.contactPhone.isEmpty() ? "" : "  \u00B7  " + SmsHelper.formatPhone(store.contactPhone)));
     }
 
-    /** Your name, plus the number crew should reach you on (added to texts sent from this phone). */
+    /** Your name, email, work position and location, plus the number crew should reach you on (added to texts). */
     private void askName() {
         EditText name = new EditText(this);
         name.setHint("Your name");
         name.setText(store.userName);
         name.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         name.setSingleLine(true);
+        EditText email = new EditText(this);
+        email.setHint("Email");
+        email.setText(store.userEmail);
+        email.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        email.setSingleLine(true);
+        EditText position = new EditText(this);
+        position.setHint("Work position, e.g. Foreman or Technician");
+        position.setText(store.workPosition);
+        position.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        position.setSingleLine(true);
+        EditText location = new EditText(this);
+        location.setHint("Work location, e.g. Main plant, Building 2");
+        location.setText(store.workLocation);
+        location.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        location.setSingleLine(true);
         EditText phone = new EditText(this);
         phone.setHint("Number crew should call or text you on");
         phone.setText(store.contactPhone);
         phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
         phone.setSingleLine(true);
         TextView hint = new TextView(this);
-        hint.setText("Your name is shown on completed fields and photos. The number is added under your name in texts.");
+        hint.setText("Your name is shown on completed fields and photos. The number is added under your name in texts. "
+                + "Tap the person icon any time to change these.");
         hint.setTextColor(getColor(R.color.grey));
         hint.setTextSize(14);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(Ui.dp(this, 22), Ui.dp(this, 8), Ui.dp(this, 22), 0);
         box.addView(name);
+        box.addView(email);
+        box.addView(position);
+        box.addView(location);
         box.addView(phone);
         box.addView(hint);
         // Profile: which task colours on the zone sheet are yours (photo imports pre-tick these)
@@ -120,8 +140,17 @@ public class MainActivity extends AppCompatActivity {
                 name.setError("Enter your name");
                 return;
             }
+            String mail = email.getText().toString().trim();
+            if (!mail.isEmpty() && !Fmt.isEmail(mail)) {
+                email.setError("Enter a valid email address");
+                email.requestFocus();
+                return;
+            }
             d.dismiss();
             store.userName = n;
+            store.userEmail = mail;
+            store.workPosition = position.getText().toString().trim();
+            store.workLocation = location.getText().toString().trim();
             store.contactPhone = phone.getText().toString().trim();
             store.myColours.clear();
             for (int i = 0; i < colours.length; i++) if (colourBoxes[i].isChecked()) store.myColours.add(colours[i][0]);

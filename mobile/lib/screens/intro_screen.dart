@@ -94,7 +94,7 @@ class _IntroScreenState extends State<IntroScreen> with SingleTickerProviderStat
                       _rise(
                         600,
                         const Text(
-                          'B44 TOOL READINESS',
+                          'FIELD WORK · CREW · REPORTS',
                           style: TextStyle(color: C.introSub, fontSize: 14, letterSpacing: 2.8),
                         ),
                       ),

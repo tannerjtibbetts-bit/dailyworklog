@@ -49,7 +49,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:letterSpacing="0.2"
-            android:text="B44 TOOL READINESS"
+            android:text="FIELD WORK · CREW · REPORTS"
             android:textColor="#8FA1B8"
             android:textSize="14sp" />
 

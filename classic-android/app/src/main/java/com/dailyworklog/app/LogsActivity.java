@@ -410,7 +410,7 @@ public class LogsActivity extends AppCompatActivity {
                     rebuild();
                 })));
         items.add(new Ui.SheetItem(R.drawable.ic_pin_small, "Set location", () ->
-                Ui.prompt(this, "Location", "e.g. Kincardine, ON", project.location, "Save", n -> {
+                Ui.prompt(this, "Location", "e.g. Main plant, Building 2", project.location, "Save", n -> {
                     project.location = n;
                     store.save();
                     rebuild();
@@ -488,7 +488,7 @@ public class LogsActivity extends AppCompatActivity {
     private void openLink(Models.Link l) {
         // Observation form: open it with your usual answers filled in.
         if (FormPrefill.isFormstack(l.url)) {
-            if (!store.formDetails.isEmpty()) {
+            if (!formDetails().isEmpty()) {
                 openFormFilled(l);
             } else {
                 new MaterialAlertDialogBuilder(this)
@@ -598,12 +598,9 @@ public class LogsActivity extends AppCompatActivity {
         });
     }
 
-    /** Your saved answers plus your name from the Projects screen. */
+    /** Your saved answers plus your name, email, position and location from your profile. */
     private FormPrefill.Details formDetails() {
-        FormPrefill.Details d = new FormPrefill.Details();
-        d.answers.putAll(store.formDetails.answers);
-        d.name = store.userName;
-        return d;
+        return FormPrefill.withProfile(store.formDetails, store.userName, store.userEmail, store.workPosition, store.workLocation);
     }
 
     /** Your details, each with a Copy button, plus a button to open the form. */

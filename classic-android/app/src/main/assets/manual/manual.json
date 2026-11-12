@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-11-10",
+  "updated": "2026-11-12",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -25,7 +25,7 @@
         {
           "type": "bullets",
           "items": [
-            "A project is a job or area, for example \"B44 Zone 2 Tool Readiness\".",
+            "A project is a job or area, for example \"Warehouse expansion\".",
             "Each project has daily logs, also called checklists. You start one for each shift or day.",
             "A checklist holds fields. A field is one task, for example \"Pack up sea can 317503\".",
             "You tick fields off as they get done. Your name and the time are stamped on each one.",
@@ -72,7 +72,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "When you open the app you see the opening screen. It shows the logo, \"Daily Work Log\", \"B44 TOOL READINESS\" and the mission."
+          "text": "When you open the app you see the opening screen. It shows the logo, \"Daily Work Log\", \"FIELD WORK · CREW · REPORTS\" and the mission."
         },
         {
           "type": "image",
@@ -383,9 +383,9 @@
     },
     {
       "id": "your-profile",
-      "title": "Your profile: name and contact number",
+      "title": "Your profile: name, email, position, location and number",
       "group": "Getting started",
-      "summary": "Set your name (stamped on your work) and the number crew should call or text you on.",
+      "summary": "Set your name (stamped on your work), your email, work position and work location, and the number crew should call or text you on. Change them any time.",
       "keywords": [
         "profile",
         "name",
@@ -393,14 +393,21 @@
         "phone number",
         "contact number",
         "person icon",
-        "signed in as"
+        "signed in as",
+        "email",
+        "work position",
+        "position",
+        "job title",
+        "work location",
+        "location",
+        "change email"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "Your profile tells the app who you are. Your name is shown on completed fields and photos. Your number is added under your name in every text the app sends."
+          "text": "Your profile tells the app who you are. Your name is shown on completed fields and photos. Your number is added under your name in every text the app sends. Your email, work position and work location are kept with your profile and fill in forms for you."
         },
         {
           "type": "image",
@@ -413,17 +420,24 @@
             "On the \"Projects\" screen, tap the round person icon at the top right.",
             "The \"Your profile\" box opens.",
             "Type your name in \"Your name\".",
+            "Type your email in \"Email\".",
+            "Type your job in \"Work position\", for example Foreman or Technician.",
+            "Type where you work in \"Work location\", for example Main plant, Building 2.",
             "Type your phone number in \"Number crew should call or text you on\".",
             "Tap \"Save\"."
           ]
         },
         {
           "type": "text",
-          "text": "Under \"Projects\" you then see \"Signed in as\" with your name and number."
+          "text": "Under \"Projects\" you then see \"Signed in as\" with your name, your work position and your number."
         },
         {
           "type": "tip",
-          "text": "The first time you open the app, this box opens by itself. You must enter a name to save it."
+          "text": "The first time you open the app, this box opens by itself. You must enter a name to save it. The other boxes can be left blank and filled in later."
+        },
+        {
+          "type": "tip",
+          "text": "To change your email, position or location later, tap the person icon again, change the box and tap \"Save\". If the email doesn't look right (like name@example.com) the app shows \"Enter a valid email address\"."
         },
         {
           "type": "text",
@@ -569,8 +583,8 @@
           "type": "steps",
           "items": [
             "Tap the big dark \"+\" button at the bottom.",
-            "In \"New project\", type the name, for example \"B44 Zone 2 Tool Readiness\".",
-            "Type the location if you like, for example \"Kincardine, ON\".",
+            "In \"New project\", type the name, for example \"Warehouse expansion\".",
+            "Type the location if you like, for example \"Main plant, Building 2\".",
             "Tap \"Create\". The new project opens."
           ]
         },
