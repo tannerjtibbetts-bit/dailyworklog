@@ -189,7 +189,7 @@ final class ReportXlsx {
         if (ot.include && !ot.filled().isEmpty()) {
             s.blank();
             s.row().text(0, "Weekend overtime", SECTION);
-            s.header("Name", "Fri", "Sat", "Sun", "Hours", "Confirmed");
+            s.header("Name", "Fri", "Sat", "Sun", "Hours", "Confirmed", "Comment");
             for (Models.Overtime.OtRow o : ot.filled()) {
                 s.row();
                 s.text(0, o.name, CELL);
@@ -198,6 +198,7 @@ final class ReportXlsx {
                 if (o.hours.matches("\\d+")) s.num(4, o.hours, NUM);
                 else s.text(4, o.hours, NUM);
                 s.text(5, o.confirmed, yesNoStyle(o.confirmed));
+                s.text(6, o.comment.trim(), CELL);
             }
             s.row().text(0, "Yes total", BOLD);
             for (int d = 0; d < 3; d++) s.num(1 + d, String.valueOf(ot.yesCount(d)), NUM);

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/** The Overtime tab as a small Excel (.xlsx) file: Name / Fri / Sat / Sun / Hours / Confirmed, totals and notes. */
+/** The Overtime tab as a small Excel (.xlsx) file: Name / Fri / Sat / Sun / Hours / Confirmed / Comment, totals and notes. */
 final class OvertimeXlsx {
     private OvertimeXlsx() {}
 
@@ -22,7 +22,7 @@ final class OvertimeXlsx {
         row(rows, r, new String[]{"Weekend of " + Fmt.weekendDay(ot.weekOf, 0) + " to " + Fmt.weekendDay(ot.weekOf, 2)}, NORMAL);
         row(rows, r, new String[]{"Exported " + Fmt.longStamp(at) + " by " + by}, NORMAL);
         r[0]++;
-        row(rows, r, new String[]{"Name", "Fri", "Sat", "Sun", "Hours", "Confirmed"}, HEAD);
+        row(rows, r, new String[]{"Name", "Fri", "Sat", "Sun", "Hours", "Confirmed", "Comment"}, HEAD);
         List<Models.Overtime.OtRow> filled = ot.filled();
         for (Models.Overtime.OtRow o : filled) {
             r[0]++;
@@ -37,6 +37,7 @@ final class OvertimeXlsx {
                 cell(rows, "E", r[0], o.hours, NORMAL);
             }
             cell(rows, "F", r[0], o.confirmed, style(o.confirmed));
+            if (!o.comment.trim().isEmpty()) cell(rows, "G", r[0], o.comment.trim(), NORMAL);
             rows.append("</row>");
         }
         r[0]++;
@@ -60,7 +61,8 @@ final class OvertimeXlsx {
                 + "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
                 + "<cols><col min=\"1\" max=\"1\" width=\"28\" customWidth=\"1\"/>"
                 + "<col min=\"2\" max=\"5\" width=\"10\" customWidth=\"1\"/>"
-                + "<col min=\"6\" max=\"6\" width=\"11\" customWidth=\"1\"/></cols>"
+                + "<col min=\"6\" max=\"6\" width=\"11\" customWidth=\"1\"/>"
+                + "<col min=\"7\" max=\"7\" width=\"36\" customWidth=\"1\"/></cols>"
                 + "<sheetData>" + rows + "</sheetData></worksheet>";
 
         try (ZipOutputStream zip = new ZipOutputStream(out)) {

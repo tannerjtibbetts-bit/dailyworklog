@@ -309,6 +309,8 @@ final class ReportPdf {
                 c.drawText(s, M + nameW + d * dayW + (dayW - tp.measureText(s)) / 2f, y + 13.5f, tp);
             }
             y += rowH;
+            String comment = r.comment.trim().replace('\n', ' ');
+            if (!comment.isEmpty()) text("Comment: " + comment, small, M + 6, w - 12, 4);  // under the row, from the name column
         }
         c.drawLine(M, y, M + w, y, line);
         String tot = "Yes total";

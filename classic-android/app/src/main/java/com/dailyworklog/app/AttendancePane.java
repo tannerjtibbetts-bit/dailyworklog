@@ -251,26 +251,6 @@ final class AttendancePane {
     }
 
     private static EditText commentBox(Activity a, Store store, Models.Attendance.AttRow r) {
-        EditText e = new EditText(a);
-        e.setSingleLine(true);
-        e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        e.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        e.setTextSize(15);
-        e.setTextColor(a.getColor(R.color.text));
-        e.setHint("Comment");
-        e.setHintTextColor(a.getColor(R.color.grey_light));
-        e.setBackgroundResource(R.drawable.bg_cell);
-        e.setMinHeight(Ui.dp(a, 44));
-        e.setPadding(Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8));
-        e.setText(r.comment);
-        e.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) {}
-            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
-            @Override public void afterTextChanged(Editable s) {
-                r.comment = s.toString();
-                store.save();
-            }
-        });
-        return e;
+        return OvertimePane.commentBox(a, store, r.comment, c -> r.comment = c);
     }
 }

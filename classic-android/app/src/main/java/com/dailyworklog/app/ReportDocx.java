@@ -119,14 +119,16 @@ final class ReportDocx {
                 + "<w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:right w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>"
                 + "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/><w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"D5D9DE\"/>";
         body.append("<w:tbl><w:tblPr><w:tblW w:w=\"10080\" w:type=\"dxa\"/><w:tblBorders>").append(b)
-                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"4080\"/>")
-                .append("<w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/></w:tblGrid>");
-        String[] head = {"Name", "Fri", "Sat", "Sun", "Hours", "Confirmed"};
+                .append("</w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid>");
+        for (int w : OT_WIDTHS) body.append("<w:gridCol w:w=\"").append(w).append("\"/>");
+        body.append("</w:tblGrid>");
+        String[] head = {"Name", "Fri", "Sat", "Sun", "Hours", "Confirmed", "Comment"};
         otRow(head, true, "E4E7EC", true);
         for (Models.Overtime.OtRow r : rows) {
-            otRow(new String[]{r.name, dash(r.fri), dash(r.sat), dash(r.sun), dash(r.hours), dash(r.confirmed)}, false, null, true);
+            otRow(new String[]{r.name, dash(r.fri), dash(r.sat), dash(r.sun), dash(r.hours), dash(r.confirmed),
+                    r.comment.trim().replace('\n', ' ')}, false, null, true);
         }
-        otRow(new String[]{"Yes total", String.valueOf(ot.yesCount(0)), String.valueOf(ot.yesCount(1)), String.valueOf(ot.yesCount(2)), "", String.valueOf(ot.confirmedCount())}, true, null, false);
+        otRow(new String[]{"Yes total", String.valueOf(ot.yesCount(0)), String.valueOf(ot.yesCount(1)), String.valueOf(ot.yesCount(2)), "", String.valueOf(ot.confirmedCount()), ""}, true, null, false);
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
         overtimeNotes(notes);
     }
@@ -236,17 +238,21 @@ final class ReportDocx {
         return v.isEmpty() ? "-" : v;
     }
 
+    /** Overtime table columns (twips): Name, Fri, Sat, Sun, Hours, Confirmed, Comment. */
+    private static final int[] OT_WIDTHS = {3080, 1000, 1000, 1000, 1000, 1000, 2000};
+
     private void otRow(String[] cells, boolean bold, String shade, boolean keep) {
-        int[] widths = {4080, 1200, 1200, 1200, 1200, 1200};
+        int[] widths = OT_WIDTHS;
         body.append("<w:tr><w:trPr><w:cantSplit/></w:trPr>");
         for (int i = 0; i < cells.length; i++) {
             body.append("<w:tc><w:tcPr><w:tcW w:w=\"").append(widths[i]).append("\" w:type=\"dxa\"/>");
             if (shade != null) body.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"").append(shade).append("\"/>");
             body.append("</w:tcPr><w:p><w:pPr>").append(keep ? "<w:keepNext/>" : "").append("<w:spacing w:before=\"40\" w:after=\"40\"/>")
-                    .append(i == 0 ? "" : "<w:jc w:val=\"center\"/>").append("</w:pPr>");
+                    .append(i == 0 || i == 6 ? "" : "<w:jc w:val=\"center\"/>").append("</w:pPr>");
             String v = cells[i];
-            String col = i > 0 && Models.Overtime.YES.equals(v) ? GREEN : i > 0 && Models.Overtime.NO.equals(v) ? RED : TEXT;
-            run(v, bold || (i > 0 && (Models.Overtime.YES.equals(v) || Models.Overtime.NO.equals(v))), 10, col, null);
+            boolean answer = i > 0 && i < 6;  // Yes green, No red (Training and the comment stay plain)
+            String col = answer && Models.Overtime.YES.equals(v) ? GREEN : answer && Models.Overtime.NO.equals(v) ? RED : TEXT;
+            run(v, bold || (answer && (Models.Overtime.YES.equals(v) || Models.Overtime.NO.equals(v))), 10, col, null);
             body.append("</w:p></w:tc>");
         }
         body.append("</w:tr>");

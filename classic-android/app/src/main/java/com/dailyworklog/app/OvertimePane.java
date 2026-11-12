@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-/** Overtime tab: weekend sign-up table with Name / Fri / Sat / Sun dropdowns, Hours and Confirmed. */
+/** Overtime tab: weekend sign-up table with Name / Fri / Sat / Sun dropdowns, Hours and Confirmed, and a comment under each row. */
 final class OvertimePane {
     private OvertimePane() {}
 
@@ -183,7 +183,7 @@ final class OvertimePane {
 
         TextView newWeek = action(a, "Clear answers", R.color.deep_blue);
         newWeek.setOnClickListener(v -> Ui.confirm(a, "Clear the Yes/No answers?",
-                "Names and notes stay in place, ready for the next weekend.", "Clear", () -> {
+                "Answers and comments are cleared. Names and notes stay in place, ready for the next weekend.", "Clear", () -> {
                     ot.startWeekend(Fmt.upcomingFriday());
                     store.save();
                     render(a, store, p, box);
@@ -207,10 +207,16 @@ final class OvertimePane {
                 new android.graphics.Rect(0, 0, target.getWidth(), target.getHeight()), false));
     }
 
-    /** One table row: Name, Fri, Sat, Sun dropdowns, the Hours box, Confirmed and the remove button. */
+    /**
+     * One person: Name, Fri, Sat, Sun dropdowns, the Hours box, Confirmed and the remove button, with their
+     * comment box on its own line underneath.
+     */
     private static LinearLayout line(Activity a, Store store, Models.Overtime ot, LinearLayout table,
                                      Models.Overtime.OtRow r, List<String> names, Runnable refreshTotals) {
+        LinearLayout block = new LinearLayout(a);
+        block.setOrientation(LinearLayout.VERTICAL);
         LinearLayout line = row(a);
+        block.addView(line);
         line.addView(dropdown(a, names, r.name.isEmpty() ? PICK : r.name, (sp, v) -> {
             r.name = PICK.equals(v) ? "" : v;
             store.save();
@@ -237,6 +243,8 @@ final class OvertimePane {
         yn.add(BLANK);
         yn.add(Models.Overtime.YES);
         yn.add(Models.Overtime.NO);
+        yn.add(Models.Overtime.TRAINING);  // plain text, not green or red
+        if (!r.confirmed.isEmpty() && !yn.contains(r.confirmed)) yn.add(r.confirmed);
         line.addView(dropdown(a, yn, r.confirmed.isEmpty() ? BLANK : r.confirmed, (sp, v) -> {
             r.confirmed = BLANK.equals(v) ? "" : v;
             store.save();
@@ -245,11 +253,16 @@ final class OvertimePane {
         }, true, false), weight(a, 1f));
         line.addView(removeButton(a, () -> r.name, () -> Models.Overtime.isBlank(r), () -> {
             ot.rows.remove(r);
-            table.removeView(line);
+            table.removeView(block);
             store.save();
             refreshTotals.run();
         }), removeSize(a));
-        return line;
+        // The comment spans the row, ending where the Confirmed column ends (not under the ×).
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        clp.setMarginEnd(Ui.dp(a, 32 + 4));
+        clp.bottomMargin = Ui.dp(a, 8);
+        block.addView(commentBox(a, store, r.comment, c -> r.comment = c), clp);
+        return block;
     }
 
     /** Grey "×" at the end of a row. A blank row goes at once; otherwise it asks first. */
@@ -295,6 +308,31 @@ final class OvertimePane {
         int pad = Ui.dp(a, 16);
         card.setPadding(pad, pad, pad, pad);
         return card;
+    }
+
+    /** One-line comment box, saved as you type (Overtime and Attendance). */
+    static EditText commentBox(Activity a, Store store, String value, java.util.function.Consumer<String> set) {
+        EditText e = new EditText(a);
+        e.setSingleLine(true);
+        e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        e.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
+        e.setTextSize(15);
+        e.setTextColor(a.getColor(R.color.text));
+        e.setHint("Comment");
+        e.setHintTextColor(a.getColor(R.color.grey_light));
+        e.setBackgroundResource(R.drawable.bg_cell);
+        e.setMinHeight(Ui.dp(a, 44));
+        e.setPadding(Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8));
+        e.setText(value);
+        e.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                set.accept(s.toString());
+                store.save();
+            }
+        });
+        return e;
     }
 
     /** Number box for hours willing to work: accepts 1 to 10. */
@@ -366,6 +404,7 @@ final class OvertimePane {
                 int col = Models.Overtime.YES.equals(v) ? 0xFF148A3A : isRed(v) ? 0xFFC9353A
                         : (PICK.equals(v) || BLANK.equals(v)) ? a.getColor(R.color.grey_light) : a.getColor(R.color.text);
                 t.setTextColor(col);
+                if (yesNo) fitWidth(t, 16f, 8f);  // e.g. "Training" in the narrow Confirmed cell
                 return t;
             }
         };
@@ -388,6 +427,31 @@ final class OvertimePane {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
         return sp;
+    }
+
+    /** Shrinks one-line text (from maxSp down to minSp) until it fits the view's width, instead of cutting it off. */
+    static void fitWidth(TextView t, float maxSp, float minSp) {
+        Runnable fit = () -> {
+            int room = t.getWidth() - t.getTotalPaddingLeft() - t.getTotalPaddingRight();
+            if (room <= 0) return;
+            float density = t.getResources().getDisplayMetrics().scaledDensity;
+            android.text.TextPaint p = new android.text.TextPaint(t.getPaint());
+            float sp = maxSp;
+            String s = t.getText().toString();
+            while (sp > minSp) {
+                p.setTextSize(sp * density);
+                if (p.measureText(s) <= room) break;
+                sp -= 0.5f;
+            }
+            if (Math.abs(t.getTextSize() - sp * density) > 0.5f) t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, sp);
+        };
+        if (t.getTag(R.id.tag_fit_text) == null) {  // one listener per (recycled) view
+            t.setTag(R.id.tag_fit_text, Boolean.TRUE);
+            t.addOnLayoutChangeListener((v, l, top, r, b, ol, ot, or, ob) -> {
+                if (r - l != or - ol) v.post(fit);
+            });
+        }
+        t.post(fit);
     }
 
     static LinearLayout row(Activity a) {

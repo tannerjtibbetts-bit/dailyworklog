@@ -665,7 +665,7 @@ public final class Models {
 
     /** Weekend overtime sign-up sheet: one row per crew member, Yes/No for Fri, Sat, Sun. */
     public static class Overtime {
-        public static final String YES = "Yes", NO = "No";
+        public static final String YES = "Yes", NO = "No", TRAINING = "Training";
         /** ISO date of the Friday this sheet covers. */
         public String weekOf = "";
         public boolean include;
@@ -677,8 +677,10 @@ public final class Models {
             public String name = "", fri = "", sat = "", sun = "";
             /** Hours willing to work, 1 to 10 (blank if not given). */
             public String hours = "";
-            /** Overtime confirmed: "", "Yes" or "No". */
+            /** Overtime confirmed: "", "Yes", "No" or "Training". */
             public String confirmed = "";
+            /** A comment about this person's weekend. */
+            public String comment = "";
 
             JSONObject toJson() throws JSONException {
                 JSONObject o = new JSONObject();
@@ -688,6 +690,7 @@ public final class Models {
                 o.put("sun", sun);
                 o.put("hours", hours);
                 o.put("confirmed", confirmed);
+                o.put("comment", comment);
                 return o;
             }
 
@@ -699,6 +702,7 @@ public final class Models {
                 r.sun = o.optString("sun", "");
                 r.hours = o.optString("hours", "");
                 r.confirmed = o.optString("confirmed", "");
+                r.comment = o.optString("comment", "");
                 return r;
             }
         }
@@ -740,7 +744,7 @@ public final class Models {
         /** True when the row has no name, answers or hours. */
         public static boolean isBlank(OtRow r) {
             return r.name.isEmpty() && r.fri.isEmpty() && r.sat.isEmpty() && r.sun.isEmpty() && r.hours.isEmpty()
-                    && r.confirmed.isEmpty();
+                    && r.confirmed.isEmpty() && r.comment.isEmpty();
         }
 
         /** Fresh weekend: keep the names, clear the Yes/No answers and hours. */
@@ -752,6 +756,7 @@ public final class Models {
                 r.sun = "";
                 r.hours = "";
                 r.confirmed = "";
+                r.comment = "";
             }
         }
 

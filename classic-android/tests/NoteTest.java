@@ -465,7 +465,7 @@ class ReportXlsxTest {
   NoteTest.check(os.contains("<c r=\"F5\" t=\"inlineStr\" s=\"2\">" + t("Confirmed")) && os.contains("<c r=\"F6\" t=\"inlineStr\" s=\"3\">" + t("Yes"))
       && os.contains("<c r=\"F7\" s=\"3\"><v>1</v></c>") && os.contains("<col min=\"6\" max=\"6\" width=\"11\""), "overtime xlsx Confirmed column");
   String doc = DelayTest.docx(p, l);
-  NoteTest.check(doc.contains("<w:gridCol w:w=\"4080\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/><w:gridCol w:w=\"1200\"/></w:tblGrid>")
+  NoteTest.check(doc.contains("<w:gridCol w:w=\"3080\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"2000\"/></w:tblGrid>")
       && doc.contains(">Confirmed</w:t>") && doc.contains("<w:b/><w:color w:val=\"1DB04B\"/><w:sz w:val=\"20\"/><w:szCs w:val=\"20\"/></w:rPr><w:t xml:space=\"preserve\">Yes</w:t>"), "docx Confirmed column");
   NoteTest.check(s.contains("<c r=\"A21\" t=\"inlineStr\" s=\"8\">" + t("Attendance Tue Oct 27, 2026")) && s.contains("<c r=\"C22\" t=\"inlineStr\" s=\"4\">" + t("Comment"))
       && s.contains("<c r=\"B23\" t=\"inlineStr\" s=\"7\">" + t("AWOL")) && s.contains("<c r=\"C23\" t=\"inlineStr\" s=\"5\">" + t("no call"))
@@ -1098,3 +1098,37 @@ class BackupTest {
     System.out.println("BACKUP PASS");
     System.exit(0);  // the stores' save threads
   } }
+class OtCommentTest {
+  public static void main(String[] a) throws Exception {
+    Models.Overtime.OtRow r = new Models.Overtime.OtRow(); r.name = "Al"; r.confirmed = "Training"; r.comment = "First aid course Sat";
+    Models.Overtime.OtRow q = Models.Overtime.OtRow.fromJson(r.toJson());
+    NoteTest.check(q.confirmed.equals("Training") && q.comment.equals("First aid course Sat"), "comment + Training round trip");
+    org.json.JSONObject old = r.toJson(); old.remove("comment");
+    NoteTest.check(Models.Overtime.OtRow.fromJson(old).comment.isEmpty(), "old row: no comment");
+    Models.Overtime ot = new Models.Overtime();
+    Models.Overtime.OtRow onlyComment = new Models.Overtime.OtRow(); onlyComment.comment = "Ask Bo";
+    ot.rows.add(onlyComment); ot.rows.add(new Models.Overtime.OtRow());
+    NoteTest.check(!Models.Overtime.isBlank(onlyComment), "a comment makes a row not empty");
+    ot.removeEmptyRows(); NoteTest.check(ot.rows.size() == 1 && ot.rows.get(0) == onlyComment, "remove empty rows keeps a comment-only row");
+    Models.Overtime.OtRow y = new Models.Overtime.OtRow(); y.name = "Bo"; y.confirmed = "Yes";
+    ot.rows.add(r); ot.rows.add(y);
+    NoteTest.check(ot.confirmedCount() == 1, "confirmedCount ignores Training");
+    // Excel daily report, Overtime Excel, Word
+    Models.Project p = new Models.Project(); p.overtime = ot; ot.include = true;
+    Models.DailyLog l = new Models.DailyLog(); l.date = "2026-11-13"; p.logs.add(l);
+    String s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    NoteTest.check(s.contains(ReportXlsxTest.t("Comment")) && s.contains(">" + ReportXlsxTest.t("First aid course Sat")) && s.contains(ReportXlsxTest.t("Training")), "xlsx daily: Comment column");
+    int at = s.indexOf(ReportXlsxTest.t("Training"));
+    NoteTest.check(s.substring(s.lastIndexOf("<c ", at), at).contains("s=\"9\""), "xlsx daily: Training plain");
+    java.io.ByteArrayOutputStream ob = new java.io.ByteArrayOutputStream();
+    OvertimeXlsx.write(p, "Tanner", 0L, ob);
+    String os = "";
+    try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(ob.toByteArray()))) {
+      for (java.util.zip.ZipEntry ze; (ze = z.getNextEntry()) != null; ) if (ze.getName().equals("xl/worksheets/sheet1.xml")) os = new String(z.readAllBytes(), "UTF-8");
+    }
+    NoteTest.check(os.contains("<c r=\"G5\" t=\"inlineStr\" s=\"2\">" + ReportXlsxTest.t("Comment")) && os.contains(ReportXlsxTest.t("First aid course Sat"))
+        && os.contains("t=\"inlineStr\">" + ReportXlsxTest.t("Training")), "overtime xlsx: Comment column, Training plain");
+    String d = DelayTest.docx(p, l);
+    NoteTest.check(d.contains(">Comment</w:t>") && d.contains(">First aid course Sat</w:t>") && d.contains("<w:gridCol w:w=\"2000\"/>"), "docx: Comment column");
+    NoteTest.check(d.contains("<w:color w:val=\"1B2533\"/><w:sz w:val=\"20\"/><w:szCs w:val=\"20\"/></w:rPr><w:t xml:space=\"preserve\">Training</w:t>"), "docx: Training plain");
+    System.out.println("OT COMMENT PASS"); } }
