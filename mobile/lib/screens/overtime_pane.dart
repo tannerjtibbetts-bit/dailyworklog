@@ -11,6 +11,9 @@ import '../ui/theme.dart';
 const _pick = 'Select…', _blank = '–';
 const _nameFlex = 22, _cellFlex = 10;
 
+/// Below this width the overtime table slides sideways (wide enough for full names and "Training").
+const _tableMinWidth = 580.0;
+
 /// Hours box text to the saved value: '' when blank, the number for 1 to 10, null if not allowed.
 String? otHours(String typed) {
   final v = typed.trim();
@@ -68,15 +71,15 @@ Color _valueColour(String v) => v == Overtime.yes
     : C.text;
 
 Widget _answerText(String v, bool yesNo) => Text(
-      v,
-      maxLines: 1,
-      overflow: yesNo ? TextOverflow.visible : TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: yesNo ? 16 : 15,
-        color: _valueColour(v),
-        fontWeight: v == Overtime.yes || _isRed(v) ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
+  v,
+  maxLines: 1,
+  overflow: yesNo ? TextOverflow.visible : TextOverflow.ellipsis,
+  style: TextStyle(
+    fontSize: yesNo ? 16 : 15,
+    color: _valueColour(v),
+    fontWeight: v == Overtime.yes || _isRed(v) ? FontWeight.bold : FontWeight.normal,
+  ),
+);
 
 /// A table dropdown: Yes in green, No and AWOL in red. [yesNo] centres short answers.
 /// [arrow] false hides the little arrow, for narrow boxes.
@@ -121,9 +124,7 @@ Widget sheetDropdown(
               alignment: yesNo ? Alignment.center : Alignment.centerLeft,
               padding: const EdgeInsets.symmetric(vertical: 10),
               // Short answers shrink to fit a narrow box (e.g. "Training") instead of being cut off.
-              child: yesNo
-                  ? FittedBox(fit: BoxFit.scaleDown, child: _answerText(v, yesNo))
-                  : _answerText(v, yesNo),
+              child: yesNo ? FittedBox(fit: BoxFit.scaleDown, child: _answerText(v, yesNo)) : _answerText(v, yesNo),
             ),
         ],
         onChanged: (v) {
@@ -462,32 +463,51 @@ class _OvertimePaneState extends State<OvertimePane> {
                     ),
                   ),
                 ),
-                _row([
-                  _label('Name'),
-                  _label('Fri'),
-                  _label('Sat'),
-                  _label('Sun'),
-                  _label('Hours'),
-                  // Split over two lines so it can be read in the narrow column.
-                  const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'Con-\nfirmed',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, height: 1.05, color: C.grey, fontWeight: FontWeight.bold),
+                // The table slides sideways when the phone is narrow, so every box shows in full.
+                LayoutBuilder(
+                  builder: (context, box) => SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: box.maxWidth < _tableMinWidth ? _tableMinWidth : box.maxWidth,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _row([
+                            _label('Name'),
+                            _label('Fri'),
+                            _label('Sat'),
+                            _label('Sun'),
+                            _label('Hours'),
+                            // Split over two lines so it can be read in the narrow column.
+                            const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Con-\nfirmed',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.05,
+                                  color: C.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ]),
+                          for (final r in ot.rows) _line(r, names, key: ObjectKey(r)),
+                          // Totals sit under the table; after adding rows the screen scrolls here.
+                          KeyedSubtree(
+                            key: _lastRow,
+                            child: _row([
+                              _label('Yes total'),
+                              for (var d = 0; d < 3; d++) _label('${ot.yesCount(d)}', color: C.green),
+                              const SizedBox(),
+                              _label('${ot.confirmedCount()}', color: C.green),
+                            ]),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ]),
-                for (final r in ot.rows) _line(r, names, key: ObjectKey(r)),
-                // Totals sit under the table; after adding rows the screen scrolls here.
-                KeyedSubtree(
-                  key: _lastRow,
-                  child: _row([
-                    _label('Yes total'),
-                    for (var d = 0; d < 3; d++) _label('${ot.yesCount(d)}', color: C.green),
-                    const SizedBox(),
-                    _label('${ot.confirmedCount()}', color: C.green),
-                  ]),
                 ),
                 if (p.crew.isEmpty)
                   const Padding(

@@ -496,6 +496,9 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.overtime)));
       await tester.pump();
+      // The table is wider than this screen: slide it so the × buttons show.
+      await tester.ensureVisible(find.byTooltip('Remove row').at(1));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Remove row').at(1));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));

@@ -2885,6 +2885,15 @@
           "caption": "Confirmed \"Training\" and a comment under each person"
         },
         {
+          "type": "tip",
+          "text": "The table is wider than most phones. Slide it left with your finger to see \"Hours\", \"Confirmed\" and the \"×\", and right to go back to the names."
+        },
+        {
+          "type": "image",
+          "file": "overtime_scrolled.png",
+          "caption": "Slid left to see Hours and Confirmed"
+        },
+        {
           "type": "text",
           "text": "The \"Yes total\" row counts the Yes answers for each day, and how many are confirmed (Training isn't counted). Everything saves by itself."
         },
