@@ -39,8 +39,8 @@ import java.util.Locale;
 public class LogsActivity extends AppCompatActivity {
     private Store store;
     private Models.Project project;
-    private static final int MODE_LOGS = 0, MODE_TEMPLATES = 1, MODE_LINKS = 2, MODE_NOTIFY = 3, MODE_OVERTIME = 4, MODE_NOTES = 5, MODE_SEACANS = 6, MODE_ATTENDANCE = 7;
-    private static final int TYPE_CARD = 0, TYPE_LINK = 1, TYPE_NOTICE = 2, TYPE_NOTE = 3;
+    private static final int MODE_LOGS = 0, MODE_TEMPLATES = 1, MODE_LINKS = 2, MODE_NOTIFY = 3, MODE_OVERTIME = 4, MODE_NOTES = 5, MODE_SEACANS = 6, MODE_ATTENDANCE = 7, MODE_CONTACTS = 8;
+    private static final int TYPE_CARD = 0, TYPE_LINK = 1, TYPE_NOTICE = 2, TYPE_NOTE = 3, TYPE_CONTACT = 4;
     private int mode = MODE_LOGS;
     private String query = "";
     private final List<Object> rows = new ArrayList<>();
@@ -56,7 +56,7 @@ public class LogsActivity extends AppCompatActivity {
         }
     }
     private RowAdapter adapter;
-    private TextView empty, title, location, pillLogs, pillOvertime, pillAttendance, pillLinks, pillNotify, pillNotes, pillSeaCans;
+    private TextView empty, title, location, pillLogs, pillOvertime, pillAttendance, pillLinks, pillNotify, pillNotes, pillSeaCans, pillContacts;
     private EditText search;
     private ExportHelper exporter;
 
@@ -84,6 +84,7 @@ public class LogsActivity extends AppCompatActivity {
         pillLinks = findViewById(R.id.pillLinks);
         pillNotify = findViewById(R.id.pillNotify);
         pillNotes = findViewById(R.id.pillNotes);
+        pillContacts = findViewById(R.id.pillContacts);
         if (savedInstanceState != null) mode = savedInstanceState.getInt("mode", MODE_LOGS);
         if (mode == MODE_TEMPLATES) mode = MODE_LOGS;  // the Templates tab was retired
         search = findViewById(R.id.search);
@@ -99,6 +100,7 @@ public class LogsActivity extends AppCompatActivity {
             if (mode == MODE_NOTIFY) startActivity(new Intent(this, NotifyActivity.class).putExtra("project", project.id));
             else if (mode == MODE_NOTES) openNote(null);
             else if (mode == MODE_LINKS) editLink(null);
+            else if (mode == MODE_CONTACTS) ContactsUi.edit(this, null, this::rebuild);
             else pickDate(null);
         });
         pillLogs.setOnClickListener(v -> setMode(MODE_LOGS));
@@ -108,6 +110,7 @@ public class LogsActivity extends AppCompatActivity {
         pillLinks.setOnClickListener(v -> setMode(MODE_LINKS));
         pillNotify.setOnClickListener(v -> setMode(MODE_NOTIFY));
         pillNotes.setOnClickListener(v -> setMode(MODE_NOTES));
+        pillContacts.setOnClickListener(v -> setMode(MODE_CONTACTS));
         findViewById(R.id.clearAll).setOnClickListener(v -> clearNotes());
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
@@ -136,21 +139,30 @@ public class LogsActivity extends AppCompatActivity {
     }
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
-    static final String[] TAB_IDS = {"notify", "links", "overtime", "attendance", "notes", "seacans"};
-    static final String[] TAB_NAMES = {"Notify", "Links", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
-    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_OVERTIME, MODE_ATTENDANCE, MODE_NOTES, MODE_SEACANS};
+    static final String[] TAB_IDS = {"notify", "links", "contacts", "overtime", "attendance", "notes", "seacans"};
+    static final String[] TAB_NAMES = {"Notify", "Links", "Organization Contacts", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
+    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_CONTACTS, MODE_OVERTIME, MODE_ATTENDANCE, MODE_NOTES, MODE_SEACANS};
 
-    /** How many pills go in the first row: 4 when all 7 show, otherwise up to 3. */
-    static int firstRowCount(int shown) {
-        return shown >= 7 ? 4 : Math.min(3, shown);
+    /** Pills per row: up to 6 tabs in rows of three, 7 as 4 + 3, 8 as 4 + 4, 9 or more in rows of three. */
+    static int[] tabRowSizes(int shown) {
+        if (shown == 7) return new int[]{4, 3};
+        if (shown == 8) return new int[]{4, 4};
+        int[] rows = new int[(shown + 2) / 3];
+        for (int i = 0; i < rows.length; i++) rows[i] = Math.min(3, shown - i * 3);
+        return rows;
     }
 
-    /** Puts the tabs that aren't hidden into two rows, in their usual order. */
+    /** How many pills go in the first row. */
+    static int firstRowCount(int shown) {
+        int[] r = tabRowSizes(shown);
+        return r.length == 0 ? 0 : r[0];
+    }
+
+    /** Puts the tabs that aren't hidden into rows, in their usual order. */
     private void layoutTabs() {
-        LinearLayout row1 = findViewById(R.id.tabRow1), row2 = findViewById(R.id.tabRow2);
-        TextView[] pills = {pillNotify, pillLinks, pillOvertime, pillAttendance, pillNotes, pillSeaCans};
-        row1.removeAllViews();
-        row2.removeAllViews();
+        LinearLayout[] tabRows = {findViewById(R.id.tabRow1), findViewById(R.id.tabRow2), findViewById(R.id.tabRow3)};
+        TextView[] pills = {pillNotify, pillLinks, pillContacts, pillOvertime, pillAttendance, pillNotes, pillSeaCans};
+        for (LinearLayout r : tabRows) r.removeAllViews();
         List<TextView> shown = new ArrayList<>();
         shown.add(pillLogs);
         for (int i = 0; i < TAB_IDS.length; i++) {
@@ -158,15 +170,19 @@ public class LogsActivity extends AppCompatActivity {
             if (!hidden) shown.add(pills[i]);
             if (hidden && mode == TAB_MODES[i]) mode = MODE_LOGS;
         }
-        int first = firstRowCount(shown.size());
-        for (int i = 0; i < shown.size(); i++) {
-            TextView pill = shown.get(i);
-            LinearLayout row = i < first ? row1 : row2;
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 46), pill == pillSeaCans ? 1.6f : 1f);
-            if (row.getChildCount() > 0) lp.setMarginStart(Ui.dp(this, 4));
-            row.addView(pill, lp);
+        int[] sizes = tabRowSizes(shown.size());
+        int next = 0;
+        for (int r = 0; r < sizes.length; r++) {
+            LinearLayout row = tabRows[Math.min(r, tabRows.length - 1)];
+            for (int k = 0; k < sizes[r] && next < shown.size(); k++) {
+                TextView pill = shown.get(next++);
+                boolean wide = pill == pillSeaCans || pill == pillContacts;
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 46), wide ? 1.6f : 1f);
+                if (row.getChildCount() > 0) lp.setMarginStart(Ui.dp(this, 4));
+                row.addView(pill, lp);
+            }
         }
-        row2.setVisibility(row2.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+        for (int r = 1; r < tabRows.length; r++) tabRows[r].setVisibility(tabRows[r].getChildCount() == 0 ? View.GONE : View.VISIBLE);
     }
 
     /** Tick the tabs to show; unticked ones disappear from every project until ticked again. */
@@ -211,6 +227,7 @@ public class LogsActivity extends AppCompatActivity {
         stylePill(pillLinks, mode == MODE_LINKS);
         stylePill(pillNotify, mode == MODE_NOTIFY);
         stylePill(pillNotes, mode == MODE_NOTES);
+        stylePill(pillContacts, mode == MODE_CONTACTS);
         // Overtime, Attendance and Sea Can Movements are full pages in the same scroller, not lists.
         boolean ot = mode == MODE_OVERTIME || mode == MODE_ATTENDANCE || mode == MODE_SEACANS;
         findViewById(R.id.overtimePane).setVisibility(ot ? View.VISIBLE : View.GONE);
@@ -225,11 +242,11 @@ public class LogsActivity extends AppCompatActivity {
             else OvertimePane.render(this, store, project, findViewById(R.id.overtimeContent));
             return;
         }
-        search.setHint(mode == MODE_NOTIFY ? "Search sent notes" : mode == MODE_NOTES ? "Search notes" : mode == MODE_LINKS ? "Search links"
+        search.setHint(mode == MODE_NOTIFY ? "Search sent notes" : mode == MODE_NOTES ? "Search notes" : mode == MODE_LINKS ? "Search links" : mode == MODE_CONTACTS ? "Search contacts"
                 : mode == MODE_TEMPLATES ? "Search templates" : "Search all days: fields, notes, sea cans");
         findViewById(R.id.fab).setContentDescription(mode == MODE_NOTIFY ? "New note to crew"
                 : mode == MODE_NOTES ? "New note"
-                : mode == MODE_LINKS ? "Add link" : "New daily log");
+                : mode == MODE_LINKS ? "Add link" : mode == MODE_CONTACTS ? "Add contact" : "New daily log");
         rows.clear();
         hitLines.clear();
         if (mode == MODE_NOTIFY) {
@@ -246,6 +263,8 @@ public class LogsActivity extends AppCompatActivity {
                 if (query.isEmpty() || l.title.toLowerCase(Locale.ROOT).contains(query)
                         || l.url.toLowerCase(Locale.ROOT).contains(query)) rows.add(l);
             }
+        } else if (mode == MODE_CONTACTS) {
+            rows.addAll(Models.Contact.list(store.contacts, query));
         } else if (mode == MODE_TEMPLATES) {
             for (Models.Template t : project.templates) {
                 if (query.isEmpty() || t.name.toLowerCase(Locale.ROOT).contains(query)) rows.add(t);
@@ -267,6 +286,7 @@ public class LogsActivity extends AppCompatActivity {
             if (!query.isEmpty()) empty.setText("Nothing matches \u201C" + search.getText().toString().trim() + "\u201D");
             else if (mode == MODE_NOTIFY) empty.setText("No notes sent yet.\nTap + to send a crew member a note or photo.\nTexts send straight away; with photos,\nMessages opens and you tap Send.");
             else if (mode == MODE_NOTES) empty.setText("No notes yet.\nTap + to write a note or add photos.\nTick a note to put it in the day's report.");
+            else if (mode == MODE_CONTACTS) empty.setText("No contacts yet.\nTap + to add a company contact who isn't on your crew.\nContacts show up in every project.");
             else if (mode == MODE_LINKS) empty.setText("No links yet.\nTap + to save a web link to a tool or procedure.\nLinks show up in every project.");
             else if (mode == MODE_TEMPLATES) empty.setText("No templates yet.\nOpen a checklist, tap \u22EF and choose Save Checklist as Template.");
             else empty.setText("No daily logs yet.\nTap + to start today's.");
@@ -473,10 +493,7 @@ public class LogsActivity extends AppCompatActivity {
     // ----- links -----
 
     private static String normalizeUrl(String raw) {
-        String u = raw.trim().replace(" ", "");
-        if (u.isEmpty()) return u;
-        if (!u.contains("://") && !u.matches("(?i)^(mailto|tel):.*")) u = "https://" + u;
-        return u;
+        return Fmt.normalizeUrl(raw);
     }
 
     private static String hostOf(String url) {
@@ -913,6 +930,7 @@ public class LogsActivity extends AppCompatActivity {
             Object r = rows.get(position);
             if (r instanceof Models.Notice) return TYPE_NOTICE;
             if (r instanceof Models.Note) return TYPE_NOTE;
+            if (r instanceof Models.Contact) return TYPE_CONTACT;
             return r instanceof Models.Link ? TYPE_LINK : TYPE_CARD;
         }
 
@@ -921,6 +939,7 @@ public class LogsActivity extends AppCompatActivity {
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LayoutInflater inf = LayoutInflater.from(parent.getContext());
             if (viewType == TYPE_LINK) return new LinkVH(inf.inflate(R.layout.item_link, parent, false));
+            if (viewType == TYPE_CONTACT) return new RecyclerView.ViewHolder(inf.inflate(R.layout.item_contact, parent, false)) {};
             if (viewType == TYPE_NOTICE || viewType == TYPE_NOTE) return new NoticeVH(inf.inflate(R.layout.item_notice, parent, false));
             return new VH(inf.inflate(R.layout.item_log, parent, false));
         }
@@ -973,6 +992,10 @@ public class LogsActivity extends AppCompatActivity {
                     noteMenu(n);
                     return true;
                 });
+                return;
+            }
+            if (row instanceof Models.Contact) {
+                ContactsUi.bind(LogsActivity.this, holder.itemView, (Models.Contact) row, LogsActivity.this::rebuild);
                 return;
             }
             if (row instanceof Models.Link) {

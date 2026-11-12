@@ -20,6 +20,26 @@ final class Fmt {
     }
 
     /** "09/25/2026 at 2:03 PM" */
+    /** A typed web address made whole: spaces dropped, "https://" added when there's no scheme. */
+    static String normalizeUrl(String raw) {
+        String u = raw.trim().replace(" ", "");
+        if (u.isEmpty()) return u;
+        if (!u.contains("://") && !u.matches("(?i)^(mailto|tel):.*")) u = "https://" + u;
+        return u;
+    }
+
+    /** The normalized web address, or null if it isn't one (no host). */
+    static String webLink(String raw) {
+        String u = normalizeUrl(raw);
+        if (u.isEmpty()) return null;
+        try {
+            String host = new java.net.URI(u).getHost();
+            return host == null || host.isEmpty() ? null : u;
+        } catch (java.net.URISyntaxException e) {
+            return null;
+        }
+    }
+
     /** Looks like an email address: text@text.text with no spaces. */
     static boolean isEmail(String s) {
         return s != null && s.trim().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+");

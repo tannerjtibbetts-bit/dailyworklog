@@ -164,8 +164,11 @@ public class MainActivity extends AppCompatActivity {
     /** Approvals (app owner), the user manual and Sign out. */
     private void profileMore() {
         List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_person_add, Access.isOwner(this) ? "Approvals / hand over" : "App owner / Approvals",
-                () -> startActivity(new Intent(this, ApprovalsActivity.class))));
+        // Only when this build has the owner key: without it there's nothing to approve.
+        if (Access.builtInOwnerKey(this) != null) {
+            items.add(new Ui.SheetItem(R.drawable.ic_person_add, Access.isOwner(this) ? "Approvals / hand over" : "App owner / Approvals",
+                    () -> startActivity(new Intent(this, ApprovalsActivity.class))));
+        }
         items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> LogsActivity.chooseTabs(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_send, "Email sending", () -> LoadEmail.setup(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "User manual", () -> ManualActivity.open(this)));

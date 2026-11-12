@@ -325,8 +325,8 @@ class ManualTest { public static void main(String[] a) throws Exception {
   System.out.println("MANUAL PASS"); } }
 class HiddenTabsTest { public static void main(String[] a) throws Exception {
   NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
-  NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,overtime,attendance,notes,seacans")
-      && LogsActivity.TAB_NAMES[3].equals("Attendance"), "attendance after overtime");
+  NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,contacts,overtime,attendance,notes,seacans")
+      && LogsActivity.TAB_NAMES[4].equals("Attendance") && LogsActivity.TAB_NAMES[2].equals("Organization Contacts"), "contacts after links, attendance after overtime");
   NoteTest.check(LogsActivity.firstRowCount(7)==4 && LogsActivity.firstRowCount(6)==3 && LogsActivity.firstRowCount(2)==2, "pill rows");
   System.out.println("TABS PASS"); } }
 class DoneTextTest { public static void main(String[] a) throws Exception {
@@ -908,3 +908,54 @@ class GroupsTest {
     NoteTest.check(back.group.equals("tech") && back.level.equals("Journeyman") && back.trade.equals("Pipefitter") && back.local.isEmpty() && back.phone.equals("555")
         && back.texts && !cp.unionLocals.containsKey("Al"), "person box saves group, level, trade, local");
     System.out.println("GROUPS PASS"); } }
+class ContactsTest {
+  static Models.Contact c(String name, String company, String title, String phone, String email, String notes) {
+    Models.Contact x = new Models.Contact(); x.name = name; x.company = company; x.title = title; x.phone = phone; x.email = email; x.notes = notes; return x;
+  }
+  static String names(java.util.List<Models.Contact> l) { java.util.List<String> o = new java.util.ArrayList<>(); for (Models.Contact x : l) o.add(x.name); return String.join(",", o); }
+  public static void main(String[] a) throws Exception {
+    // JSON round trip, missing = []
+    Store s = new Store();
+    NoteTest.check(s.contacts.isEmpty(), "no contacts by default");
+    Models.Contact k = c("Pat Lee", "Acme Power", "Safety coordinator", "519-555-0100", "pat@acme.com", "Gate 3 badge office");
+    k.link = "https://acme.com/safety"; s.contacts.add(k);
+    org.json.JSONObject j = s.toJson();
+    Store t = new Store(); t.fromJson(new org.json.JSONObject(j.toString()));
+    Models.Contact b = t.contacts.get(0);
+    NoteTest.check(t.contacts.size() == 1 && b.id.equals(k.id) && b.name.equals("Pat Lee") && b.company.equals("Acme Power") && b.title.equals("Safety coordinator")
+        && b.phone.equals("519-555-0100") && b.email.equals("pat@acme.com") && b.link.equals("https://acme.com/safety") && b.notes.equals("Gate 3 badge office"), "contact round trip");
+    j.remove("contacts");
+    Store o = new Store(); o.fromJson(j);
+    NoteTest.check(o.contacts.isEmpty(), "old file: no contacts");
+    Models.Contact partial = Models.Contact.fromJson(new org.json.JSONObject("{\"name\":\"Jo\"}"));
+    NoteTest.check(partial.name.equals("Jo") && partial.company.isEmpty() && partial.link.isEmpty() && !partial.id.isEmpty(), "missing fields blank");
+    RichTest.eq(k.role(), "Safety coordinator · Acme Power", "title · company");
+    RichTest.eq(c("A", "Acme", "", "", "", "").role(), "Acme", "company only");
+    RichTest.eq(c("A", "", "Boss", "", "", "").role(), "Boss", "title only");
+    // Search matching and sort order
+    java.util.List<Models.Contact> all = new java.util.ArrayList<>();
+    all.add(c("zoe Park", "Hydro One", "", "", "", "")); all.add(k); all.add(c("al Smith", "", "Crane operator", "226-555-0199", "al@x.ca", "Night shift"));
+    all.add(c("Bea", "", "", "", "", ""));
+    RichTest.eq(names(Models.Contact.list(all, "")), "al Smith,Bea,Pat Lee,zoe Park", "sorted by name, any case");
+    RichTest.eq(names(Models.Contact.list(all, "HYDRO")), "zoe Park", "matches company");
+    RichTest.eq(names(Models.Contact.list(all, "crane")), "al Smith", "matches title");
+    RichTest.eq(names(Models.Contact.list(all, "555-01")), "al Smith,Pat Lee", "matches phone");
+    RichTest.eq(names(Models.Contact.list(all, "acme.com")), "Pat Lee", "matches email");
+    RichTest.eq(names(Models.Contact.list(all, "night")), "al Smith", "matches notes");
+    RichTest.eq(names(Models.Contact.list(all, "bea")), "Bea", "matches name");
+    k.link = "https://secret.example"; NoteTest.check(Models.Contact.list(all, "secret").isEmpty(), "link isn't searched");
+    // Tab rows
+    String[] want = {"", "1", "2", "3", "3,1", "3,2", "3,3", "4,3", "4,4", "3,3,3", "3,3,3,1"};
+    for (int n = 1; n <= 10; n++) {
+      int[] r = LogsActivity.tabRowSizes(n);
+      java.util.List<String> parts = new java.util.ArrayList<>(); int sum = 0; for (int x : r) { parts.add(String.valueOf(x)); sum += x; }
+      NoteTest.check(String.join(",", parts).equals(want[n]) && sum == n, "tab rows for " + n + ": " + parts);
+    }
+    NoteTest.check(LogsActivity.firstRowCount(8) == 4 && LogsActivity.firstRowCount(9) == 3, "first row 8 -> 4, 9 -> 3");
+    // Web links
+    RichTest.eq(Fmt.webLink("example.com"), "https://example.com", "adds https://");
+    RichTest.eq(Fmt.webLink("  http://Example.com/a b "), "http://Example.com/ab", "keeps http, drops spaces");
+    RichTest.eq(Fmt.webLink("https://acme.com/safety?x=1"), "https://acme.com/safety?x=1", "full link unchanged");
+    NoteTest.check(Fmt.webLink("") == null && Fmt.webLink("https://") == null && Fmt.webLink("not a{link") == null, "invalid links refused");
+    RichTest.eq(Fmt.normalizeUrl("www.acme.com"), "https://www.acme.com", "normalize like Links");
+    System.out.println("CONTACTS PASS"); } }

@@ -16,6 +16,9 @@ class Store extends ChangeNotifier {
   final Directory dir;
   final List<Project> projects = [];
   final List<Link> links = [];
+
+  /// Organization Contacts tab, shared by every project.
+  final List<Contact> contacts = [];
   String userName = '';
 
   /// Number the crew should call or text you on; added under your name in texts.
@@ -156,6 +159,13 @@ class Store extends ChangeNotifier {
         if (p is Map) projects.add(Project.fromJson(Map<String, dynamic>.from(p)));
       }
     }
+    contacts.clear();
+    final cs = o['contacts'];
+    if (cs is List) {
+      for (final c in cs) {
+        if (c is Map) contacts.add(Contact.fromJson(Map<String, dynamic>.from(c)));
+      }
+    }
     final ls = o['links'];
     if (ls is List) {
       for (final l in ls) {
@@ -180,6 +190,7 @@ class Store extends ChangeNotifier {
         'hiddenTabs': hiddenTabs.toList(),
         'projects': [for (final p in projects) p.toJson()],
         'links': [for (final l in links) l.toJson()],
+        'contacts': [for (final c in contacts) c.toJson()],
       };
 
   /// Saves in the background and tells the screens to redraw.

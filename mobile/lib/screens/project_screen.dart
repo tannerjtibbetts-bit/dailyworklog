@@ -21,16 +21,18 @@ import 'log_screen.dart';
 import 'note_screen.dart';
 import 'notify_screen.dart';
 import 'attendance_pane.dart';
+import 'contacts_pane.dart';
 import 'overtime_pane.dart';
 import 'seacan_pane.dart';
 import 'projects_screen.dart' show AddPill;
 
-enum ProjectTab { checklists, notify, links, overtime, attendance, notes, seaCans }
+enum ProjectTab { checklists, notify, links, contacts, overtime, attendance, notes, seaCans }
 
 const _tabLabels = {
   ProjectTab.checklists: 'Checklists',
   ProjectTab.notify: 'Notify',
   ProjectTab.links: 'Links',
+  ProjectTab.contacts: 'Organization Contacts',
   ProjectTab.overtime: 'Overtime',
   ProjectTab.attendance: 'Attendance',
   ProjectTab.notes: 'Notes',
@@ -41,6 +43,7 @@ const _tabLabels = {
 const tabIds = {
   ProjectTab.notify: 'notify',
   ProjectTab.links: 'links',
+  ProjectTab.contacts: 'contacts',
   ProjectTab.overtime: 'overtime',
   ProjectTab.attendance: 'attendance',
   ProjectTab.notes: 'notes',
@@ -53,12 +56,10 @@ List<ProjectTab> visibleTabs(Set<String> hidden) => [
     if (t == ProjectTab.checklists || !hidden.contains(tabIds[t])) t,
 ];
 
-/// Splits the shown tabs into rows: threes, or four then three when there are seven.
+/// Splits the shown tabs into rows: threes, or four then the rest when there are seven or eight.
 List<List<ProjectTab>> tabRows(List<ProjectTab> shown) {
-  if (shown.length > 6) return [shown.sublist(0, 4), shown.sublist(4)];
-  return [
-    for (var i = 0; i < shown.length; i += 3) shown.sublist(i, i + 3 > shown.length ? shown.length : i + 3),
-  ];
+  if (shown.length == 7 || shown.length == 8) return [shown.sublist(0, 4), shown.sublist(4)];
+  return [for (var i = 0; i < shown.length; i += 3) shown.sublist(i, i + 3 > shown.length ? shown.length : i + 3)];
 }
 
 /// Tick the tabs to show; unticked ones disappear from every project until ticked again.
@@ -70,22 +71,24 @@ Future<void> chooseTabs(BuildContext context) async {
     builder: (c) => StatefulBuilder(
       builder: (c, set) => AlertDialog(
         title: const Text('Show or hide tabs'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Untick the tabs you don\u2019t use. Checklists is always shown.',
-              style: TextStyle(color: C.grey, fontSize: 15),
-            ),
-            for (final t in tabIds.keys)
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                value: on[t],
-                title: Text(_tabLabels[t]!),
-                onChanged: (v) => set(() => on[t] = v ?? true),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Untick the tabs you don\u2019t use. Checklists is always shown.',
+                style: TextStyle(color: C.grey, fontSize: 15),
               ),
-          ],
+              for (final t in tabIds.keys)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: on[t],
+                  title: Text(_tabLabels[t]!),
+                  onChanged: (v) => set(() => on[t] = v ?? true),
+                ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
@@ -722,7 +725,12 @@ class _ProjectScreenState extends State<ProjectScreen> {
     for (final h in hits.take(max))
       Padding(
         padding: const EdgeInsets.only(top: 2),
-        child: Text(h, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.grey, fontSize: 15)),
+        child: Text(
+          h,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: C.grey, fontSize: 15),
+        ),
       ),
     if (hits.length > max)
       Padding(
@@ -764,6 +772,26 @@ class _ProjectScreenState extends State<ProjectScreen> {
             ),
           ),
           const Icon(Icons.chevron_right, color: C.navy, size: 28),
+        ],
+      ),
+    ),
+  );
+
+  Widget _contactRow(Contact c) => _card(
+    onTap: () => editContact(context, c).then((_) {
+      if (mounted) setState(() {});
+    }),
+    onLongPress: () => contactMenu(context, c, () {
+      if (mounted) setState(() {});
+    }),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(18, 16, 14, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _iconBox(Icons.contact_phone_outlined),
+          const SizedBox(width: 16),
+          Expanded(child: ContactCardBody(c)),
         ],
       ),
     ),
@@ -913,6 +941,11 @@ class _ProjectScreenState extends State<ProjectScreen> {
           for (final n in p.notes)
             if (query.isEmpty || n.tagged().$1.toLowerCase().contains(query)) _noteRow(n),
         ];
+      case ProjectTab.contacts:
+        return [
+          for (final c in Contact.sorted(store.contacts))
+            if (c.matches(query)) _contactRow(c),
+        ];
       case ProjectTab.links:
         return [
           for (final l in store.links)
@@ -937,6 +970,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
         return 'No notes sent yet.\nTap + to send a crew member a note or photo.\nTexts send straight away; with photos,\nMessages opens and you tap Send.';
       case ProjectTab.notes:
         return "No notes yet.\nTap + to write a note or add photos.\nTick a note to put it in the day's report.";
+      case ProjectTab.contacts:
+        return "No contacts yet.\nTap + to add a company contact who isn't on your crew.\nContacts show up in every project.";
       case ProjectTab.links:
         return 'No links yet.\nTap + to save a web link to a tool or procedure.\nLinks show up in every project.';
       default:
@@ -948,6 +983,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ProjectTab.notify => 'Search sent notes',
     ProjectTab.notes => 'Search notes',
     ProjectTab.links => 'Search links',
+    ProjectTab.contacts => 'Search contacts',
     _ => 'Search all days: fields, notes, sea cans',
   };
 
@@ -955,6 +991,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ProjectTab.notify => 'New note to crew',
     ProjectTab.notes => 'New note',
     ProjectTab.links => 'Add link',
+    ProjectTab.contacts => 'Add contact',
     _ => 'New daily log',
   };
 
@@ -966,6 +1003,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
         _openNote(null);
       case ProjectTab.links:
         _editLink(null);
+      case ProjectTab.contacts:
+        editContact(context, null).then((_) {
+          if (mounted) setState(() {});
+        });
       default:
         _pickDate();
     }
@@ -1017,7 +1058,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
               children: [
                 for (var i = 0; i < rows[r].length; i++)
                   Expanded(
-                    flex: rows[r][i] == ProjectTab.seaCans ? 16 : 10,
+                    flex: rows[r][i] == ProjectTab.seaCans || rows[r][i] == ProjectTab.contacts ? 16 : 10,
                     child: _pill(rows[r][i], first: i == 0),
                   ),
               ],

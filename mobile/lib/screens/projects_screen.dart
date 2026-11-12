@@ -226,11 +226,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   /// Approvals (app owner) and Sign out.
   Future<void> _profileMore() async {
     final owner = await Access.isOwner();
+    // Approvals only mean something when this copy has the owner's key built in.
+    final locked = await Access.builtInOwnerKey() != null;
     final pin =
         await Access.hasPin(); // Sign out only means something with a PIN set
     if (!mounted) return;
     await menu(context, null, [
-      SheetItem(
+      if (locked)
+        SheetItem(
         Icons.person_add_alt_1,
         owner ? 'Approvals / hand over' : 'App owner / Approvals',
         () {

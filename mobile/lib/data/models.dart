@@ -408,6 +408,45 @@ class Link {
     ..url = _s(o, 'url');
 }
 
+/// Someone on the Organization Contacts tab (not on the crew). Shared by every project.
+class Contact {
+  String id = newId();
+  String name = '', company = '', title = '', phone = '', email = '', link = '', notes = '';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'company': company,
+        'title': title,
+        'phone': phone,
+        'email': email,
+        'link': link,
+        'notes': notes,
+      };
+
+  static Contact fromJson(Map<String, dynamic> o) => Contact()
+    ..id = _s(o, 'id', newId())
+    ..name = _s(o, 'name')
+    ..company = _s(o, 'company')
+    ..title = _s(o, 'title')
+    ..phone = _s(o, 'phone')
+    ..email = _s(o, 'email')
+    ..link = _s(o, 'link')
+    ..notes = _s(o, 'notes');
+
+  /// "Safety coordinator · Acme Ltd", or ''.
+  String titleLine() => [title.trim(), company.trim()].where((s) => s.isNotEmpty).join(' · ');
+
+  bool matches(String query) {
+    final q = query.trim().toLowerCase();
+    return q.isEmpty || [name, company, title, phone, email, notes].any((s) => s.toLowerCase().contains(q));
+  }
+
+  /// Sorted by name, any case.
+  static List<Contact> sorted(Iterable<Contact> list) =>
+      List.of(list)..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+}
+
 /// A note (and photos) sent to crew from the Notify tab.
 class Notice {
   String id = newId();

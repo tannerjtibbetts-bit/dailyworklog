@@ -508,6 +508,62 @@ public final class Models {
         }
     }
 
+    /** Organization Contacts tab: someone at the company who isn't on the crew. App-wide, like links. */
+    public static class Contact {
+        public String id = newId();
+        public String name = "", company = "", title = "", phone = "", email = "", link = "", notes = "";
+
+        /** "title · company", whichever are set. */
+        public String role() {
+            if (title.isEmpty() || company.isEmpty()) return title + company;
+            return title + " \u00B7 " + company;
+        }
+
+        /** True if the (lower-case) query is in the name, company, job title, phone, email or notes. */
+        public boolean matches(String q) {
+            if (q == null || q.isEmpty()) return true;
+            for (String s : new String[]{name, company, title, phone, email, notes}) {
+                if (s.toLowerCase(java.util.Locale.ROOT).contains(q)) return true;
+            }
+            return false;
+        }
+
+        /** The contacts matching the query, sorted by name (A-Z, any case). */
+        public static List<Contact> list(List<Contact> all, String query) {
+            String q = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+            List<Contact> out = new ArrayList<>();
+            for (Contact c : all) if (c.matches(q)) out.add(c);
+            out.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
+            return out;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("id", id);
+            o.put("name", name);
+            o.put("company", company);
+            o.put("title", title);
+            o.put("phone", phone);
+            o.put("email", email);
+            o.put("link", link);
+            o.put("notes", notes);
+            return o;
+        }
+
+        static Contact fromJson(JSONObject o) {
+            Contact c = new Contact();
+            c.id = o.optString("id", newId());
+            c.name = o.optString("name", "");
+            c.company = o.optString("company", "");
+            c.title = o.optString("title", "");
+            c.phone = o.optString("phone", "");
+            c.email = o.optString("email", "");
+            c.link = o.optString("link", "");
+            c.notes = o.optString("notes", "");
+            return c;
+        }
+    }
+
     /** A note (and photos) sent to crew from the Notify tab. */
     public static class Notice {
         public String id = newId();

@@ -132,6 +132,10 @@
           "text": "The first time you use the app on a phone, the app owner has to approve it. You ask by text. It only takes a minute."
         },
         {
+          "type": "tip",
+          "text": "Only on a copy of the app set up with an owner. Most copies (like the one from the App Store) don't ask for approval: you go straight in."
+        },
+        {
           "type": "image",
           "file": "signin.png",
           "caption": "The Sign in screen with Request access"
@@ -529,7 +533,7 @@
         {
           "type": "bullets",
           "items": [
-            "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). See the App owner section.",
+            "\"Approvals / hand over\" (on the owner's phone) or \"App owner / Approvals\" (on other phones). It only shows on a copy of the app set up with an owner, where new phones must be approved. See the App owner section.",
             "\"Show or hide tabs\": choose which project tabs you see.",
             "\"Email sending\": the Gmail address and app password used to email load securement photos, and who gets them.",
             "\"User manual\": opens this manual.",
@@ -651,7 +655,7 @@
       "id": "project-screen",
       "title": "Inside a project: the tabs",
       "group": "Projects & checklists",
-      "summary": "A project has seven tabs: Checklists, Notify, Links, Overtime, Attendance, Notes and Sea Can Movements.",
+      "summary": "A project has eight tabs: Checklists, Notify, Links, Organization Contacts, Overtime, Attendance, Notes and Sea Can Movements.",
       "keywords": [
         "tabs",
         "pills",
@@ -662,14 +666,15 @@
         "attendance",
         "notes",
         "sea can",
-        "search"
+        "search",
+        "contacts"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "When you open a project, you see its name at the top and the tab buttons: four in the top row and three below."
+          "text": "When you open a project, you see its name at the top and the tab buttons in two rows of four."
         },
         {
           "type": "image",
@@ -682,6 +687,7 @@
             "\"Checklists\": your daily logs, newest first.",
             "\"Notify\": send a crew member a note or photo by text.",
             "\"Links\": saved web links and forms. They show in every project.",
+            "\"Organization Contacts\": company contacts who aren't on your crew. They show in every project.",
             "\"Overtime\": the weekend overtime sign-up sheet.",
             "\"Attendance\": who is here today, and why not if they aren't.",
             "\"Notes\": your own notes and photos.",
@@ -690,7 +696,7 @@
         },
         {
           "type": "text",
-          "text": "Tap a tab to switch. On Checklists, Notify, Links and Notes there is a search box. On Checklists it searches every day of the project, including sea can numbers."
+          "text": "Tap a tab to switch. On Checklists, Notify, Links, Organization Contacts and Notes there is a search box. On Checklists it searches every day of the project, including sea can numbers."
         },
         {
           "type": "tip",
@@ -2685,6 +2691,76 @@
           "type": "see",
           "id": "formstack-forms",
           "text": "Related: Forms filled in with your answers"
+        }
+      ]
+    },
+    {
+      "id": "organization-contacts",
+      "title": "Organization Contacts: people who aren't on your crew",
+      "group": "Tabs",
+      "summary": "Keep company contacts handy and call, text, email or open their link with one tap. They show in every project.",
+      "keywords": [
+        "contacts",
+        "organization contacts",
+        "company contacts",
+        "phone book",
+        "call",
+        "email",
+        "safety",
+        "dispatch",
+        "add contact"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The \"Organization Contacts\" tab is for people you deal with who aren't on your crew: safety, dispatch, the office, suppliers. The same contacts show in every project."
+        },
+        {
+          "type": "image",
+          "file": "contacts.png",
+          "caption": "The Organization Contacts tab"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open a project and tap \"Organization Contacts\".",
+            "Tap the big \"+\".",
+            "Fill in \"Name\". The rest is optional: \"Company\", \"Job title\", \"Phone number\", \"Email\", \"Web link (optional)\" and \"Notes\".",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "image",
+          "file": "contact_edit.png",
+          "caption": "Adding or editing a contact"
+        },
+        {
+          "type": "text",
+          "text": "Each contact has round buttons for what you filled in: call, text, email, and open link. Tap one and your phone opens the dialler, Messages, your email app or the browser."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Tap a contact to change their details.",
+            "Press and hold a contact for \"Call\", \"Text\", \"Email\", \"Open link\", \"Edit contact\" and \"Delete contact\".",
+            "Use \"Search contacts\" to find someone by name, company, job title, number, email or notes."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Deleting a contact removes it from every project."
+        },
+        {
+          "type": "see",
+          "id": "links-tab",
+          "text": "Related: Links: saving and opening web links"
+        },
+        {
+          "type": "see",
+          "id": "show-hide-tabs",
+          "text": "Related: Showing or hiding tabs"
         }
       ]
     },

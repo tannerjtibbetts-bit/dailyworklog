@@ -26,6 +26,8 @@ public final class Store {
 
     public final List<Models.Project> projects = new ArrayList<>();
     public final List<Models.Link> links = new ArrayList<>();
+    /** Organization Contacts tab (app-wide: the same list in every project). */
+    public final List<Models.Contact> contacts = new ArrayList<>();
     public String userName = "";
     /** Number the crew should call or text you on; added under your name in texts. */
     public String contactPhone = "";
@@ -228,6 +230,11 @@ public final class Store {
                 if (p != null) projects.add(Models.Project.fromJson(p));
             }
         }
+        JSONArray cs = o.optJSONArray("contacts");
+        for (int i = 0; cs != null && i < cs.length(); i++) {
+            JSONObject c = cs.optJSONObject(i);
+            if (c != null) contacts.add(Models.Contact.fromJson(c));
+        }
         JSONArray ls = o.optJSONArray("links");
         if (ls != null) {
             for (int i = 0; i < ls.length(); i++) {
@@ -265,6 +272,9 @@ public final class Store {
         JSONArray ls = new JSONArray();
         for (Models.Link l : links) ls.put(l.toJson());
         o.put("links", ls);
+        JSONArray cs = new JSONArray();
+        for (Models.Contact c : contacts) cs.put(c.toJson());
+        o.put("contacts", cs);
         return o;
     }
 
