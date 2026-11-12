@@ -3558,14 +3558,21 @@
         "work phone",
         "transfer owner",
         "6-digit code",
-        "undo"
+        "undo",
+        "sell",
+        "sold",
+        "buyer",
+        "new owner",
+        "transfer",
+        "transfer ownership",
+        "new phone"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "Moving to another phone, like a work phone? You can make it the owner. Everyone you approved stays approved."
+          "text": "Moving to a new phone, or someone else is taking over the app (for example if you sell it)? Make their phone the owner. Everyone you approved stays approved."
         },
         {
           "type": "steps",
@@ -3640,6 +3647,61 @@
         {
           "type": "tip",
           "text": "To make the old phone the owner again later, send a handover from the new owner phone back to it."
+        },
+        {
+          "type": "see",
+          "id": "hand-over-ownership",
+          "text": "Related: Handing over ownership"
+        }
+      ]
+    },
+    {
+      "id": "selling-the-app",
+      "title": "Selling the app or giving it to a new owner",
+      "group": "App owner",
+      "summary": "What a new owner needs: the owner role on their phone, the build key file, and the app's code and store listings.",
+      "keywords": [
+        "sell",
+        "sale",
+        "buyer",
+        "buy",
+        "new owner",
+        "transfer",
+        "ownership",
+        "app store",
+        "github"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "In the app, ownership is who can approve new phones. To give that to a buyer:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "The buyer installs the app on their phone.",
+            "On your phone open \"Approvals / hand over\" and hand over ownership to their phone. Tell them the 6-digit code in person or by phone call, not by text.",
+            "On their phone they tap \"Take over as the app owner\", paste the text and type the code.",
+            "On your phone tap \"Save build key file\" and give them dailyworklog-owner-key.txt. Their Termux builds need it."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Outside the app, a sale also moves:"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "The app's code (the GitHub project): GitHub can transfer it to their account.",
+            "The iPhone App Store listing: App Store Connect has an \"App Transfer\" to move it to their Apple developer account.",
+            "The email for access requests: they run the build with --email and type their email."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Your own work (projects, photos) is not part of the sale. It stays on your phone unless you send them a backup."
         },
         {
           "type": "see",
@@ -3728,12 +3790,12 @@
         "safe",
         "copy"
       ],
-      "newAppOnly": true,
+      "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "A backup puts all your work into one .zip file: projects, checklists, photos, crew, links and your profile."
+          "text": "A backup puts all your work into one .zip file: projects, checklists, photos, crew, links, contacts and your profile. The same backup works in both apps, on Android and iPhone."
         },
         {
           "type": "steps",
@@ -3741,7 +3803,7 @@
             "On the \"Projects\" screen, tap the person icon.",
             "Tap \"More…\", then \"Back up all my work\".",
             "Wait for \"Making your backup…\".",
-            "The share menu opens. Save the file somewhere safe (like Files or Drive), or send it to your new phone."
+            "The share menu opens. Save the file somewhere safe (like Files or Drive), or send it to your new phone. The classic app also saves a copy in your Downloads folder (\"Backup saved to Downloads: …\")."
           ]
         },
         {
@@ -3773,7 +3835,7 @@
         "recover",
         "import all"
       ],
-      "newAppOnly": true,
+      "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
@@ -3828,7 +3890,7 @@
           "items": [
             "The app works without signal. Only opening links and filling in forms need the internet.",
             "Reports, texts and emails only leave your phone when you send them.",
-            "If you delete the app, your work is deleted with it. Make a backup first (new app)."
+            "If you delete the app, your work is deleted with it. Make a backup first."
           ]
         },
         {
@@ -3842,7 +3904,7 @@
       "id": "moving-to-a-new-phone",
       "title": "Moving to a new phone",
       "group": "Help",
-      "summary": "Back up on the old phone, restore on the new one, and get the new phone approved.",
+      "summary": "Back up on the old phone, install on the new one, restore. If you're the app owner, hand over ownership too.",
       "keywords": [
         "new phone",
         "switch phone",
@@ -3856,26 +3918,32 @@
       "classicOnly": false,
       "blocks": [
         {
+          "type": "text",
+          "text": "Your work is only on your phone, so moving takes a backup file. Do it in this order:"
+        },
+        {
           "type": "steps",
           "items": [
-            "On the old phone, tap \"Back up all my work\" and send the file to the new phone.",
+            "On the old phone: tap the person icon, \"More…\", \"Back up all my work\". Send the .zip to the new phone (email it to yourself, or save it to Drive).",
             "Install the app on the new phone.",
-            "Ask for access on the new phone (\"Request access\"). The approval is for each phone.",
-            "Paste the approval code, sign in and choose a PIN.",
-            "Tap the person icon, \"More…\", \"Restore from a backup\", and pick the file."
+            "If you are the app owner: on the old phone open \"Approvals / hand over\" and hand over ownership to the new phone (see \"Handing over ownership\"). Then on the new phone tap \"Take over as the app owner\".",
+            "If you are not the owner: on the new phone tap \"Request access\" and wait for the approval code. The approval is for each phone.",
+            "Sign in and choose a PIN.",
+            "Tap the person icon, \"More…\", \"Restore from a backup\", and pick the .zip file. Tap \"Restore\".",
+            "Check your projects and photos are there before you wipe the old phone."
           ]
         },
         {
           "type": "tip",
-          "text": "Backups work between Android and iPhone."
+          "text": "Building the app yourself in Termux? On the old phone open \"Approvals / hand over\" and tap \"Save build key file\". Copy dailyworklog-owner-key.txt into the new phone's Downloads before you run the build there, so new phones still need your approval."
+        },
+        {
+          "type": "tip",
+          "text": "Backups work between Android and iPhone, and between the classic app and the new app."
         },
         {
           "type": "tip",
           "text": "Moving from the classic Android app to the new app on the same phone? Installing the new app as an update keeps your work."
-        },
-        {
-          "type": "tip",
-          "text": "If you are the app owner, also hand over ownership to the new phone."
         },
         {
           "type": "see",

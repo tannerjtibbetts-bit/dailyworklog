@@ -64,6 +64,24 @@ public class ApprovalsActivity extends AppCompatActivity {
             showHandover();
         } else if (built) showTakeOver();
         else showSetup();
+        if (built) showBuildKey();
+    }
+
+    /** The owner key file a Termux build needs, saved to Downloads for building on a new phone. */
+    private void showBuildKey() {
+        heading("Building the app on a new phone");
+        para("Your Termux build needs the owner key file. Save it to Downloads and copy it to the new phone's "
+                + "Downloads before you build there.");
+        button("Save build key file", false, () -> {
+            byte[] key = Access.builtInOwnerKeyFile(this);
+            try {
+                if (key == null) throw new java.io.IOException("no key");
+                Downloads.save(this, Access.KEY_FILE, "text/plain", key);
+                Toast.makeText(this, "Saved to Downloads: " + Access.KEY_FILE, Toast.LENGTH_LONG).show();
+            } catch (Exception e) {
+                Toast.makeText(this, "Couldn't save the key file to Downloads", Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     // ----- one-time setup -----

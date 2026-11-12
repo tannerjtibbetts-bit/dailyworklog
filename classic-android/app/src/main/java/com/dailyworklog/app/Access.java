@@ -72,6 +72,17 @@ final class Access {
         }
     }
 
+    /** The built-in assets/owner_key.txt exactly as it is, or null if there's none. */
+    static byte[] builtInOwnerKeyFile(Context c) {
+        try (InputStream in = c.getAssets().open("owner_key.txt")) {
+            java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+            Backup.copy(in, b);
+            return b.size() == 0 ? null : b.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** The app owner's email built in at build time (assets/owner_email.txt); "" if none or not an email. */
     static String ownerEmail(Context c) {
         try (InputStream in = c.getAssets().open("owner_email.txt")) {

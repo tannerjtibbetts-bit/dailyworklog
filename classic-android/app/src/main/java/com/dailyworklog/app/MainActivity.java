@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private ProjectAdapter adapter;
     private TextView empty;
     private TextView subtitle;
+    private androidx.activity.result.ActivityResultLauncher<String[]> pickBackup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +43,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_projects);
         Ui.applyInsets(findViewById(R.id.root));
         store = Store.get(this);
+        pickBackup = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri != null) restorePicked(uri);
+                });
 
         empty = findViewById(R.id.empty);
         subtitle = findViewById(R.id.subtitle);
@@ -172,6 +178,10 @@ public class MainActivity extends AppCompatActivity {
         items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> LogsActivity.chooseTabs(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_send, "Email sending", () -> LoadEmail.setup(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "User manual", () -> ManualActivity.open(this)));
+        items.add(new Ui.SheetItem(R.drawable.ic_download, "Back up all my work", this::backUp));
+        items.add(new Ui.SheetItem(R.drawable.ic_folder, "Restore from a backup",
+                // application/zip first; */* too, so .zip files from Drive or Downloads always show
+                () -> pickBackup.launch(new String[]{"application/zip", "*/*"})));
         if (Access.hasPin(this)) {
             items.add(new Ui.SheetItem(R.drawable.ic_back, "Sign out", () -> {
                 Access.signOut(this);
@@ -180,6 +190,114 @@ public class MainActivity extends AppCompatActivity {
             }));
         }
         Ui.menu(this, null, items);
+    }
+
+    // ----- backup and restore (the same .zip as the new app) -----
+
+    private AlertDialog busy(String message) {
+        AlertDialog d = new MaterialAlertDialogBuilder(this).setMessage(message).setCancelable(false).create();
+        d.show();
+        return d;
+    }
+
+    /** Makes the backup zip, saves a copy to Downloads and opens the share menu. */
+    private void backUp() {
+        store.save();
+        AlertDialog busy = busy("Making your backup\u2026");
+        PhotoUtil.BG.execute(() -> {
+            File zip;
+            try {
+                zip = Backup.create(store, new File(getCacheDir(), "exports"));
+            } catch (Exception e) {
+                zip = null;
+            }
+            boolean saved = false;
+            if (zip != null) {
+                try {
+                    Downloads.save(this, zip.getName(), "application/zip", zip);
+                    saved = true;
+                } catch (Exception ignored) {
+                    // the share menu still offers a way to keep it
+                }
+            }
+            final File done = zip;
+            final boolean inDownloads = saved;
+            runOnUiThread(() -> {
+                busy.dismiss();
+                if (done == null) {
+                    android.widget.Toast.makeText(this, "Couldn't make the backup. Please try again.", android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (inDownloads) {
+                    android.widget.Toast.makeText(this, "Backup saved to Downloads: " + done.getName(), android.widget.Toast.LENGTH_LONG).show();
+                }
+                android.net.Uri u = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".files", done);
+                Intent i = new Intent(Intent.ACTION_SEND).setType("application/zip")
+                        .putExtra(Intent.EXTRA_STREAM, u)
+                        .putExtra(Intent.EXTRA_SUBJECT, "Daily Work Log backup")
+                        .putExtra(Intent.EXTRA_TEXT, "Daily Work Log backup. Save it somewhere safe, or send it to your new phone.");
+                i.setClipData(android.content.ClipData.newRawUri("", u));
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(i, "Daily Work Log backup"));
+            });
+        });
+    }
+
+    /** Copies the picked file to the cache, shows what's in it and asks before replacing everything. */
+    private void restorePicked(android.net.Uri uri) {
+        AlertDialog busy = busy("Reading the backup\u2026");
+        PhotoUtil.BG.execute(() -> {
+            File copy = new File(getCacheDir(), "restore.zip");
+            try (java.io.InputStream in = getContentResolver().openInputStream(uri);
+                 java.io.OutputStream out = new java.io.FileOutputStream(copy)) {
+                if (in != null) Backup.copy(in, out);
+            } catch (Exception ignored) {
+                // the check below then says it isn't a backup
+            }
+            final Backup.Info found = Backup.inspect(copy);
+            runOnUiThread(() -> {
+                busy.dismiss();
+                if (found == null) {
+                    android.widget.Toast.makeText(this, "That file isn't a Daily Work Log backup", android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Ui.confirm(this, "Restore this backup?", restoreMessage(found), "Restore", () -> restore(copy));
+            });
+        });
+    }
+
+    static String restoreMessage(Backup.Info i) {
+        return "Backup" + (i.userName.trim().isEmpty() ? "" : " from " + i.userName.trim()) + ": "
+                + Fmt.plural(i.projects, "project", "projects") + ", " + Fmt.plural(i.photos, "photo", "photos")
+                + ".\n\nThis replaces everything on this phone with the backup. It can't be undone.";
+    }
+
+    private void restore(File zip) {
+        AlertDialog busy = busy("Restoring\u2026");
+        PhotoUtil.BG.execute(() -> {
+            org.json.JSONObject data;
+            try {
+                data = Backup.unpack(store, zip);
+            } catch (Exception e) {
+                data = null;
+            }
+            final org.json.JSONObject o = data;
+            runOnUiThread(() -> {
+                boolean restored = false;
+                if (o != null) {
+                    try {
+                        Backup.load(store, o); // on the main thread, so nothing reads the data mid-swap
+                        restored = true;
+                    } catch (Exception e) {
+                        restored = false;
+                    }
+                }
+                busy.dismiss();
+                android.widget.Toast.makeText(this, restored ? "Backup restored" : "Couldn't restore that backup",
+                        android.widget.Toast.LENGTH_LONG).show();
+                refresh();
+            });
+        });
     }
 
     private void editProject(Models.Project existing) {

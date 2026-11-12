@@ -65,6 +65,44 @@ public final class Store {
         photoDir = null;
     }
 
+    /** A store kept in a folder of its own (worklog.json and photos/), for tests. */
+    Store(File dir) {
+        app = null;
+        dataFile = new File(dir, "worklog.json");
+        photoDir = new File(dir, "photos");
+        //noinspection ResultOfMethodCallIgnored
+        photoDir.mkdirs();
+        load();
+    }
+
+    File dataFile() {
+        return dataFile;
+    }
+
+    /** Waits until everything saved so far is written to the file. */
+    void flush() {
+        try {
+            io.submit(() -> {}).get();
+        } catch (Exception ignored) {
+            // nothing to wait for
+        }
+    }
+
+    /** Replaces everything with a backup's worklog.json (lists emptied first, settings back to their defaults). */
+    void replaceWith(JSONObject o) {
+        projects.clear();
+        links.clear();
+        contacts.clear();
+        hiddenTabs.clear();
+        formDetails.answers.clear();
+        myColours.clear();
+        myColours.add(ZoneSheet.BLUE);
+        tradeOptions.clear();
+        tradeOptions.addAll(DEFAULT_TRADES);
+        localOptions.clear();
+        fromJson(o);
+    }
+
     private Store(Context c) {
         app = c;
         dataFile = new File(c.getFilesDir(), "worklog.json");

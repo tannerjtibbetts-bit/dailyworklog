@@ -1015,3 +1015,83 @@ class RequestEmailTest {
     r = AccessCodes.parseRequest("DWL-REQ-zzzz\n" + code);
     NoteTest.check(r != null && r.name.equals("Jo Smith"), "broken first code, good second");
     System.out.println("REQUEST EMAIL PASS"); } }
+class BackupTest {
+  static java.io.File tmp(String name) throws Exception {
+    java.io.File d = java.nio.file.Files.createTempDirectory("dwl-" + name).toFile(); d.deleteOnExit(); return d;
+  }
+  static void write(java.io.File f, byte[] b) throws Exception { java.nio.file.Files.write(f.toPath(), b); }
+  static byte[] read(java.io.File f) throws Exception { return java.nio.file.Files.readAllBytes(f.toPath()); }
+  public static void main(String[] a) throws Exception {
+    // A store with a project and two photos
+    java.io.File home = tmp("home");
+    Store s = new Store(home);
+    s.userName = "Tanner"; s.workPosition = "Foreman";
+    Models.Project p = new Models.Project(); p.name = "Warehouse expansion"; p.crew.add("Al"); s.projects.add(p);
+    Models.Link l = new Models.Link(); l.title = "Procedures"; l.url = "https://example.com"; s.links.add(l);
+    byte[] jpgA = new byte[70000]; new java.util.Random(1).nextBytes(jpgA);
+    write(new java.io.File(s.photoDir(), "a.jpg"), jpgA);
+    write(new java.io.File(s.photoDir(), "b.jpg"), "second photo".getBytes("UTF-8"));
+    s.save();
+    java.io.File zip = Backup.create(s, tmp("out"));
+    RichTest.eq(zip.getName(), "DailyWorkLog-backup-" + Fmt.todayIso() + ".zip", "file name");
+    try (java.util.zip.ZipFile z = new java.util.zip.ZipFile(zip)) {
+      NoteTest.check(z.getEntry("worklog.json") != null && z.getEntry("photos/a.jpg") != null && z.getEntry("photos/b.jpg") != null && z.size() == 3, "entries");
+      NoteTest.check(z.getEntry("photos/a.jpg").getMethod() == java.util.zip.ZipEntry.STORED && z.getEntry("photos/a.jpg").getSize() == 70000, "photos STORED");
+      NoteTest.check(java.util.Arrays.equals(z.getInputStream(z.getEntry("photos/a.jpg")).readAllBytes(), jpgA), "photo bytes");
+      org.json.JSONObject j = new org.json.JSONObject(new String(z.getInputStream(z.getEntry("worklog.json")).readAllBytes(), "UTF-8"));
+      NoteTest.check(j.getString("userName").equals("Tanner") && j.getJSONArray("projects").length() == 1, "worklog.json is the store");
+    }
+    // inspect
+    Backup.Info info = Backup.inspect(zip);
+    NoteTest.check(info != null && info.projects == 1 && info.photos == 2 && info.userName.equals("Tanner"), "inspect");
+    RichTest.eq(MainActivity.restoreMessage(info), "Backup from Tanner: 1 project, 2 photos.\n\nThis replaces everything on this phone with the backup. It can't be undone.", "confirm text");
+    RichTest.eq(MainActivity.restoreMessage(new Backup.Info(3, 1, " ")), "Backup: 3 projects, 1 photo.\n\nThis replaces everything on this phone with the backup. It can't be undone.", "confirm text, no name");
+    // Restore into another store that has its own data
+    java.io.File other = tmp("other");
+    Store t = new Store(other);
+    t.userName = "Old phone"; Models.Project old = new Models.Project(); old.name = "Old project"; t.projects.add(old); t.hiddenTabs.add("notes"); t.tradeOptions.clear();
+    t.save(); t.flush();
+    NoteTest.check(Backup.restore(t, zip), "restored");
+    NoteTest.check(t.userName.equals("Tanner") && t.workPosition.equals("Foreman") && t.projects.size() == 1 && t.projects.get(0).name.equals("Warehouse expansion")
+        && t.links.size() == 1 && t.hiddenTabs.isEmpty() && t.tradeOptions.size() == 6, "data replaced, not added to");
+    NoteTest.check(java.util.Arrays.equals(read(new java.io.File(t.photoDir(), "a.jpg")), jpgA) && new java.io.File(t.photoDir(), "b.jpg").exists(), "photos written");
+    java.io.File[] before = other.listFiles((d, n) -> n.startsWith("worklog-before-restore-") && n.endsWith(".json"));
+    NoteTest.check(before != null && before.length == 1 && new String(read(before[0]), "UTF-8").contains("Old project"), "copy kept before restoring");
+    Store reloaded = new Store(other);
+    NoteTest.check(reloaded.userName.equals("Tanner") && reloaded.projects.size() == 1, "saved to worklog.json");
+    // Not a backup
+    java.io.File notZip = new java.io.File(tmp("bad"), "notes.zip"); write(notZip, "hello".getBytes("UTF-8"));
+    NoteTest.check(Backup.inspect(notZip) == null && !Backup.restore(new Store(tmp("x")), notZip), "not a zip");
+    java.io.File noData = new java.io.File(tmp("bad2"), "photos.zip");
+    try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(noData))) {
+      z.putNextEntry(new java.util.zip.ZipEntry("photos/a.jpg")); z.write(1); z.closeEntry();
+    }
+    Store untouched = new Store(tmp("y")); untouched.userName = "Keep me";
+    NoteTest.check(Backup.inspect(noData) == null && !Backup.restore(untouched, noData) && untouched.userName.equals("Keep me"), "zip without worklog.json");
+    // A zip laid out like the new app's (worklog.json deflated, photos stored), with bad photo names
+    java.io.File fromNew = new java.io.File(tmp("new"), "DailyWorkLog-backup-2026-11-12.zip");
+    try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(fromNew))) {
+      z.putNextEntry(new java.util.zip.ZipEntry("worklog.json"));
+      z.write("{\"version\":2,\"userName\":\"Pat\",\"projects\":[{\"id\":\"p1\",\"name\":\"From iPhone\",\"crew\":[\"Bo\"]}],\"links\":[]}".getBytes("UTF-8"));
+      z.closeEntry();
+      for (String n : new String[]{"photos/good.jpg", "photos/", "photos/../evil.jpg", "photos/sub/x.jpg", "photos/..jpg", "other/z.jpg"}) {
+        byte[] b = n.getBytes("UTF-8");
+        java.util.zip.ZipEntry e = new java.util.zip.ZipEntry(n);
+        if (!n.endsWith("/")) {
+          java.util.zip.CRC32 crc = new java.util.zip.CRC32(); crc.update(b);
+          e.setMethod(java.util.zip.ZipEntry.STORED); e.setSize(b.length); e.setCompressedSize(b.length); e.setCrc(crc.getValue());
+        }
+        z.putNextEntry(e); if (!n.endsWith("/")) z.write(b); z.closeEntry();
+      }
+    }
+    java.io.File third = tmp("third");
+    Store u = new Store(third);
+    NoteTest.check(Backup.restore(u, fromNew) && u.userName.equals("Pat") && u.projects.get(0).name.equals("From iPhone") && u.projects.get(0).crew.contains("Bo"), "new app's backup restores");
+    String[] names = u.photoDir().list();
+    java.util.Arrays.sort(names);
+    RichTest.eq(String.join(",", names), "good.jpg", "bad photo names skipped");
+    NoteTest.check(!new java.io.File(third, "evil.jpg").exists() && !new java.io.File(u.photoDir(), "sub").exists(), "nothing written outside photos");
+    NoteTest.check(Backup.photoName(new java.util.zip.ZipEntry("photos/ok.jpg")).equals("ok.jpg") && Backup.photoName(new java.util.zip.ZipEntry("photos/a..b.jpg")) == null, "photo name check");
+    System.out.println("BACKUP PASS");
+    System.exit(0);  // the stores' save threads
+  } }
