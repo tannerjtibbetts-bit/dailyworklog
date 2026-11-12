@@ -85,9 +85,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       case _Mode.setup:
         body = _setup();
       case _Mode.owner:
-        body = [..._approvals(), ..._handover()];
+        body = [..._approvals(), ..._handover(), ..._buildKey()];
       case _Mode.takeOver:
-        body = _takeOver();
+        body = [..._takeOver(), ..._buildKey()];
     }
     return accessPage(body, appBar: Navigator.of(context).canPop(), top: 32);
   }
@@ -181,6 +181,16 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   // ----- handing over to another phone -----
+
+  /// The key file a Termux build on another phone needs.
+  List<Widget> _buildKey() => [
+    accessHeading('Building the app on a new phone'),
+    accessPara(
+      "Your Termux build needs the owner key file. Save it to Downloads and copy it to the new phone's "
+      'Downloads before you build there.',
+    ),
+    BigButton('Save build key file', () => Access.shareBuildKey(shareOrigin: _origin()), filled: false),
+  ];
 
   List<Widget> _handover() => [
     accessHeading('Hand over ownership'),

@@ -57,6 +57,19 @@ class Access {
     }
   }
 
+  /// Shares the owner key file built into this app, so a Termux build on a new phone can use it.
+  static Future<void> shareBuildKey({Rect? shareOrigin}) async {
+    final text = (await rootBundle.loadString('assets/owner_key.txt')).trim();
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(Uint8List.fromList(utf8.encode(text)), mimeType: 'text/plain', name: keyFile)],
+        fileNameOverrides: const [keyFile],
+        subject: keyFile,
+        sharePositionOrigin: shareOrigin,
+      ),
+    );
+  }
+
   static Future<String>? _email;
 
   /// The owner's email built into this copy (access requests are emailed there), or '' if none.
