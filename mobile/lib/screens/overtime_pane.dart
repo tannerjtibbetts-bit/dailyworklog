@@ -44,32 +44,49 @@ List<String> overtimeNames(Project p) {
 bool _isRed(String v) => v == Overtime.no || v == 'AWOL';
 
 BoxDecoration _cellBg(String v) => BoxDecoration(
-      color: v == Overtime.yes
-          ? const Color(0xFFE3F6EA)
-          : _isRed(v)
-              ? const Color(0xFFFDECEC)
-              : const Color(0xFFF2F7FD),
-      border: Border.all(
-          color: v == Overtime.yes
-              ? const Color(0xFFB5E3C5)
-              : _isRed(v)
-                  ? const Color(0xFFF4C4C5)
-                  : C.cardStroke),
-      borderRadius: BorderRadius.circular(10),
-    );
+  color: v == Overtime.yes
+      ? const Color(0xFFE3F6EA)
+      : _isRed(v)
+      ? const Color(0xFFFDECEC)
+      : const Color(0xFFF2F7FD),
+  border: Border.all(
+    color: v == Overtime.yes
+        ? const Color(0xFFB5E3C5)
+        : _isRed(v)
+        ? const Color(0xFFF4C4C5)
+        : C.cardStroke,
+  ),
+  borderRadius: BorderRadius.circular(10),
+);
 
 Color _valueColour(String v) => v == Overtime.yes
     ? const Color(0xFF148A3A)
     : _isRed(v)
-        ? const Color(0xFFC9353A)
-        : (v == _pick || v == _blank)
-            ? C.greyLight
-            : C.text;
+    ? const Color(0xFFC9353A)
+    : (v == _pick || v == _blank)
+    ? C.greyLight
+    : C.text;
+
+Widget _answerText(String v, bool yesNo) => Text(
+      v,
+      maxLines: 1,
+      overflow: yesNo ? TextOverflow.visible : TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: yesNo ? 16 : 15,
+        color: _valueColour(v),
+        fontWeight: v == Overtime.yes || _isRed(v) ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
 
 /// A table dropdown: Yes in green, No and AWOL in red. [yesNo] centres short answers.
 /// [arrow] false hides the little arrow, for narrow boxes.
-Widget sheetDropdown(List<String> items, String current, ValueChanged<String> onPick,
-    {required bool yesNo, bool arrow = true}) {
+Widget sheetDropdown(
+  List<String> items,
+  String current,
+  ValueChanged<String> onPick, {
+  required bool yesNo,
+  bool arrow = true,
+}) {
   return Container(
     constraints: const BoxConstraints(minHeight: 44),
     decoration: _cellBg(current),
@@ -103,16 +120,10 @@ Widget sheetDropdown(List<String> items, String current, ValueChanged<String> on
             Container(
               alignment: yesNo ? Alignment.center : Alignment.centerLeft,
               padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                v,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: yesNo ? 16 : 15,
-                  color: _valueColour(v),
-                  fontWeight: v == Overtime.yes || _isRed(v) ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
+              // Short answers shrink to fit a narrow box (e.g. "Training") instead of being cut off.
+              child: yesNo
+                  ? FittedBox(fit: BoxFit.scaleDown, child: _answerText(v, yesNo))
+                  : _answerText(v, yesNo),
             ),
         ],
         onChanged: (v) {
@@ -125,19 +136,19 @@ Widget sheetDropdown(List<String> items, String current, ValueChanged<String> on
 
 /// The small × at the end of a table row.
 Widget removeRowButton(VoidCallback onTap) => Semantics(
-      label: 'Remove row',
-      button: true,
-      child: SizedBox(
-        width: 32,
-        height: 44,
-        child: IconButton(
-          padding: EdgeInsets.zero,
-          tooltip: 'Remove row',
-          icon: const Icon(Icons.close, color: C.grey, size: 20),
-          onPressed: onTap,
-        ),
-      ),
-    );
+  label: 'Remove row',
+  button: true,
+  child: SizedBox(
+    width: 32,
+    height: 44,
+    child: IconButton(
+      padding: EdgeInsets.zero,
+      tooltip: 'Remove row',
+      icon: const Icon(Icons.close, color: C.grey, size: 20),
+      onPressed: onTap,
+    ),
+  ),
+);
 
 /// Removes a row: at once if it's empty, otherwise after asking.
 void confirmRemoveRow(BuildContext context, String name, bool empty, VoidCallback remove) {
@@ -145,8 +156,13 @@ void confirmRemoveRow(BuildContext context, String name, bool empty, VoidCallbac
     remove();
     return;
   }
-  confirm(context, 'Remove this row?',
-      "${name.isEmpty ? 'This row' : name} comes off this sheet. Your crew list doesn't change.", 'Remove', remove);
+  confirm(
+    context,
+    'Remove this row?',
+    "${name.isEmpty ? 'This row' : name} comes off this sheet. Your crew list doesn't change.",
+    'Remove',
+    remove,
+  );
 }
 
 class OvertimePane extends StatefulWidget {
@@ -164,6 +180,7 @@ class OvertimePane extends StatefulWidget {
 class _OvertimePaneState extends State<OvertimePane> {
   final Map<OtRow, TextEditingController> _hours = {};
   final Map<OtRow, String?> _hourErrors = {};
+  final Map<OtRow, TextEditingController> _comments = {};
   late final TextEditingController _notes = TextEditingController(text: widget.project.overtime.notes);
   final _lastRow = GlobalKey();
 
@@ -172,7 +189,7 @@ class _OvertimePaneState extends State<OvertimePane> {
 
   @override
   void dispose() {
-    for (final c in _hours.values) {
+    for (final c in [..._hours.values, ..._comments.values]) {
       c.dispose();
     }
     _notes.dispose();
@@ -180,12 +197,41 @@ class _OvertimePaneState extends State<OvertimePane> {
   }
 
   void _resetHours() {
-    for (final c in _hours.values) {
+    for (final c in [..._hours.values, ..._comments.values]) {
       c.dispose();
     }
     _hours.clear();
+    _comments.clear();
     _hourErrors.clear();
   }
+
+  /// Free-text comment for one person.
+  Widget _commentBox(OtRow r) => TextField(
+    controller: _comments.putIfAbsent(r, () => TextEditingController(text: r.comment)),
+    textCapitalization: TextCapitalization.sentences,
+    textInputAction: TextInputAction.done,
+    style: const TextStyle(fontSize: 15, color: C.text),
+    decoration: InputDecoration(
+      hintText: 'Comment',
+      hintStyle: const TextStyle(color: C.greyLight),
+      isDense: true,
+      filled: true,
+      fillColor: const Color(0xFFF2F7FD),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.cardStroke),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.blue),
+      ),
+    ),
+    onChanged: (v) {
+      r.comment = v;
+      store.save();
+    },
+  );
 
   TextEditingController _hoursFor(OtRow r) => _hours.putIfAbsent(r, () => TextEditingController(text: r.hours));
 
@@ -203,256 +249,330 @@ class _OvertimePaneState extends State<OvertimePane> {
 
   /// Number box for hours willing to work: accepts 1 to 10.
   Widget _hoursBox(OtRow r) => TextField(
-        controller: _hoursFor(r),
-        keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: C.deepBlue),
-        onTap: () {
-          final c = _hoursFor(r);
-          c.selection = TextSelection(baseOffset: 0, extentOffset: c.text.length);
-        },
-        decoration: InputDecoration(
-          hintText: _blank,
-          hintStyle: const TextStyle(color: C.greyLight),
-          isDense: true,
-          filled: true,
-          fillColor: const Color(0xFFF2F7FD),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
-          errorText: _hourErrors[r],
-          errorStyle: const TextStyle(fontSize: 10),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.cardStroke)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.blue)),
-          errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.red)),
-          focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.red)),
-        ),
-        onChanged: (s) {
-          final v = otHours(s);
-          if (v == null) {
-            setState(() => _hourErrors[r] = '1 to 10');
-            return;
-          }
-          _hourErrors[r] = null;
-          r.hours = v;
-          store.save();
-        },
-      );
+    controller: _hoursFor(r),
+    keyboardType: TextInputType.number,
+    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+    textAlign: TextAlign.center,
+    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: C.deepBlue),
+    onTap: () {
+      final c = _hoursFor(r);
+      c.selection = TextSelection(baseOffset: 0, extentOffset: c.text.length);
+    },
+    decoration: InputDecoration(
+      hintText: _blank,
+      hintStyle: const TextStyle(color: C.greyLight),
+      isDense: true,
+      filled: true,
+      fillColor: const Color(0xFFF2F7FD),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+      errorText: _hourErrors[r],
+      errorStyle: const TextStyle(fontSize: 10),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.cardStroke),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.blue),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.red),
+      ),
+    ),
+    onChanged: (s) {
+      final v = otHours(s);
+      if (v == null) {
+        setState(() => _hourErrors[r] = '1 to 10');
+        return;
+      }
+      _hourErrors[r] = null;
+      r.hours = v;
+      store.save();
+    },
+  );
 
   /// A table line; [end] is the remove button (or a gap the same width).
   Widget _row(List<Widget> cells, {Widget? end}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          for (var i = 0; i < cells.length; i++)
-            Expanded(
-              flex: i == 0 ? _nameFlex : _cellFlex,
-              child: Padding(padding: const EdgeInsets.only(right: 4), child: cells[i]),
-            ),
-          end ?? const SizedBox(width: 32),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (var i = 0; i < cells.length; i++)
+          Expanded(
+            flex: i == 0 ? _nameFlex : _cellFlex,
+            child: Padding(padding: const EdgeInsets.only(right: 4), child: cells[i]),
+          ),
+        end ?? const SizedBox(width: 32),
+      ],
+    ),
+  );
 
   /// A column heading or total, kept on one line (it shrinks a little if the column is narrow).
   static Widget _label(String s, {Color color = C.grey}) => FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(s,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.bold)),
-      );
+    fit: BoxFit.scaleDown,
+    child: Text(
+      s,
+      maxLines: 1,
+      textAlign: TextAlign.center,
+      style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.bold),
+    ),
+  );
 
   /// One table row: Name, Fri, Sat, Sun dropdowns and the Hours box.
   Widget _line(OtRow r, List<String> names, {Key? key}) => KeyedSubtree(
-        key: key,
-        child: _row([
-          sheetDropdown(names, r.name.isEmpty ? _pick : r.name, (v) {
-            r.name = v == _pick ? '' : v;
-            store.save();
-          }, yesNo: false),
-          for (var d = 0; d < 3; d++)
-            sheetDropdown(const [_blank, Overtime.yes, Overtime.no], r.day(d).isEmpty ? _blank : r.day(d), (v) {
-              r.setDay(d, v == _blank ? '' : v);
+    key: key,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _row(
+          [
+            sheetDropdown(names, r.name.isEmpty ? _pick : r.name, (v) {
+              r.name = v == _pick ? '' : v;
               store.save();
-            }, yesNo: true, arrow: false),
-          _hoursBox(r),
-          // Confirmed for the weekend: Yes / No.
-          sheetDropdown(const [_blank, Overtime.yes, Overtime.no], r.confirmed.isEmpty ? _blank : r.confirmed, (v) {
-            r.confirmed = v == _blank ? '' : v;
-            store.save();
-          }, yesNo: true, arrow: false),
-        ], end: removeRowButton(() {
-          final empty =
-              r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty && r.confirmed.isEmpty;
-          confirmRemoveRow(context, r.name, empty, () {
-            ot.rows.remove(r);
-            store.save();
-          });
-        })),
-      );
+            }, yesNo: false),
+            for (var d = 0; d < 3; d++)
+              sheetDropdown(
+                const [_blank, Overtime.yes, Overtime.no],
+                r.day(d).isEmpty ? _blank : r.day(d),
+                (v) {
+                  r.setDay(d, v == _blank ? '' : v);
+                  store.save();
+                },
+                yesNo: true,
+                arrow: false,
+              ),
+            _hoursBox(r),
+            // Confirmed for the weekend: Yes / No / Training.
+            sheetDropdown(
+              const [_blank, Overtime.yes, Overtime.no, Overtime.training],
+              r.confirmed.isEmpty ? _blank : r.confirmed,
+              (v) {
+                r.confirmed = v == _blank ? '' : v;
+                store.save();
+              },
+              yesNo: true,
+              arrow: false,
+            ),
+          ],
+          end: removeRowButton(() {
+            confirmRemoveRow(context, r.name, r.isEmpty, () {
+              ot.rows.remove(r);
+              store.save();
+            });
+          }),
+        ),
+        // The comment sits on its own line under the person, so every column still fits on the screen.
+        Padding(padding: const EdgeInsets.only(right: 36, bottom: 6), child: _commentBox(r)),
+      ],
+    ),
+  );
 
   Widget _action(String s, Color color, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 16, 8, 4),
-          child: Text(s, style: TextStyle(fontSize: 18, color: color)),
-        ),
-      );
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(8, 16, 8, 4),
+      child: Text(s, style: TextStyle(fontSize: 18, color: color)),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final p = widget.project;
     prepareOvertime(p);
     // Rows removed elsewhere drop their boxes.
-    _hours.removeWhere((r, c) {
-      if (ot.rows.contains(r)) return false;
-      c.dispose();
-      return true;
-    });
+    for (final m in [_hours, _comments]) {
+      m.removeWhere((r, c) {
+        if (ot.rows.contains(r)) return false;
+        c.dispose();
+        return true;
+      });
+    }
     final names = overtimeNames(p);
     final card = BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: C.cardStroke));
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: C.cardStroke),
+    );
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-          decoration: card,
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            // Title, with an Export button for sending just this sheet as PDF or Excel
-            Row(children: [
-              const Expanded(
-                child: Text('Weekend overtime',
-                    style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold)),
-              ),
-              Semantics(
-                label: 'Export overtime to PDF or Excel',
-                button: true,
-                child: Material(
-                  color: C.sky,
-                  borderRadius: BorderRadius.circular(100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            decoration: card,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Title, with an Export button for sending just this sheet as PDF or Excel
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Weekend overtime',
+                        style: TextStyle(fontSize: 22, color: C.navy, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Semantics(
+                      label: 'Export overtime to PDF or Excel',
+                      button: true,
+                      child: Material(
+                        color: C.sky,
+                        borderRadius: BorderRadius.circular(100),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(100),
+                          onTap: widget.onExport,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                            child: Text(
+                              'Export',
+                              style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 6),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(100),
-                    onTap: widget.onExport,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                      child: Text('Export',
-                          style: TextStyle(fontSize: 15, color: C.deepBlue, fontWeight: FontWeight.bold)),
+                    onTap: () {
+                      ot.include = !ot.include;
+                      store.save();
+                    },
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: ot.include,
+                          onChanged: (v) {
+                            ot.include = v ?? false;
+                            store.save();
+                          },
+                        ),
+                        const Expanded(
+                          child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ]),
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 6),
-              child: InkWell(
-                onTap: () {
-                  ot.include = !ot.include;
-                  store.save();
-                },
-                child: Row(children: [
-                  Checkbox(
-                    value: ot.include,
-                    onChanged: (v) {
-                      ot.include = v ?? false;
-                      store.save();
-                    },
-                  ),
-                  const Expanded(
-                    child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                _row([
+                  _label('Name'),
+                  _label('Fri'),
+                  _label('Sat'),
+                  _label('Sun'),
+                  _label('Hours'),
+                  // Split over two lines so it can be read in the narrow column.
+                  const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Con-\nfirmed',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, height: 1.05, color: C.grey, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ]),
-              ),
+                for (final r in ot.rows) _line(r, names, key: ObjectKey(r)),
+                // Totals sit under the table; after adding rows the screen scrolls here.
+                KeyedSubtree(
+                  key: _lastRow,
+                  child: _row([
+                    _label('Yes total'),
+                    for (var d = 0; d < 3; d++) _label('${ot.yesCount(d)}', color: C.green),
+                    const SizedBox(),
+                    _label('${ot.confirmedCount()}', color: C.green),
+                  ]),
+                ),
+                if (p.crew.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Text(
+                      'Add your crew first: tap ⋯ at the top, then Manage crew.',
+                      style: TextStyle(fontSize: 15, color: C.grey),
+                    ),
+                  ),
+              ],
             ),
-            _row([
-              _label('Name'),
-              _label('Fri'),
-              _label('Sat'),
-              _label('Sun'),
-              _label('Hours'),
-              // Split over two lines so it can be read in the narrow column.
-              const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text('Con-\nfirmed',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, height: 1.05, color: C.grey, fontWeight: FontWeight.bold)),
-              ),
-            ]),
-            for (final r in ot.rows) _line(r, names, key: ObjectKey(r)),
-            // Totals sit under the table; after adding rows the screen scrolls here.
-            KeyedSubtree(key: _lastRow, child: _row([
-              _label('Yes total'),
-              for (var d = 0; d < 3; d++) _label('${ot.yesCount(d)}', color: C.green),
-              const SizedBox(),
-              _label('${ot.confirmedCount()}', color: C.green),
-            ])),
-            if (p.crew.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 10),
-                child: Text('Add your crew first: tap ⋯ at the top, then Manage crew.',
-                    style: TextStyle(fontSize: 15, color: C.grey)),
-              ),
-          ]),
-        ),
-        Align(alignment: Alignment.centerLeft, child: _action('+  Add a row', C.blue, () => _addRows(1))),
-        Align(alignment: Alignment.centerLeft, child: _action('+  Add 5 rows', C.blue, () => _addRows(5))),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _action('Remove empty rows', C.deepBlue, () {
-            final before = ot.rows.length;
-            ot.removeEmptyRows();
-            if (ot.rows.length == before) {
-              toast(context, 'No empty rows to remove');
-              return;
-            }
-            store.save();
-          }),
-        ),
-        // Notes for the weekend, printed under the table in reports
-        Container(
-          margin: const EdgeInsets.only(top: 18),
-          decoration: card,
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('Notes', style: TextStyle(fontSize: 20, color: C.navy, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _notes,
-              minLines: 4,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              textCapitalization: TextCapitalization.sentences,
-              style: const TextStyle(fontSize: 17, color: C.text),
-              decoration: InputDecoration(
-                hintText: 'Add notes about this weekend’s overtime…',
-                hintStyle: const TextStyle(color: C.greyLight),
-                contentPadding: const EdgeInsets.all(12),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: C.cardStroke)),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: C.blue)),
-              ),
-              onChanged: (s) {
-                ot.notes = s;
-                store.save();
-              },
-            ),
-          ]),
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _action('Clear answers', C.deepBlue, () {
-            confirm(context, 'Clear the Yes/No answers?', 'Names and notes stay in place, ready for the next weekend.',
-                'Clear', () {
-              ot.startWeekend(Fmt.upcomingFriday());
-              _resetHours();
+          ),
+          Align(alignment: Alignment.centerLeft, child: _action('+  Add a row', C.blue, () => _addRows(1))),
+          Align(alignment: Alignment.centerLeft, child: _action('+  Add 5 rows', C.blue, () => _addRows(5))),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _action('Remove empty rows', C.deepBlue, () {
+              final before = ot.rows.length;
+              ot.removeEmptyRows();
+              if (ot.rows.length == before) {
+                toast(context, 'No empty rows to remove');
+                return;
+              }
               store.save();
-            });
-          }),
-        ),
-      ]),
+            }),
+          ),
+          // Notes for the weekend, printed under the table in reports
+          Container(
+            margin: const EdgeInsets.only(top: 18),
+            decoration: card,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Notes',
+                  style: TextStyle(fontSize: 20, color: C.navy, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _notes,
+                  minLines: 4,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: const TextStyle(fontSize: 17, color: C.text),
+                  decoration: InputDecoration(
+                    hintText: 'Add notes about this weekend’s overtime…',
+                    hintStyle: const TextStyle(color: C.greyLight),
+                    contentPadding: const EdgeInsets.all(12),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: C.cardStroke),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: C.blue),
+                    ),
+                  ),
+                  onChanged: (s) {
+                    ot.notes = s;
+                    store.save();
+                  },
+                ),
+              ],
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _action('Clear answers', C.deepBlue, () {
+              confirm(
+                context,
+                'Clear the Yes/No answers?',
+                'Answers and comments are cleared. Names and notes stay in place, ready for the next weekend.',
+                'Clear',
+                () {
+                  ot.startWeekend(Fmt.upcomingFriday());
+                  _resetHours();
+                  store.save();
+                },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }

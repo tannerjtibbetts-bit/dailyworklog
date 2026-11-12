@@ -128,16 +128,31 @@ class ReportDocx {
         '<w:insideH w:val="single" w:sz="4" w:color="D5D9DE"/><w:insideV w:val="single" w:sz="4" w:color="D5D9DE"/>';
     _body.write(
       '<w:tbl><w:tblPr><w:tblW w:w="10080" w:type="dxa"/><w:tblBorders>$b'
-      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4080"/>'
-      '<w:gridCol w:w="1200"/><w:gridCol w:w="1200"/><w:gridCol w:w="1200"/><w:gridCol w:w="1200"/>'
-      '<w:gridCol w:w="1200"/></w:tblGrid>',
+      '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="3080"/>'
+      '<w:gridCol w:w="1000"/><w:gridCol w:w="1000"/><w:gridCol w:w="1000"/><w:gridCol w:w="1000"/>'
+      '<w:gridCol w:w="1000"/><w:gridCol w:w="2000"/></w:tblGrid>',
     );
-    _otRow(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours', 'Confirmed'], true, 'E4E7EC', true);
+    const widths = [3080, 1000, 1000, 1000, 1000, 1000, 2000];
+    _otRow(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours', 'Confirmed', 'Comment'], true, 'E4E7EC', true,
+        widths: widths);
     for (final r in rows) {
-      _otRow([r.name, _dash(r.fri), _dash(r.sat), _dash(r.sun), _dash(r.hours), _dash(r.confirmed)], false, null, true);
+      _otRow(
+        [r.name, _dash(r.fri), _dash(r.sat), _dash(r.sun), _dash(r.hours), _dash(r.confirmed), r.comment.trim()],
+        false,
+        null,
+        true,
+        widths: widths,
+        leftLast: true,
+      );
     }
-    _otRow(['Yes total', '${ot.yesCount(0)}', '${ot.yesCount(1)}', '${ot.yesCount(2)}', '', '${ot.confirmedCount()}'],
-        true, null, false);
+    _otRow(
+      ['Yes total', '${ot.yesCount(0)}', '${ot.yesCount(1)}', '${ot.yesCount(2)}', '', '${ot.confirmedCount()}', ''],
+      true,
+      null,
+      false,
+      widths: widths,
+      leftLast: true,
+    );
     _body.write('</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr></w:p>');
     _overtimeNotes(notes);
   }

@@ -221,6 +221,11 @@ class ReportPdf {
         _drawString(s, tp, _m + nameW + d * dayW + (dayW - _measure(s, tp)) / 2, _y + 13.5);
       }
       _y += rowH;
+      final c = r.comment.trim().replaceAll('\n', ' ');
+      if (c.isNotEmpty) {
+        _ensure(16);
+        _richText('Comment: $c', const [], _small, _m + 6, w - 12, 4);
+      }
     }
     _ensure(rowH);
     _hLine(_m, _m + w, _y);

@@ -530,8 +530,20 @@ class OtRow {
   /// Hours willing to work, 1 to 10 (blank if not given).
   String hours = '';
 
-  /// Confirmed for the weekend: 'Yes', 'No' or '' (not answered).
+  /// Confirmed for the weekend: 'Yes', 'No', 'Training' or '' (not answered).
   String confirmed = '';
+
+  /// Free-text comment for this person.
+  String comment = '';
+
+  bool get isEmpty =>
+      name.isEmpty &&
+      fri.isEmpty &&
+      sat.isEmpty &&
+      sun.isEmpty &&
+      hours.isEmpty &&
+      confirmed.isEmpty &&
+      comment.trim().isEmpty;
 
   String day(int d) => d == 0 ? fri : d == 1 ? sat : sun;
 
@@ -546,7 +558,7 @@ class OtRow {
   }
 
   Map<String, dynamic> toJson() =>
-      {'name': name, 'fri': fri, 'sat': sat, 'sun': sun, 'hours': hours, 'confirmed': confirmed};
+      {'name': name, 'fri': fri, 'sat': sat, 'sun': sun, 'hours': hours, 'confirmed': confirmed, 'comment': comment};
 
   static OtRow fromJson(Map<String, dynamic> o) => OtRow()
     ..name = _s(o, 'name')
@@ -554,12 +566,13 @@ class OtRow {
     ..sat = _s(o, 'sat')
     ..sun = _s(o, 'sun')
     ..hours = _s(o, 'hours')
-    ..confirmed = _s(o, 'confirmed');
+    ..confirmed = _s(o, 'confirmed')
+    ..comment = _s(o, 'comment');
 }
 
 /// Weekend overtime sign-up sheet: one row per crew member, Yes/No for Fri, Sat, Sun.
 class Overtime {
-  static const yes = 'Yes', no = 'No';
+  static const yes = 'Yes', no = 'No', training = 'Training';
 
   /// ISO date of the Friday this sheet covers.
   String weekOf = '';
@@ -578,8 +591,7 @@ class Overtime {
   int confirmedCount() => filled().where((r) => r.confirmed == yes).length;
 
   /// Drops rows with no name and no answers.
-  void removeEmptyRows() => rows.removeWhere(
-      (r) => r.name.isEmpty && r.fri.isEmpty && r.sat.isEmpty && r.sun.isEmpty && r.hours.isEmpty && r.confirmed.isEmpty);
+  void removeEmptyRows() => rows.removeWhere((r) => r.isEmpty);
 
   /// Fresh weekend: keep the names, clear the Yes/No answers and hours.
   void startWeekend(String friday) {
@@ -590,6 +602,7 @@ class Overtime {
       r.sun = '';
       r.hours = '';
       r.confirmed = '';
+      r.comment = '';
     }
   }
 

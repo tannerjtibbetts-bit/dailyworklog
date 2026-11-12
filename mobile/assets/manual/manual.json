@@ -2851,7 +2851,9 @@
         "delete row",
         "x",
         "confirmed",
-        "confirm"
+        "confirm",
+        "training",
+        "comment"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2872,13 +2874,19 @@
             "In each row, tap \"Select…\" and pick a name.",
             "Under \"Fri\", \"Sat\" and \"Sun\", pick \"Yes\" or \"No\". Yes turns green, No turns red.",
             "Under \"Hours\", type the hours the person is willing to work, 1 to 10.",
-            "Under \"Confirmed\", pick \"Yes\" once the person has confirmed they're coming, or \"No\". Yes turns green, No turns red.",
+            "Under \"Confirmed\", pick \"Yes\" once the person has confirmed they're coming, \"No\", or \"Training\" if they're on training instead. Yes turns green, No turns red.",
+            "Type a comment for that person in the \"Comment\" box under their row, for example \"Can stay late Fri\".",
             "Type anything else in the \"Notes\" box under the table."
           ]
         },
         {
+          "type": "image",
+          "file": "overtime_comment.png",
+          "caption": "Confirmed \"Training\" and a comment under each person"
+        },
+        {
           "type": "text",
-          "text": "The \"Yes total\" row counts the Yes answers for each day, and how many are confirmed. Everything saves by itself."
+          "text": "The \"Yes total\" row counts the Yes answers for each day, and how many are confirmed (Training isn't counted). Everything saves by itself."
         },
         {
           "type": "bullets",
@@ -2906,13 +2914,13 @@
         },
         {
           "type": "text",
-          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the overtime table and notes to your daily reports too."
+          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the overtime table and notes to your daily reports too. Comments print under each person in the PDF, and in a \"Comment\" column in Word and Excel."
         },
         {
           "type": "steps",
           "items": [
             "For the next weekend, tap \"Clear answers\" at the bottom.",
-            "Tap \"Clear\". The Yes/No answers, hours and Confirmed are cleared. Names and notes stay in place."
+            "Tap \"Clear\". The Yes/No answers, hours, Confirmed and comments are cleared. Names and notes stay in place."
           ]
         },
         {

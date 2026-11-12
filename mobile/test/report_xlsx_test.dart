@@ -49,7 +49,9 @@ void main() {
     p.logs.add(l);
     p.overtime
       ..include = true
-      ..rows = [OtRow()..name = 'Sam Maint'..fri = 'Yes'..sat = 'No'..hours = '8'];
+      ..rows = [
+        OtRow()..name = 'Sam Maint'..fri = 'Yes'..sat = 'No'..hours = '8'..confirmed = 'Training'..comment = 'Crane course Sat',
+      ];
     p.attendance
       ..include = true
       ..date = '2026-10-29'
@@ -104,5 +106,24 @@ void main() {
     final empty = _unzip(ReportXlsx.write(Project(), DailyLog()..date = '2026-10-29', 'T', day))['xl/worksheets/sheet1.xml']!;
     expect(empty, contains('No fields'));
     expect(empty, contains('0/0 fields completed'));
+  });
+
+  test('overtime rows: Training and comments are saved, counted and exported', () {
+    final r = OtRow.fromJson((OtRow()
+          ..name = 'Al'
+          ..confirmed = Overtime.training
+          ..comment = 'Course')
+        .toJson());
+    expect([r.confirmed, r.comment], ['Training', 'Course']);
+    expect(OtRow.fromJson({'name': 'Bo'}).comment, '');
+    final ot = Overtime()..rows = [r, OtRow()..comment = 'only a comment', OtRow()];
+    expect(ot.confirmedCount(), 0);
+    ot.removeEmptyRows();
+    expect(ot.rows.length, 2);
+    final p = sample();
+    final text = _unzip(ReportXlsx.write(p, p.logs.single, 'Tanner Tibbetts', day)).values.join();
+    expect(text, contains('Comment'));
+    expect(text, contains('Crane course Sat'));
+    expect(text, contains('Training'));
   });
 }
