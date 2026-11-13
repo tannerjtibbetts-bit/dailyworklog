@@ -12,7 +12,7 @@ workflows:
     integrations:
       app_store_connect: DailyWorkLog App Store
     environment:
-      flutter: stable
+      flutter: 3.47.7
       xcode: latest
       cocoapods: default
       ios_signing:
