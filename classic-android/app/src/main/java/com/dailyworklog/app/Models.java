@@ -592,6 +592,10 @@ public final class Models {
     public static class Place {
         public int page;
         public double x, y;
+        /** Width available (the fill-in line's length), or 0 when no line was found (then up to the page edge). */
+        public double w;
+        /** For long answers: where the following lines go (y of each next ruled line). */
+        public List<Double> rows = new ArrayList<>();
 
         public Place(int page, double x, double y) {
             this.page = page;
@@ -599,13 +603,45 @@ public final class Models {
             this.y = y;
         }
 
+        public Place(int page, double x, double y, double w, List<Double> rows) {
+            this(page, x, y);
+            this.w = w;
+            if (rows != null) this.rows = new ArrayList<>(rows);
+        }
+
+        /** The width to fit in: the line's length, else to the page's right edge. */
+        public double width() {
+            return w > 0 ? w : Math.max(0.04, Math.min(1.0, 0.96 - x));
+        }
+
+        /** Moved by (dx, dy); following lines move with it. */
+        public Place moved(double dx, double dy) {
+            List<Double> r = new ArrayList<>();
+            for (double v : rows) r.add(Math.max(0.01, Math.min(1.0, v + dy)));
+            return new Place(page, Math.max(0, Math.min(0.98, x + dx)), Math.max(0.01, Math.min(1.0, y + dy)), w, r);
+        }
+
         JSONObject toJson() throws JSONException {
-            return new JSONObject().put("page", page).put("x", x).put("y", y);
+            JSONObject o = new JSONObject().put("page", page).put("x", x).put("y", y);
+            if (w > 0) o.put("w", w);
+            if (!rows.isEmpty()) {
+                JSONArray a = new JSONArray();
+                for (double v : rows) a.put(v);
+                o.put("rows", a);
+            }
+            return o;
         }
 
         static Place fromJson(JSONObject o) {
             if (o == null) return null;
-            return new Place(Math.max(0, o.optInt("page", 0)), clamp01(o.optDouble("x", 0)), clamp01(o.optDouble("y", 0)));
+            Place p = new Place(Math.max(0, o.optInt("page", 0)), clamp01(o.optDouble("x", 0)), clamp01(o.optDouble("y", 0)));
+            if (o.has("w")) p.w = clamp01(o.optDouble("w", 0));
+            JSONArray a = o.optJSONArray("rows");
+            for (int i = 0; a != null && i < a.length(); i++) {
+                double v = a.optDouble(i, Double.NaN);
+                if (!Double.isNaN(v)) p.rows.add(clamp01(v));
+            }
+            return p;
         }
 
         static double clamp01(double v) {

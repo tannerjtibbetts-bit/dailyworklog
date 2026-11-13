@@ -231,9 +231,11 @@ public class ReportsActivity extends FormScreen {
         f.name = name;
         f.kind = kind;
         f.files.addAll(files);
+        // The fill-in lines in the page pictures, found while the text is read.
+        List<FormLines.Segment> segments = java.util.Collections.synchronizedList(new ArrayList<>());
         Docs.BoxLines done = (lines, error) -> {
             busy.dismiss();
-            FormReader.Result r = FormReader.readLines(lines);
+            FormReader.Result r = FormReader.readLines(lines, new ArrayList<>(segments));
             f.questions = r.questions;
             f.textSize = r.textSize;
             f.signatures = r.signatures.isEmpty() ? FormReader.defaultSignatures(group) : r.signatures;
@@ -255,6 +257,7 @@ public class ReportsActivity extends FormScreen {
             // Uploaded photos are straightened like camera ones, so the answers line up with what's shown.
             PhotoUtil.BG.execute(() -> {
                 for (File img : images) PhotoUtil.normalize(img);
+                for (int i = 0; i < images.size(); i++) segments.addAll(FormLines.find(images.get(i), i));
                 runOnUiThread(() -> Docs.ocrBoxes(this, images, done));
             });
             return;
@@ -272,6 +275,7 @@ public class ReportsActivity extends FormScreen {
                         f.files.add(n);
                         images.add(store.photoFile(n));
                     }
+                    for (int i = 0; i < images.size(); i++) segments.addAll(FormLines.find(images.get(i), i));
                 }
             } catch (Exception | OutOfMemoryError e) {
                 error = "Couldn't read that file";

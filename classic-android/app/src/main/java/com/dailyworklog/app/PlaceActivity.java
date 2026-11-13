@@ -144,9 +144,22 @@ public class PlaceActivity extends FormScreen {
         chip.setBackgroundColor(0x55FFE45C);
         chip.setPadding(0, 0, 0, 0);
         frame.addView(chip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        // The real size: the PDF's font size is textSize x page height x fontScale.
+        // The real size: the PDF's font size (textSize x page height x fontScale), shrunk to fit the line as in the PDF.
         Runnable size = () -> {
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (form.textSize * h * form.fontScale));
+            double base = form.textSize * h * form.fontScale, width = q.place.width() * w;
+            String t = chipText(q);
+            java.util.function.ToDoubleFunction<String> at1 = FormPdf.measureAt1(new android.text.TextPaint(chip.getPaint()));
+            double px;
+            if (Models.FormQuestion.LONG.equals(q.kind)) {
+                Fit.Rows fit = Fit.rows(t, width, 1 + q.place.rows.size(), base, at1);
+                px = fit.size;
+                t = fit.lines.isEmpty() ? t : fit.lines.get(0) + (fit.lines.size() > 1 ? " \u2026" : "");
+            } else {
+                px = Fit.oneLine(t, width, base, at1);
+            }
+            chip.setText(t);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) px);
+            chip.setMaxWidth((int) Math.max(40, width));
             Paint.FontMetrics fm = chip.getPaint().getFontMetrics();
             // Bottom-left of the text at the baseline: the chip's top sits one ascent above it.
             chip.setX((float) (q.place.x * w));
@@ -169,9 +182,11 @@ public class PlaceActivity extends FormScreen {
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     Paint.FontMetrics fm = chip.getPaint().getFontMetrics();
-                    q.place = new Models.Place(q.place.page, Models.Place.clamp01(v.getX() / w),
-                            Models.Place.clamp01((v.getY() - fm.ascent) / h));
+                    // Moving keeps the line length and moves the following lines too.
+                    double nx = Models.Place.clamp01(v.getX() / w), ny = Models.Place.clamp01((v.getY() - fm.ascent) / h);
+                    q.place = q.place.moved(nx - q.place.x, ny - q.place.y);
                     store.save();
+                    size.run();
                     return true;
                 default:
                     return false;

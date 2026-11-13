@@ -103,21 +103,31 @@ final class FormPdf {
                 c.drawBitmap(b, null, new android.graphics.RectF(0, 0, pw, ph), new Paint(Paint.FILTER_BITMAP_FLAG));
                 b.recycle();
             }
-            float size = (float) (f.textSize * ph * f.fontScale);
-            ink.setTextSize(size);
+            double base = f.textSize * ph * f.fontScale;
+            java.util.function.ToDoubleFunction<String> at1 = measureAt1(ink);
             for (Models.FormQuestion q : f.questions) {
-                if (q.place == null || q.place.page != p) continue;
-                String a = written(f, r, q);
+                Models.Place pl = q.place;
+                if (pl == null || pl.page != p) continue;
+                String a = written(f, r, q).trim();
                 if (a.isEmpty()) continue;
-                float x = (float) (q.place.x * pw), y = (float) (q.place.y * ph);
+                double width = pl.width() * pw;
+                float x = (float) (pl.x * pw);
                 if (Models.FormQuestion.LONG.equals(q.kind)) {
-                    StaticLayout l = layout(a, ink, (float) ((0.96 - q.place.x) * pw));
-                    for (int i = 0; i < l.getLineCount(); i++) {
-                        String line = a.substring(l.getLineStart(i), l.getLineEnd(i)).replace("\n", "").trim();
-                        c.drawText(line, x, y + i * 1.7f * size, ink);
+                    // On the form's ruled lines, smaller if needed to fit them.
+                    java.util.List<Double> ys = new ArrayList<>();
+                    ys.add(pl.y);
+                    ys.addAll(pl.rows);
+                    Fit.Rows fit = Fit.rows(a, width, ys.size(), base, at1);
+                    ink.setTextSize((float) fit.size);
+                    double gap = ys.size() > 1 ? ys.get(ys.size() - 1) - ys.get(ys.size() - 2) : 1.7 * fit.size / ph;
+                    for (int i = 0; i < fit.lines.size(); i++) {
+                        double y = i < ys.size() ? ys.get(i) : ys.get(ys.size() - 1) + gap * (i - ys.size() + 1);
+                        c.drawText(fit.lines.get(i), x, (float) (y * ph), ink);
                     }
                 } else {
-                    c.drawText(a.replace('\n', ' '), x, y, ink);
+                    String one = a.replace('\n', ' ');
+                    ink.setTextSize((float) Fit.oneLine(one, width, base, at1));
+                    c.drawText(one, x, (float) (pl.y * ph), ink);
                 }
             }
             doc.finishPage(page);
@@ -135,6 +145,13 @@ final class FormPdf {
         text((f.name.isEmpty() ? r.formName : f.name) + " \u00B7 " + r.person, meta, M, BODY_W, 14);
         typed(f, r, rest);
         finishPage();
+    }
+
+    /** A string's width at text size 1 (measured at 100 for accuracy). */
+    static java.util.function.ToDoubleFunction<String> measureAt1(TextPaint p) {
+        TextPaint m = new TextPaint(p);
+        m.setTextSize(100);
+        return t -> t.isEmpty() ? 0 : m.measureText(t) / 100.0;
     }
 
     /** The questions in the typed layout: "Label: answer", long answers under their label, ratings in a table. */

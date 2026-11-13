@@ -123,6 +123,11 @@ final class FormReader {
     }
 
     static Result readLines(List<Line> lines) {
+        return readLines(lines, new ArrayList<>());
+    }
+
+    /** segments: the fill-in lines found in the page pictures (FormLines), so answers go on them. */
+    static Result readLines(List<Line> lines, List<FormLines.Segment> segments) {
         Result r = new Result();
         List<Found> found = new ArrayList<>();
         String[] normalized = new String[lines.size()];
@@ -259,12 +264,24 @@ final class FormReader {
             r.questions.add(q);
             kept.add(f);
         }
-        place(r, kept, lines, normalized);
+        place(r, kept, lines, normalized, segments);
         return r;
     }
 
     /** Where each answer goes on the page picture, from its line's box (only for lines read from a picture). */
-    private static void place(Result r, List<Found> kept, List<Line> lines, String[] normalized) {
+    private static void place(Result r, List<Found> kept, List<Line> lines, String[] normalized, List<FormLines.Segment> segments) {
+        // The fill-in lines: not the underline of a heading (a line right under words that cover it).
+        List<FormLines.Segment> fill = new ArrayList<>();
+        for (FormLines.Segment g : segments) {
+            boolean underline = false;
+            for (Line t : lines) {
+                if (!t.hasBox || t.page != g.page || t.text == null || t.text.matches("(?s).*_{3,}.*")) continue;
+                if (g.y >= t.top && g.y <= t.bottom + 0.006
+                        && (Math.min(g.x1, t.right) - Math.max(g.x0, t.left)) > 0.5 * g.length()) underline = true;
+            }
+            if (!underline) fill.add(g);
+        }
+        java.util.Set<FormLines.Segment> used = new java.util.HashSet<>();
         double ratingRight = -1;
         for (int i = 0; i < kept.size(); i++) {
             Line l = lines.get(kept.get(i).line);
@@ -286,6 +303,13 @@ final class FormReader {
             if (onLine > 1 && f.endChar >= 0 && norm != null && !norm.isEmpty()) {
                 labelEnd = l.left + (l.right - l.left) * f.endChar / norm.length();
             }
+            int paren = Models.FormQuestion.AVERAGE.equals(q.kind) ? nextParenthesis(normalized, f.line) : -1;
+            double parenRight = paren >= 0 && lines.get(paren).hasBox ? lines.get(paren).right : l.right;
+            Models.Place onFill = onLines(l, q.kind, labelEnd, paren >= 0, parenRight, fill, used);
+            if (onFill != null) {
+                q.place = onFill;
+                continue;
+            }
             double x, y;
             switch (q.kind) {
                 case Models.FormQuestion.LONG:
@@ -298,10 +322,7 @@ final class FormReader {
                     break;
                 case Models.FormQuestion.AVERAGE:
                     // Right of the "(total ...)" line when it follows (else of the average line), and in the rating column.
-                    int paren = nextParenthesis(normalized, f.line);
-                    Line pl = paren >= 0 ? lines.get(paren) : null;
-                    double right = pl != null && pl.hasBox ? pl.right : l.right;
-                    x = Math.max(ratingX, right + 0.015);
+                    x = Math.max(ratingX, Math.max(l.right, parenRight) + 0.015);
                     y = paren >= 0 ? l.bottom + 1.2 * h : l.bottom;
                     break;
                 default:
@@ -316,6 +337,62 @@ final class FormReader {
             double median = n % 2 == 1 ? heights.get(n / 2) : (heights.get(n / 2 - 1) + heights.get(n / 2)) / 2;
             r.textSize = Math.max(0.008, Math.min(0.03, median * 0.75));
         }
+    }
+
+    /** Puts an answer on the form's own fill-in line: a short answer on the nearest line to the right of its
+     * label (or just under it), a long answer on the ruled lines under it. */
+    private static Models.Place onLines(Line b, String kind, double labelEnd, boolean parenAfter, double parenRight,
+                                        List<FormLines.Segment> fill, java.util.Set<FormLines.Segment> used) {
+        double h = b.bottom - b.top, pad = 0.006, lift = 0.0045;
+        if (Models.FormQuestion.LONG.equals(kind)) {
+            List<FormLines.Segment> below = new ArrayList<>();
+            for (FormLines.Segment g : fill) {
+                if (g.page == b.page && !used.contains(g) && g.y > b.bottom && g.y <= b.bottom + 10 * h && g.length() >= 0.25) below.add(g);
+            }
+            if (below.isEmpty()) return null;
+            below.sort((a, c) -> Double.compare(a.y, c.y));
+            List<FormLines.Segment> rows = new ArrayList<>();
+            rows.add(below.get(0));
+            for (int i = 1; i < below.size(); i++) {
+                FormLines.Segment g = below.get(i), last = rows.get(rows.size() - 1);
+                if (g.y - last.y > 3 * h) break;
+                if (g.y - last.y < 0.4 * h) continue;  // the same line found twice
+                rows.add(g);
+            }
+            used.addAll(rows);
+            FormLines.Segment first = rows.get(0);
+            List<Double> next = new ArrayList<>();
+            for (int i = 1; i < rows.size(); i++) next.add(rows.get(i).y - lift);
+            return new Models.Place(b.page, first.x0 + pad, first.y - lift, first.length() - 2 * pad, next);
+        }
+        // The average's label may run on to a "(total ...)" line: look from the end of that.
+        boolean avg = Models.FormQuestion.AVERAGE.equals(kind) && parenAfter;
+        double end = avg ? Math.max(labelEnd, parenRight) : labelEnd;
+        double bottom = avg ? b.bottom + 1.2 * h : b.bottom;
+        FormLines.Segment best = null;
+        double bestScore = Double.POSITIVE_INFINITY;
+        for (FormLines.Segment g : fill) {
+            if (g.page != b.page || used.contains(g)) continue;
+            if (g.y < bottom - 0.5 * h || g.y > bottom + 1.6 * h) continue;
+            if (g.x1 <= end + 0.01 || g.x0 < end - 0.02) continue;
+            double score = (g.x0 - end) + 2 * Math.abs(g.y - bottom);
+            if (score < bestScore) {
+                bestScore = score;
+                best = g;
+            }
+        }
+        // Or a line just under the label.
+        if (best == null) {
+            for (FormLines.Segment g : fill) {
+                if (g.page != b.page || used.contains(g)) continue;
+                if (g.y <= b.bottom || g.y > b.bottom + 2.5 * h) continue;
+                if (g.x1 < b.left || g.x0 > b.right) continue;
+                if (best == null || g.y < best.y) best = g;
+            }
+        }
+        if (best == null) return null;
+        used.add(best);
+        return new Models.Place(b.page, best.x0 + pad, best.y - lift, best.length() - 2 * pad, null);
     }
 
     private static double clamp(double v) {
