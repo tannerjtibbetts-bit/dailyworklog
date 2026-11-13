@@ -250,41 +250,61 @@ class _PlaceScreenState extends State<PlaceScreen> {
       child: Stack(clipBehavior: Clip.none, children: [
         Positioned.fill(child: Image.file(File(store.photoFile(file).path), fit: BoxFit.fill)),
         for (final q in form.questions)
-          if (q.place != null && q.place!.page == page)
-            Positioned(
-              left: q.place!.x * width,
-              top: q.place!.y * height - font * 1.15,
-              child: GestureDetector(
-                onPanUpdate: (d) => setState(() {
-                  final p = q.place!;
-                  q.place = Place(page, (p.x + d.delta.dx / width).clamp(0.0, 0.98),
-                      (p.y + d.delta.dy / height).clamp(0.01, 1.0));
-                }),
-                onPanEnd: (_) => _save(),
-                child: Container(
-                  constraints: BoxConstraints(
-                      maxWidth: q.kind == ReportQuestion.long ? math.max(40, (0.96 - q.place!.x) * width) : width),
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0x55FFE082),
-                    border: Border.all(color: const Color(0xFFE0A800), width: 1),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Text(
-                    _text(q),
-                    maxLines: q.kind == ReportQuestion.long ? 6 : 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: math.max(6, font),
-                      height: q.kind == ReportQuestion.long ? 1.7 : 1.15,
-                      color: const Color(0xFF0B2E83),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          if (q.place != null && q.place!.page == page) ..._answer(q, width, height, font),
       ]),
     );
+  }
+
+  static const _ink = Color(0xFF0B2E83);
+
+  /// One answer drawn as the PDF will: fitted to its line, a long one wrapped over its ruled lines. Each piece
+  /// can be dragged; the whole answer moves together.
+  List<Widget> _answer(ReportQuestion q, double width, double height, double font) {
+    final p = q.place!;
+    final text = _text(q).trim();
+    final lineWidth = p.width * width;
+    // Measured at size 100 and scaled: tiny sizes measure badly.
+    double at1(String t) {
+      final tp = TextPainter(
+          text: TextSpan(text: t, style: const TextStyle(fontSize: 100, color: _ink)), textDirection: TextDirection.ltr)
+        ..layout();
+      return tp.width / 100;
+    }
+
+    final pieces = <(double, double, double, String)>[]; // x, baseline y, size, text
+    if (q.kind == ReportQuestion.long) {
+      final ys = [p.y, ...p.rows];
+      final (size, lines) = Fit.rows(text, lineWidth, ys.length, font, at1);
+      final gap = ys.length > 1 ? ys[ys.length - 1] - ys[ys.length - 2] : 1.7 * size / height;
+      for (var i = 0; i < lines.length; i++) {
+        pieces.add((p.x * width, (i < ys.length ? ys[i] : ys.last + gap * (i - ys.length + 1)) * height, size, lines[i]));
+      }
+    } else {
+      final one = text.replaceAll('\n', ' ');
+      pieces.add((p.x * width, p.y * height, Fit.oneLine(one, lineWidth, font, at1), one));
+    }
+    return [
+      for (final (x, y, size, t) in pieces)
+        Positioned(
+          left: x,
+          top: y - size * 1.0,
+          child: GestureDetector(
+            onPanUpdate: (d) => setState(() => q.place = q.place!.moved(d.delta.dx / width, d.delta.dy / height)),
+            onPanEnd: (_) => _save(),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0x55FFE082),
+                border: Border.all(color: const Color(0xFFE0A800), width: 1),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(t,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(fontSize: math.max(5, size), height: 1.15, color: _ink)),
+            ),
+          ),
+        ),
+    ];
   }
 
   @override

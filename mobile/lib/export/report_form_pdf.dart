@@ -38,28 +38,44 @@ class ReportFormPdf {
   /// page pictures' bytes, in page order. Answers that have no place go on a last page, "More answers".
   static Future<Uint8List> writeOnForm(ReportForm form, FilledReport r, List<Uint8List> pictures) async {
     final doc = pw.Document(title: plain(form.name), author: 'Daily Work Log');
+    final font = PdfFont.helvetica(doc.document);
+    double at1(String t) => t.isEmpty ? 0 : font.stringMetrics(t).advanceWidth;
     for (var page = 0; page < pictures.length; page++) {
       final image = pw.MemoryImage(pictures[page]);
       const w = 612.0;
       final h = w * (image.height ?? 792) / (image.width ?? 612);
-      final size = form.textSize * h * form.fontScale;
-      final style = pw.TextStyle(fontSize: size, color: _ink, lineSpacing: size * 0.7);
+      final base = form.textSize * h * form.fontScale;
+      // Text is placed by its baseline: the top of the text box is this far above it.
+      pw.Widget at(double x, double baseline, double size, String text) => pw.Positioned(
+            left: x,
+            top: baseline - size * 0.78,
+            child: pw.Text(text, style: pw.TextStyle(fontSize: size, color: _ink)),
+          );
+      final writing = <pw.Widget>[];
+      for (final q in form.questions) {
+        final p = q.place;
+        if (p == null || p.page != page) continue;
+        final text = plain(FormFill.onForm(q, r, form)).trim();
+        if (text.isEmpty) continue;
+        final width = p.width * w;
+        if (q.kind == ReportQuestion.long) {
+          final ys = [p.y, ...p.rows];
+          final (size, lines) = Fit.rows(text, width, ys.length, base, at1);
+          final gap = ys.length > 1 ? ys[ys.length - 1] - ys[ys.length - 2] : 1.7 * size / h;
+          for (var i = 0; i < lines.length; i++) {
+            final y = i < ys.length ? ys[i] : ys.last + gap * (i - ys.length + 1);
+            writing.add(at(p.x * w, y * h, size, lines[i]));
+          }
+        } else {
+          final one = text.replaceAll('\n', ' ');
+          writing.add(at(p.x * w, p.y * h, Fit.oneLine(one, width, base, at1), one));
+        }
+      }
       doc.addPage(pw.Page(
         pageFormat: PdfPageFormat(w, h, marginAll: 0),
         build: (c) => pw.Stack(children: [
           pw.Image(image, width: w, height: h, fit: pw.BoxFit.fill),
-          for (final q in form.questions)
-            if (q.place != null && q.place!.page == page && FormFill.onForm(q, r, form).trim().isNotEmpty)
-              pw.Positioned(
-                left: q.place!.x * w,
-                top: q.place!.y * h - size * 0.95,
-                child: q.kind == ReportQuestion.long
-                    ? pw.SizedBox(
-                        width: ((0.96 - q.place!.x) * w).clamp(40, w),
-                        child: pw.Text(plain(FormFill.onForm(q, r, form)), style: style),
-                      )
-                    : pw.Text(plain(FormFill.onForm(q, r, form).replaceAll('\n', ' ')), style: style),
-              ),
+          ...writing,
         ]),
       ));
     }

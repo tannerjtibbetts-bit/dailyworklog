@@ -4,12 +4,14 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:printing/printing.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/form_lines.dart';
 import '../data/forms.dart';
 import '../data/store.dart';
 import '../ui/common.dart';
@@ -105,14 +107,28 @@ class FormFiles {
       case Doc.pdf:
         final pages = await pdfPages(form.files.first);
         form.files = [form.files.first, ...pages];
-        return FormReader.readLines(await readPictures(pages));
+        return FormReader.readLines(await readPictures(pages), segments: await findLines(pages));
       case Doc.docx:
         return FormReader.read(FormReader.docxLines(await Store.instance.photoFile(form.files.first).readAsBytes()));
       case Doc.xlsx:
         return FormReader.read(FormReader.xlsxLines(await Store.instance.photoFile(form.files.first).readAsBytes()));
       default:
-        return FormReader.readLines(await readPictures(form.files));
+        return FormReader.readLines(await readPictures(form.files), segments: await findLines(form.files));
     }
+  }
+
+  /// The fill-in lines on each page picture (worked out in the background).
+  static Future<List<Segment>> findLines(List<String> pictures) async {
+    final out = <Segment>[];
+    for (var page = 0; page < pictures.length; page++) {
+      try {
+        final bytes = await Store.instance.photoFile(pictures[page]).readAsBytes();
+        out.addAll(await compute(_findLines, (bytes, page)));
+      } catch (_) {
+        // no lines found on this page; answers go beside their labels
+      }
+    }
+    return out;
   }
 
   /// The pictures to show for a form or document: photos as they are, a PDF's pages.
@@ -179,3 +195,6 @@ class Mic {
     } catch (_) {}
   }
 }
+
+List<Segment> _findLines((Uint8List, int) a) => FormLines.find(a.$1, a.$2);
+

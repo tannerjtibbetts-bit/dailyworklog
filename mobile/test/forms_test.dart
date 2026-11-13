@@ -1,6 +1,10 @@
 import 'dart:convert';
 
+import 'dart:typed_data';
+
 import 'package:archive/archive.dart';
+import 'package:image/image.dart' as img;
+import 'package:dailyworklog/data/form_lines.dart';
 import 'package:dailyworklog/data/forms.dart';
 import 'package:dailyworklog/data/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -310,5 +314,55 @@ void main() {
     expect(FormFill.ruleFor(ReportQuestion('a', 'Work location', 'text')), 'location');
     expect(FormFill.ruleFor(ReportQuestion('a', 'Determine next steps', 'text')), isNull);
   });
-}
 
+  test('fill-in lines are found in a page picture and answers fit them', () {
+    // A white 1000 x 1400 page with: a line right of "NAME:", a heading's underline, and 3 ruled lines.
+    final page = img.Image(width: 1000, height: 1400);
+    img.fill(page, color: img.ColorRgb8(250, 250, 250));
+    void line(int x0, int x1, int y) =>
+        img.fillRect(page, x1: x0, y1: y, x2: x1, y2: y + 1, color: img.ColorRgb8(20, 20, 20));
+    line(220, 550, 300); // NAME blank
+    line(600, 700, 420); // underline under the heading words
+    for (final y in [520, 560, 600]) {
+      line(150, 900, y); // comment lines
+    }
+    // Some "text": short dark blocks (letters) that must not count as lines.
+    for (var x = 100; x < 400; x += 14) {
+      img.fillRect(page, x1: x, y1: 700, x2: x + 9, y2: 716, color: img.ColorRgb8(20, 20, 20));
+    }
+    final segs = FormLines.find(Uint8List.fromList(img.encodePng(page)), 0);
+    expect(segs.length, 5);
+    expect(segs.first.x0, closeTo(0.22, 0.005));
+    expect(segs.first.x1, closeTo(0.551, 0.005));
+    expect(segs.first.y * 1400, closeTo(300.5, 1.5));
+
+    FormLine l(String t, double x0, double y0, double x1, double y1) =>
+        FormLine(t, left: x0 / 1000, top: y0 / 1400, right: x1 / 1000, bottom: y1 / 1400);
+    final r = FormReader.readLines([
+      l('NAME:', 100, 280, 160, 298),
+      l('Point System', 600, 400, 700, 418),
+      l('C. Your overall comment on the apprentice:', 100, 480, 480, 498),
+    ], segments: segs);
+    final name = r.questions.firstWhere((q) => q.label == 'Name').place!;
+    expect(name.x, closeTo(0.226, 0.002)); // where the line starts, not beside the label
+    expect(name.w, closeTo(0.551 - 0.22 - 0.012, 0.004)); // the line's length
+    final comment = r.questions.firstWhere((q) => q.kind == ReportQuestion.long).place!;
+    expect(comment.x, closeTo(0.156, 0.002));
+    expect(comment.rows.length, 2); // carries on to the next two ruled lines
+    expect(comment.y, closeTo(520.5 / 1400 - 0.0045, 0.002));
+
+    // Fitting: 10 units per character at size 1.
+    double at1(String t) => t.length * 10.0;
+    expect(Fit.oneLine('Tyson Zimmer', 2000, 1, at1), 1); // fits
+    expect(Fit.oneLine('Aecon Industrial Western', 120, 1, at1), 0.5); // shrinks, not below half
+    final (size, lines) = Fit.rows('one two three four five six seven eight nine ten', 200, 2, 1, at1);
+    expect(lines.length, lessThanOrEqualTo(3));
+    expect(size, lessThan(1));
+    expect(Fit.wrap('a b c', 30, (t) => t.length * 10.0), ['a b', 'c']);
+    // Moving keeps the line length and moves the following lines too.
+    final moved = comment.moved(0.01, 0.02);
+    expect(moved.w, comment.w);
+    expect(moved.rows.first, closeTo(comment.rows.first + 0.02, 1e-9));
+    expect(Place.fromJson(comment.toJson())!.rows.length, 2);
+  });
+}

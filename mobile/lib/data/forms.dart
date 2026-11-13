@@ -7,7 +7,10 @@ import 'dart:math' as math;
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import 'form_lines.dart';
 import 'models.dart';
+
+export 'form_lines.dart' show Segment;
 
 /// A file saved on the Links tab (a photo, PDF, Word, Excel or other file).
 class Doc {
@@ -77,15 +80,40 @@ class Place {
   final int page;
   final double x, y;
 
-  const Place(this.page, this.x, this.y);
+  /// Width available (the fill-in line's length), or 0 when no line was found (then up to the page edge).
+  final double w;
 
-  Map<String, dynamic> toJson() => {'page': page, 'x': x, 'y': y};
+  /// For long answers: where the following lines go (y of each next ruled line).
+  final List<double> rows;
+
+  const Place(this.page, this.x, this.y, [this.w = 0, this.rows = const []]);
+
+  /// The width to fit in: the line's length, else to the page's right edge.
+  double get width => w > 0 ? w : (0.96 - x).clamp(0.04, 1.0);
+
+  /// Moved by (dx, dy); following lines move with it.
+  Place moved(double dx, double dy) => Place(page, (x + dx).clamp(0.0, 0.98), (y + dy).clamp(0.01, 1.0), w,
+      [for (final r in rows) (r + dy).clamp(0.01, 1.0)]);
+
+  Map<String, dynamic> toJson() => {
+        'page': page,
+        'x': x,
+        'y': y,
+        if (w > 0) 'w': w,
+        if (rows.isNotEmpty) 'rows': rows,
+      };
 
   static Place? fromJson(dynamic o) {
     if (o is! Map) return null;
     final x = o['x'], y = o['y'];
     if (x is! num || y is! num) return null;
-    return Place(o['page'] is int ? o['page'] as int : 0, x.toDouble().clamp(0, 1), y.toDouble().clamp(0, 1));
+    return Place(
+      o['page'] is int ? o['page'] as int : 0,
+      x.toDouble().clamp(0, 1),
+      y.toDouble().clamp(0, 1),
+      o['w'] is num ? (o['w'] as num).toDouble().clamp(0, 1) : 0,
+      [if (o['rows'] is List) for (final r in o['rows'] as List) if (r is num) r.toDouble().clamp(0, 1)],
+    );
   }
 
   @override
@@ -318,7 +346,7 @@ class FormReader {
 
   /// Reads the lines into questions and signature lines; when the lines have boxes, also works out where
   /// each answer is written on the page.
-  static ReadForm readLines(List<FormLine> input) {
+  static ReadForm readLines(List<FormLine> input, {List<Segment> segments = const []}) {
     final found = <_Found>[];
     final choices = <Choice>[];
     final signatures = <String>[];
@@ -469,11 +497,28 @@ class FormReader {
     final textSize =
         heights.isEmpty ? 0.014 : (heights[heights.length ~/ 2] * 0.75).clamp(0.008, 0.03).toDouble();
 
+    // The fill-in lines: not the underline of a heading (a line right under words that cover it).
+    final lines = [
+      for (final g in segments)
+        if (!input.any((t) =>
+            t.hasBox &&
+            t.page == g.page &&
+            !t.text.contains(RegExp(r'_{3,}')) &&
+            g.y >= t.top &&
+            g.y <= t.bottom + 0.006 &&
+            (math.min(g.x1, t.right) - math.max(g.x0, t.left)) > 0.5 * g.length))
+          g,
+    ];
+    final used = <Segment>{};
+
     final questions = <ReportQuestion>[];
     for (var i = 0; i < found.length; i++) {
       final f = found[i], b = f.src, kind = kinds[i];
       Place? place;
-      if (b.hasBox) {
+      final onLine = b.hasBox ? _onLines(f, kind, lines, used) : null;
+      if (onLine != null) {
+        place = onLine;
+      } else if (b.hasBox) {
         place = switch (kind) {
           ReportQuestion.long => Place(b.page, b.left, b.bottom + 1.1 * b.height),
           ReportQuestion.rating => Place(b.page, column, b.bottom),
@@ -489,6 +534,58 @@ class FormReader {
           kind == ReportQuestion.rating ? List.of(choices) : null, place));
     }
     return ReadForm(questions, signatures, textSize);
+  }
+
+  /// Puts an answer on the form's own fill-in line: a short answer on the nearest line to the right of its
+  /// label (or just under it), a long answer on the ruled lines under it.
+  static Place? _onLines(_Found f, String kind, List<Segment> lines, Set<Segment> used) {
+    final b = f.src;
+    final h = b.height;
+    const pad = 0.006, lift = 0.0045;
+    if (kind == ReportQuestion.long) {
+      final below = lines
+          .where((g) => g.page == b.page && !used.contains(g) && g.y > b.bottom && g.y <= b.bottom + 10 * h && g.length >= 0.25)
+          .toList()
+        ..sort((a, c) => a.y.compareTo(c.y));
+      if (below.isEmpty) return null;
+      final rows = [below.first];
+      for (final g in below.skip(1)) {
+        if (g.y - rows.last.y > 3 * h) break;
+        if (g.y - rows.last.y < 0.4 * h) continue; // the same line found twice
+        rows.add(g);
+      }
+      used.addAll(rows);
+      final first = rows.first;
+      return Place(b.page, first.x0 + pad, first.y - lift, first.length - 2 * pad,
+          [for (final g in rows.skip(1)) g.y - lift]);
+    }
+    // The average's label may run on to a "(total ...)" line: look from the end of that.
+    final end = kind == ReportQuestion.average && f.parenAfter ? math.max(f.labelEnd, f.parenRight) : f.labelEnd;
+    final bottom = kind == ReportQuestion.average && f.parenAfter ? b.bottom + 1.2 * h : b.bottom;
+    Segment? best;
+    var bestScore = double.infinity;
+    for (final g in lines) {
+      if (g.page != b.page || used.contains(g)) continue;
+      if (g.y < bottom - 0.5 * h || g.y > bottom + 1.6 * h) continue;
+      if (g.x1 <= end + 0.01 || g.x0 < end - 0.02) continue;
+      final score = (g.x0 - end) + 2 * (g.y - bottom).abs();
+      if (score < bestScore) {
+        bestScore = score;
+        best = g;
+      }
+    }
+    // Or a line just under the label.
+    if (best == null) {
+      for (final g in lines) {
+        if (g.page != b.page || used.contains(g)) continue;
+        if (g.y <= b.bottom || g.y > b.bottom + 2.5 * h) continue;
+        if (g.x1 < b.left || g.x0 > b.right) continue;
+        if (best == null || g.y < best.y) best = g;
+      }
+    }
+    if (best == null) return null;
+    used.add(best);
+    return Place(b.page, best.x0 + pad, best.y - lift, best.length - 2 * pad);
   }
 
   /// Trimmed, without trailing ":" or blanks; ALL CAPS becomes sentence case ("Employee #").
@@ -893,3 +990,58 @@ class FormFill {
           if (q.kind != ReportQuestion.average && r.answer(q.id).isEmpty) q,
       ];
 }
+
+/// Fitting answers into the form's lines (the PDF and the Place the answers screen use the same steps).
+class Fit {
+  Fit._();
+
+  /// [text] in lines no wider than [width], breaking between words (a very long word is split).
+  /// [measure] gives a string's width at the size being used.
+  static List<String> wrap(String text, double width, double Function(String) measure) {
+    final out = <String>[];
+    for (final para in text.split('\n')) {
+      var line = '';
+      for (final word in para.split(RegExp(r'\s+')).where((w) => w.isNotEmpty)) {
+        final tryLine = line.isEmpty ? word : '$line $word';
+        if (measure(tryLine) <= width) {
+          line = tryLine;
+          continue;
+        }
+        if (line.isNotEmpty) out.add(line);
+        // A word longer than the line on its own is split.
+        var rest = word;
+        while (measure(rest) > width && rest.length > 1) {
+          var n = rest.length - 1;
+          while (n > 1 && measure(rest.substring(0, n)) > width) {
+            n--;
+          }
+          out.add(rest.substring(0, n));
+          rest = rest.substring(n);
+        }
+        line = rest;
+      }
+      if (line.isNotEmpty) out.add(line);
+    }
+    return out;
+  }
+
+  /// The size to write a one-line answer at so it fits [width]: [size], or smaller (not under half).
+  static double oneLine(String text, double width, double size, double Function(String) measureAt1) {
+    final w = measureAt1(text) * size;
+    if (w <= width || w == 0) return size;
+    return math.max(size * 0.5, size * width / w);
+  }
+
+  /// A long answer on [rows] ruled lines of [width]: the size (from [size] down to 55% of it) and the lines.
+  /// If it still doesn't fit, there are more lines than rows (they carry on below).
+  static (double, List<String>) rows(String text, double width, int rows, double size,
+      double Function(String) measureAt1) {
+    var s = size;
+    while (true) {
+      final lines = wrap(text, width, (t) => measureAt1(t) * s);
+      if (lines.length <= math.max(1, rows) || s <= size * 0.55) return (s, lines);
+      s *= 0.92;
+    }
+  }
+}
+
