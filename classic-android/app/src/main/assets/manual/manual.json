@@ -2943,6 +2943,14 @@
           "caption": "The answers written on the approved form"
         },
         {
+          "type": "bullets",
+          "items": [
+            "Signature lines are always left empty for signing by hand.",
+            "An answer never runs into printed words: if a line has another label on it, the answer stops before it.",
+            "Long answers only use the ruled lines that belong to that question, and the writing is sized so it doesn't touch the lines above or below."
+          ]
+        },
+        {
           "type": "text",
           "text": "Moving an answer: the first time, check where the answers land. On the report, tap \"Check where the answers go\" (or press and hold the form and tap \"Place the answers\"). Press and drag any answer onto its line; a long answer moves with all its lines. Tap \"A-\" or \"A+\" to make all the answers smaller or bigger. The app remembers this for every report on that form."
         },
@@ -3011,6 +3019,8 @@
         {
           "type": "bullets",
           "items": [
+            "Everything in Apprentice reports works here too: the answers are written on your own form's lines, fitted to their length, with the same Place the answers, Replace the form and Export PDF.",
+            "Questions like \"Employee name\", \"Employee #\", \"BP #\", \"DISN #\", \"Position\" or \"Job title\" (their trade, for example \"Millwright Apprentice\"), \"Supervisor\" (you) and \"Date\" (today) fill in by themselves. Things like the date of the incident and what happened are asked.",
             "When you fill it in, \"Who is this report for?\" lists everyone on the project's crew.",
             "If the form has no signature lines the app could read, the PDF gets \"Supervisor signature\", \"Employee signature\" and \"Witness signature\".",
             "Forms and filled-in reports here are kept separate from Apprentice reports."
