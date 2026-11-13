@@ -617,9 +617,8 @@ public final class Models {
         /** With following lines: the tallest text that fits between them (fraction of the page height); else -1. */
         public double rowFit() {
             if (rows.isEmpty()) return -1;
-            double gap = rows.get(0) - y;
-            for (int i = 1; i < rows.size(); i++) gap = Math.min(gap, rows.get(i) - rows.get(i - 1));
-            return gap * 0.62;
+            // The average gap between the lines.
+            return (rows.get(rows.size() - 1) - y) / rows.size() * 0.66;
         }
 
         /** Moved by (dx, dy); following lines move with it. */
@@ -659,7 +658,7 @@ public final class Models {
 
     /** A question on a report form. */
     public static class FormQuestion {
-        public static final String TEXT = "text", LONG = "long", RATING = "rating", AVERAGE = "average";
+        public static final String TEXT = "text", LONG = "long", RATING = "rating", AVERAGE = "average", DATE = "date";
         public String id = "", label = "", kind = TEXT;
         public List<Choice> choices = new ArrayList<>();
         /** Where its answer goes on the form's pictures (null: not placed). */

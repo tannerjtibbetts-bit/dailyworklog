@@ -127,7 +127,8 @@ final class FormReader {
     }
 
     /** segments: the fill-in lines found in the page pictures (FormLines), so answers go on them. */
-    static Result readLines(List<Line> lines, List<FormLines.Segment> segments) {
+    static Result readLines(List<Line> rawLines, List<FormLines.Segment> segments) {
+        List<Line> lines = joinRows(rawLines);
         Result r = new Result();
         List<Found> found = new ArrayList<>();
         String[] normalized = new String[lines.size()];
@@ -252,11 +253,14 @@ final class FormReader {
                 kind = r.scale.size() >= 2 ? Models.FormQuestion.RATING : Models.FormQuestion.TEXT;
             } else if (f.kind.equals(Models.FormQuestion.AVERAGE)) {
                 kind = Models.FormQuestion.AVERAGE;
-            } else if (f.section || isLong(label)) {
+            } else if (f.section) {
                 kind = Models.FormQuestion.LONG;
             } else {
                 kind = Models.FormQuestion.TEXT;
             }
+            // Dates are picked on a calendar: "Date", "Date of incident", and a "... from" / "... to" period.
+            if (kind.equals(Models.FormQuestion.TEXT) && isDateLabel(label)) kind = Models.FormQuestion.DATE;
+            if (kind.equals(Models.FormQuestion.TEXT) && isLong(label)) kind = Models.FormQuestion.LONG;
             Models.FormQuestion q = new Models.FormQuestion("q" + (r.questions.size() + 1), label, kind);
             if (kind.equals(Models.FormQuestion.RATING)) {
                 for (Models.Choice c : r.scale) q.choices.add(new Models.Choice(c.label, c.value));
@@ -346,7 +350,7 @@ final class FormReader {
             java.util.Collections.sort(heights);
             int n = heights.size();
             double median = n % 2 == 1 ? heights.get(n / 2) : (heights.get(n / 2 - 1) + heights.get(n / 2)) / 2;
-            r.textSize = Math.max(0.008, Math.min(0.03, median * 0.75));
+            r.textSize = Math.max(0.008, Math.min(0.03, median * 1.15));
         }
     }
 
@@ -441,6 +445,62 @@ final class FormReader {
             if (s == null || s.isEmpty()) continue;
             return s.startsWith("(") && s.endsWith(")") ? i : -1;
         }
+        return -1;
+    }
+
+    static boolean isDateLabel(String label) {
+        String l = label.toLowerCase(Locale.ROOT).trim();
+        return Pattern.compile("\\bdate\\b").matcher(l).find() || l.endsWith(" from") || l.endsWith(" to");
+    }
+
+    private static final Pattern MARKER = Pattern.compile("^(\\d{1,2}|[A-H])[.)]$");
+    private static final Pattern NUMBER = Pattern.compile("^\\d+(\\.\\d+)?$");
+
+    private static boolean sameRow(Line a, Line b) {
+        double overlap = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        return a.page == b.page && overlap > 0.5 * Math.min(a.bottom - a.top, b.bottom - b.top);
+    }
+
+    /**
+     * The phone's text reader can read a column of item numbers ("1.", "2." ...) or of points ("4.0" ...) apart
+     * from their words: join each back to the words on its row (a marker to the words on its right, a number to
+     * the words on its left).
+     */
+    static List<Line> joinRows(List<Line> input) {
+        List<Line> out = new ArrayList<>(input);
+        java.util.Set<Line> gone = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for (Line m : input) {
+            if (!m.hasBox || gone.contains(m) || m.text == null) continue;
+            String t = m.text.trim();
+            boolean isMarker = MARKER.matcher(t).matches(), isNumber = !isMarker && NUMBER.matcher(t).matches();
+            if (!isMarker && !isNumber) continue;
+            Line best = null;
+            double bestGap = Double.POSITIVE_INFINITY;
+            for (Line o : out) {
+                if (o == m || !o.hasBox || gone.contains(o) || o.text == null || !sameRow(m, o)) continue;
+                String ot = o.text.trim();
+                if (MARKER.matcher(ot).matches() || NUMBER.matcher(ot).matches()) continue;
+                double gap = isMarker ? o.left - m.right : m.left - o.right;
+                if (gap < -0.005 || gap > 0.25) continue;
+                if (gap < bestGap) {
+                    bestGap = gap;
+                    best = o;
+                }
+            }
+            if (best == null) continue;
+            Line joined = new Line(isMarker ? t + " " + best.text : best.text + " " + t, m.page,
+                    Math.min(m.left, best.left), Math.min(m.top, best.top), Math.max(m.right, best.right), Math.max(m.bottom, best.bottom));
+            gone.add(m);
+            gone.add(best);
+            out.set(indexOf(out, best), joined);
+        }
+        List<Line> kept = new ArrayList<>();
+        for (Line l : out) if (!gone.contains(l)) kept.add(l);
+        return kept;
+    }
+
+    private static int indexOf(List<Line> list, Line l) {
+        for (int i = 0; i < list.size(); i++) if (list.get(i) == l) return i;
         return -1;
     }
 

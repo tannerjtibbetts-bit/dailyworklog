@@ -65,8 +65,10 @@ final class ReportFill {
      */
     static String suggest(Store store, Models.Project p, Models.ReportForm form, Models.FilledReport r,
                           Models.FormQuestion q, List<Models.FilledReport> earlier, long now) {
-        if (!Models.FormQuestion.TEXT.equals(q.kind) && !Models.FormQuestion.LONG.equals(q.kind)) return "";
         String l = q.label.toLowerCase(Locale.ROOT).trim();
+        // Dates only get today, and only for a plain "Date" and the like.
+        if (Models.FormQuestion.DATE.equals(q.kind)) return DATES.contains(l) ? day(now) : "";
+        if (!Models.FormQuestion.TEXT.equals(q.kind) && !Models.FormQuestion.LONG.equals(q.kind)) return "";
         String person = r.person;
         if (has(ME, l)) {
             if (has(PHONE, l)) return store.contactPhone.isEmpty() ? "" : SmsHelper.formatPhone(store.contactPhone);
@@ -180,6 +182,37 @@ final class ReportFill {
             n++;
         }
         return n == 0 ? "" : String.format(Locale.US, "%.1f", sum / n);
+    }
+
+    /**
+     * The end of a period picked as one range: q is a date ending " from" and the next question a date ending " to".
+     */
+    static Models.FormQuestion rangeEnd(Models.ReportForm form, Models.FormQuestion q) {
+        if (!Models.FormQuestion.DATE.equals(q.kind) || !q.label.toLowerCase(Locale.ROOT).endsWith(" from")) return null;
+        int i = form.questions.indexOf(q);
+        if (i < 0 || i + 1 >= form.questions.size()) return null;
+        Models.FormQuestion next = form.questions.get(i + 1);
+        return Models.FormQuestion.DATE.equals(next.kind) && next.label.toLowerCase(Locale.ROOT).endsWith(" to") ? next : null;
+    }
+
+    /** The start of the range this question ends, or null. */
+    static Models.FormQuestion rangeStart(Models.ReportForm form, Models.FormQuestion q) {
+        int i = form.questions.indexOf(q);
+        if (i <= 0) return null;
+        Models.FormQuestion prev = form.questions.get(i - 1);
+        return rangeEnd(form, prev) == q ? prev : null;
+    }
+
+    /** A date answer ("Nov 3, 2026") back as a date, or null. */
+    static java.util.Calendar parseDate(String s) {
+        java.util.regex.Matcher m = Pattern.compile("^([A-Z][a-z]{2}) (\\d{1,2}), (\\d{4})$").matcher(s == null ? "" : s.trim());
+        if (!m.matches()) return null;
+        int month = java.util.Arrays.asList("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec").indexOf(m.group(1));
+        if (month < 0) return null;
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        c.clear();
+        c.set(Integer.parseInt(m.group(3)), month, Integer.parseInt(m.group(2)));
+        return c;
     }
 
     /** The questions still to ask: empty, and not worked out (the average). */
