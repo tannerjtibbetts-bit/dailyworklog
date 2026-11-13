@@ -1163,8 +1163,8 @@ class FormsTest {
     String ratings = "Improvement shown in above period(rating) | Understanding of work(rating) | Progress in learning this phase of work(rating) | "
         + "Work quality(rating) | Interest shown in this period(rating) | Attendance(rating) | Punctuality(rating) | Co-operation(rating) | "
         + "Safety Attitude(rating) | Mechanical skills(rating)";
-    RichTest.eq(qs(r), "Date(text) | Name(text) | Employee #(text) | Employer(text) | Term(text) | Period covered from(text) | "
-        + "Period covered to(text) | Work done in the above period(long) | " + ratings + " | Overall average(average) | "
+    RichTest.eq(qs(r), "Date(date) | Name(text) | Employee #(text) | Employer(text) | Term(text) | Period covered from(date) | "
+        + "Period covered to(date) | Work done in the above period(long) | " + ratings + " | Overall average(average) | "
         + "Your overall comment on the apprentice(long)", "sample questions");
     RichTest.eq(r.signatures, java.util.Arrays.asList("Signature Of Supervisor", "Signature Of Steward", "Signature Of Apprenticeship Chairman",
         "Signature Of Apprentice"), "sample signatures");
@@ -1172,7 +1172,7 @@ class FormsTest {
     NoteTest.check(r.questions.get(0).id.equals("q1") && r.questions.get(19).id.equals("q20") && r.questions.size() == 20, "ids q1..q20");
     for (Models.FormQuestion q : r.questions) if (!q.kind.equals("rating")) NoteTest.check(q.choices.isEmpty(), "no choices on " + q.label);
     // Other line shapes
-    RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("NAME: ____ DATE: ____"))), "Name(text) | Date(text)", "two blanks on a line");
+    RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("NAME: ____ DATE: ____"))), "Name(text) | Date(date)", "two blanks on a line");
     RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("Employer ________"))), "Employer(text)", "label then blank");
     RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("cc: Apprentice / Personnel / File", "FW: Apprentice Reviews", "Supervisor:"))), "Supervisor(text)", "cc / FW lines aren't questions");
     RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("Reason for discipline:", "Describe what happened ......", "Was the employee warned before?",
@@ -1378,7 +1378,7 @@ class PlacementTest {
     lines.add(new FormReader.Line("Comments"));  // no box (e.g. from Word)
     FormReader.Result r = FormReader.readLines(lines);
     RichTest.eq(FormsTest.qs(r), "Name(text) | Work done in the above period(long) | Improvement shown in above period(rating) | "
-        + "Progress in learning this phase of work(rating) | Overall average(average) | Name2(text) | Date(text)", "questions");
+        + "Progress in learning this phase of work(rating) | Overall average(average) | Name2(text) | Date(date)", "questions");
     Models.Place name = r.questions.get(0).place;
     near(name.x, 0.177, "Name x"); near(name.y, 0.287, "Name y"); NoteTest.check(name.page == 0, "Name page");
     near(r.questions.get(1).place.x, 0.107, "Work done x"); near(r.questions.get(1).place.y, 0.349 + 1.1 * 0.013, "Work done y");
@@ -1403,7 +1403,7 @@ class PlacementTest {
     java.util.List<FormReader.Line> noParen = new java.util.ArrayList<>(wide.subList(0, 4));
     near(FormReader.readLines(noParen).questions.get(1).place.x, 0.365, "average right of its own line, past the rating column");
     near(FormReader.readLines(noParen).questions.get(1).place.y, 0.31, "average on its line when no (total ...)");
-    near(r.textSize, 0.013 * 0.75, "text size from the median line height");
+    near(r.textSize, 0.013 * 1.15, "text size from the median line height (x 1.15)");
     NoteTest.check(FormReader.read(java.util.Arrays.asList("NAME:")).questions.get(0).place == null
         && FormReader.read(java.util.Arrays.asList("NAME:")).textSize == 0.014, "no boxes: no places, default size");
     // JSON: place and fontScale
@@ -1565,7 +1565,7 @@ class SafeguardsTest {
     FormLinesTest.near(name.x, 0.266, 0.001, "name starts on its line");
     NoteTest.check(name.x + name.w < 0.60, "name stops before \"Date:\" (" + (name.x + name.w) + ")");
     NoteTest.check(inc.rows.size() == 2, "incident uses its 3 ruled lines, not the signature line");
-    FormLinesTest.near(inc.rowFit(), 0.015 * 0.62, 0.0005, "rowFit");
+    FormLinesTest.near(inc.rowFit(), 0.015 * 0.66, 0.0005, "rowFit (average gap x 0.66)");
     NoteTest.check(new Models.Place(0, 0.1, 0.1).rowFit() < 0, "no rows: no rowFit");
     // A job title from Manage Crew
     Models.ReportForm form = new Models.ReportForm(); form.questions = r.questions;
@@ -1582,3 +1582,51 @@ class SafeguardsTest {
     s.workPosition = "Foreman";
     RichTest.eq(ReportFill.suggest(s, p, form, rep, new Models.FormQuestion("z", "Position of supervisor", "text"), java.util.Collections.emptyList(), 0), "Foreman", "me rule still wins");
     System.out.println("SAFEGUARDS PASS"); } }
+class RowsAndDatesTest {
+  static FormReader.Line l(String t, double x0, double y0, double x1, double y1) { return new FormReader.Line(t, 0, x0, y0, x1, y1); }
+  public static void main(String[] a) throws Exception {
+    // Item numbers and points read as their own column are joined back to their words.
+    FormReader.Result r = FormReader.readLines(java.util.Arrays.asList(
+        l("1.", 0.14, 0.400, 0.16, 0.410), l("2.", 0.14, 0.414, 0.16, 0.424), l("10.", 0.13, 0.428, 0.16, 0.438),
+        l("Improvement shown in above period", 0.19, 0.400, 0.49, 0.410),
+        l("Understanding of work", 0.19, 0.414, 0.37, 0.424),
+        l("Mechanical skills", 0.19, 0.428, 0.32, 0.438),
+        l("Excellent", 0.66, 0.40, 0.74, 0.41), l("4.0", 0.85, 0.40, 0.88, 0.41),
+        l("Average", 0.66, 0.414, 0.73, 0.424), l("2.0", 0.85, 0.414, 0.88, 0.424),
+        l("Poor", 0.66, 0.428, 0.70, 0.438), l("0.0", 0.85, 0.428, 0.88, 0.438),
+        l("Overall average of above:", 0.32, 0.45, 0.53, 0.46)));
+    java.util.List<String> got = new java.util.ArrayList<>();
+    for (Models.FormQuestion q : r.questions) got.add(q.label + "/" + q.kind);
+    RichTest.eq(got, java.util.Arrays.asList("Improvement shown in above period/rating", "Understanding of work/rating",
+        "Mechanical skills/rating", "Overall average/average"), "numbers column joined: ratings found");
+    java.util.List<String> legend = new java.util.ArrayList<>();
+    for (Models.Choice c : r.questions.get(0).choices) legend.add(c.label + " " + c.value);
+    RichTest.eq(legend, java.util.Arrays.asList("Excellent 4.0", "Average 2.0", "Poor 0.0"), "points joined to their words");
+    // Dates: the period is one pick, dates read back, only a plain Date is today.
+    Models.ReportForm f = new Models.ReportForm();
+    f.questions = FormReader.read(java.util.Arrays.asList("DATE:", "PERIOD COVERED FROM:", "TO:", "Date of incident:", "Update:")).questions;
+    got.clear();
+    for (Models.FormQuestion q : f.questions) got.add(q.label + "/" + q.kind);
+    RichTest.eq(got, java.util.Arrays.asList("Date/date", "Period covered from/date", "Period covered to/date", "Date of incident/date", "Update/text"), "date kinds");
+    RichTest.eq(ReportFill.rangeEnd(f, f.questions.get(1)).label, "Period covered to", "range end");
+    NoteTest.check(ReportFill.rangeEnd(f, f.questions.get(0)) == null && ReportFill.rangeStart(f, f.questions.get(2)) == f.questions.get(1), "range pairing");
+    java.util.Calendar d = ReportFill.parseDate("Nov 3, 2026");
+    NoteTest.check(d != null && d.get(java.util.Calendar.YEAR) == 2026 && d.get(java.util.Calendar.MONTH) == 10 && d.get(java.util.Calendar.DAY_OF_MONTH) == 3, "parseDate");
+    NoteTest.check(ReportFill.parseDate("soon") == null, "parseDate: not a date");
+    java.util.Calendar today = java.util.Calendar.getInstance(); today.clear(); today.set(2026, 10, 13, 9, 0);
+    Models.FilledReport rep = new Models.FilledReport();
+    ReportFill.autoFill(new Store(), new Models.Project(), f, rep, java.util.Collections.emptyList(), today.getTimeInMillis());
+    RichTest.eq(rep.answers.toString(), "{q1=Nov 13, 2026}", "only a plain Date is today");
+    got.clear();
+    for (Models.FormQuestion q : ReportFill.missing(f, rep)) got.add(q.label);
+    RichTest.eq(got, java.util.Arrays.asList("Period covered from", "Period covered to", "Date of incident", "Update"), "missing");
+    // The average is never asked.
+    Models.ReportForm sf = FormsTest.sampleForm();
+    for (Models.FormQuestion q : ReportFill.missing(sf, new Models.FilledReport())) NoteTest.check(!q.kind.equals("average"), "average not asked: " + q.label);
+    // The calendar's dates
+    RichTest.eq(DatePick.format(DatePick.utc("Aug 1, 2026")), "Aug 1, 2026", "calendar date round trip");
+    RichTest.eq(DatePick.periodLabel("Period covered from"), "Period covered", "period label");
+    // rowFit: the average gap x 0.66
+    Models.Place p = new Models.Place(0, 0.1, 0.20, 0.5, java.util.Arrays.asList(0.22, 0.26));
+    FormLinesTest.near(p.rowFit(), 0.03 * 0.66, 1e-9, "rowFit uses the average gap");
+    System.out.println("ROWSDATES PASS"); } }

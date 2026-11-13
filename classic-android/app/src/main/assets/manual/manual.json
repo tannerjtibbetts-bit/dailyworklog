@@ -2854,7 +2854,13 @@
         "line",
         "lines",
         "too long",
-        "smaller"
+        "smaller",
+        "calendar",
+        "date picker",
+        "period covered",
+        "score",
+        "scores",
+        "rating each item"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2927,6 +2933,24 @@
           "type": "image",
           "file": "report_ask.png",
           "caption": "The app asks each missing question"
+        },
+        {
+          "type": "text",
+          "text": "Dates are picked on a calendar: tap \"Pick a date\", swipe up or down to change month, and tap the day. For \"Period covered from\" and \"to\", it's one calendar: tap the first day, then the last day, then \"Done\". Both blanks fill in."
+        },
+        {
+          "type": "image",
+          "file": "report_period.png",
+          "caption": "Picking the period"
+        },
+        {
+          "type": "image",
+          "file": "report_calendar.png",
+          "caption": "The calendar: first day, then last day"
+        },
+        {
+          "type": "text",
+          "text": "Each numbered item (1 to 10) is asked on its own: tap its score, for example \"Excellent (4.0)\". The \"Overall average\" is never asked: it's worked out from your 10 scores (total of 1 to 10, divided by 10) and fills in by itself."
         },
         {
           "type": "text",
