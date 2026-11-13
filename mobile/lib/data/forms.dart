@@ -91,6 +91,17 @@ class Place {
   /// The width to fit in: the line's length, else to the page's right edge.
   double get width => w > 0 ? w : (0.96 - x).clamp(0.04, 1.0);
 
+  /// For long answers on ruled lines: the tallest text that fits between them (fraction of the page height),
+  /// or null with no following lines.
+  double? get rowFit {
+    if (rows.isEmpty) return null;
+    var gap = rows.first - y;
+    for (var i = 1; i < rows.length; i++) {
+      gap = math.min(gap, rows[i] - rows[i - 1]);
+    }
+    return gap * 0.62;
+  }
+
   /// Moved by (dx, dy); following lines move with it.
   Place moved(double dx, double dy) => Place(page, (x + dx).clamp(0.0, 0.98), (y + dy).clamp(0.01, 1.0), w,
       [for (final r in rows) (r + dy).clamp(0.01, 1.0)]);
@@ -509,7 +520,18 @@ class FormReader {
             (math.min(g.x1, t.right) - math.max(g.x0, t.left)) > 0.5 * g.length))
           g,
     ];
-    final used = <Segment>{};
+    // Signature lines are left empty: a line with "Signature ..." under it, or after it on the same line.
+    final sigs = [for (final t in input) if (t.hasBox && t.text.toLowerCase().contains('signature')) t];
+    final used = <Segment>{
+      for (final g in lines)
+        if (sigs.any((t) =>
+            t.page == g.page &&
+            ((math.min(g.x1, t.right) - math.max(g.x0, t.left) > 0.3 * math.min(g.length, t.right - t.left) &&
+                    t.top - g.y >= -0.004 &&
+                    t.top - g.y <= 1.5 * t.height) ||
+                (g.x0 >= t.right - 0.01 && g.x0 - t.right < 0.1 && (g.y - t.bottom).abs() <= t.height))))
+          g,
+    };
 
     final questions = <ReportQuestion>[];
     for (var i = 0; i < found.length; i++) {
@@ -517,7 +539,7 @@ class FormReader {
       Place? place;
       final onLine = b.hasBox ? _onLines(f, kind, lines, used) : null;
       if (onLine != null) {
-        place = onLine;
+        place = _clear(onLine, b, input);
       } else if (b.hasBox) {
         place = switch (kind) {
           ReportQuestion.long => Place(b.page, b.left, b.bottom + 1.1 * b.height),
@@ -529,6 +551,7 @@ class FormReader {
               f.parenAfter ? b.bottom + 1.2 * b.height : b.bottom),
           _ => Place(b.page, f.labelEnd + 0.012, b.bottom),
         };
+        place = _clear(place, b, input);
       }
       questions.add(ReportQuestion('q${questions.length + 1}', f.label, kind,
           kind == ReportQuestion.rating ? List.of(choices) : null, place));
@@ -549,9 +572,14 @@ class FormReader {
         ..sort((a, c) => a.y.compareTo(c.y));
       if (below.isEmpty) return null;
       final rows = [below.first];
+      double? spacing;
       for (final g in below.skip(1)) {
-        if (g.y - rows.last.y > 3 * h) break;
-        if (g.y - rows.last.y < 0.4 * h) continue; // the same line found twice
+        final gap = g.y - rows.last.y;
+        if (gap < 0.4 * h) continue; // the same line found twice
+        if (gap > 3 * h) break;
+        // Ruled lines are evenly spaced: a bigger gap means a different part of the form.
+        if (spacing != null && gap > 1.8 * spacing) break;
+        spacing ??= gap;
         rows.add(g);
       }
       used.addAll(rows);
@@ -586,6 +614,23 @@ class FormReader {
     if (best == null) return null;
     used.add(best);
     return Place(b.page, best.x0 + pad, best.y - lift, best.length - 2 * pad);
+  }
+
+  /// Keeps an answer off printed words: its width stops before any text on the page that sits in the band the
+  /// answer is written in (from a little above its first line to its last line), other than its own label.
+  static Place _clear(Place p, FormLine own, List<FormLine> input) {
+    final h = own.height;
+    final top = p.y - 1.1 * h, bottom = (p.rows.isEmpty ? p.y : p.rows.last) + 0.2 * h;
+    var end = p.x + p.width;
+    for (final t in input) {
+      if (!t.hasBox || t.page != p.page || identical(t, own)) continue;
+      if (t.bottom <= top || t.top >= bottom) continue;
+      if (t.left <= p.x + 0.005 || t.left >= end) continue;
+      end = t.left - 0.008;
+    }
+    final w = end - p.x;
+    if (w >= p.width - 1e-9) return p;
+    return Place(p.page, p.x, p.y, math.max(0.03, w), p.rows);
   }
 
   /// Trimmed, without trailing ":" or blanks; ALL CAPS becomes sentence case ("Employee #").
@@ -840,6 +885,7 @@ class FormFill {
     if (_names.contains(l) || _nameParts.any(l.contains)) return 'name';
     // Single words match whole words only ("Work location" isn't a union local, "determine" isn't a term).
     bool w(String words) => RegExp('\\b($words)\\b').hasMatch(l);
+    if (w('position|occupation') || l.contains('job title')) return 'position';
     if (w('trade|craft')) return 'trade';
     if (w('union|local')) return 'local';
     if (w('level|classification')) return 'level';
@@ -881,6 +927,10 @@ class FormFill {
         'disn' => p.disnNumbers[who] ?? '',
         'name' => who,
         'trade' => p.trades[who] ?? '',
+        // Their job: "Millwright", "Millwright Apprentice", or just the level when no trade is set.
+        'position' => [p.trades[who] ?? '', p.levels[who] == 'Apprentice' ? 'Apprentice' : '']
+            .where((x) => x.isNotEmpty)
+            .join(' '),
         'local' => p.unionLocals[who] ?? '',
         'level' => p.levels[who] ?? '',
         'term' => p.terms[who] ?? '',

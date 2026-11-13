@@ -1,5 +1,6 @@
 // A filled-in report form (Apprentice reports, Disciplinary action) as a PDF to print, sign and hand in:
 // the answers, the ratings table with the point system, and the form's signature lines.
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:pdf/pdf.dart';
@@ -60,7 +61,9 @@ class ReportFormPdf {
         final width = p.width * w;
         if (q.kind == ReportQuestion.long) {
           final ys = [p.y, ...p.rows];
-          final (size, lines) = Fit.rows(text, width, ys.length, base, at1);
+          // Not taller than the gap between the ruled lines, so lines of writing don't touch.
+          final start = p.rowFit == null ? base : math.min(base, p.rowFit! * h);
+          final (size, lines) = Fit.rows(text, width, ys.length, start, at1);
           final gap = ys.length > 1 ? ys[ys.length - 1] - ys[ys.length - 2] : 1.7 * size / h;
           for (var i = 0; i < lines.length; i++) {
             final y = i < ys.length ? ys[i] : ys.last + gap * (i - ys.length + 1);

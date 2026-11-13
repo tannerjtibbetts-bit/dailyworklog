@@ -274,7 +274,8 @@ class _PlaceScreenState extends State<PlaceScreen> {
     final pieces = <(double, double, double, String)>[]; // x, baseline y, size, text
     if (q.kind == ReportQuestion.long) {
       final ys = [p.y, ...p.rows];
-      final (size, lines) = Fit.rows(text, lineWidth, ys.length, font, at1);
+      final start = p.rowFit == null ? font : math.min(font, p.rowFit! * height);
+      final (size, lines) = Fit.rows(text, lineWidth, ys.length, start, at1);
       final gap = ys.length > 1 ? ys[ys.length - 1] - ys[ys.length - 2] : 1.7 * size / height;
       for (var i = 0; i < lines.length; i++) {
         pieces.add((p.x * width, (i < ys.length ? ys[i] : ys.last + gap * (i - ys.length + 1)) * height, size, lines[i]));

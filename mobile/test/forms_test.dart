@@ -375,4 +375,42 @@ void main() {
     expect(moved.rows.first, closeTo(comment.rows.first + 0.02, 1e-9));
     expect(Place.fromJson(comment.toJson())!.rows.length, 2);
   });
+
+  test('safeguards: signature lines stay empty, answers stop before printed words, ruled lines belong together', () {
+    FormLine l(String t, double x0, double y0, double x1, double y1) =>
+        FormLine(t, left: x0, top: y0, right: x1, bottom: y1);
+    const seg = Segment.new;
+    final r = FormReader.readLines([
+      l('Employee name:', 0.10, 0.100, 0.25, 0.110),
+      l('Date:', 0.60, 0.100, 0.66, 0.110), // a second label on the same line as the name's blank
+      l('Details of the incident:', 0.10, 0.200, 0.40, 0.210),
+      l('Supervisor signature', 0.15, 0.300, 0.40, 0.310), // under the line at 0.296
+      l('Position:', 0.10, 0.400, 0.20, 0.410),
+    ], segments: [
+      seg(0, 0.26, 0.90, 0.111), // runs under "Date:" too
+      seg(0, 0.10, 0.90, 0.225),
+      seg(0, 0.10, 0.90, 0.240),
+      seg(0, 0.10, 0.90, 0.255),
+      seg(0, 0.10, 0.45, 0.296), // the signature line: not for the incident's answer
+      seg(0, 0.21, 0.60, 0.411),
+    ]);
+    Place p(String label) => r.questions.firstWhere((q) => q.label == label).place!;
+    // The name stops before "Date:".
+    expect(p('Employee name').x, closeTo(0.266, 0.001));
+    expect(p('Employee name').x + p('Employee name').w, lessThan(0.60));
+    // The incident uses its 3 ruled lines, not the signature line.
+    expect(p('Details of the incident').rows.length, 2);
+    expect(p('Details of the incident').rowFit, closeTo((0.015) * 0.62, 0.0005));
+    // A job title is filled from Manage Crew.
+    final form = formFrom(r);
+    final proj = Project()
+      ..crew = ['Al']
+      ..trades = {'Al': 'Millwright'}
+      ..levels = {'Al': 'Apprentice'};
+    final rep = FilledReport()..person = 'Al';
+    FormFill.autoFill(rep, form, proj,
+        myName: 'Me', myPhone: '', myEmail: '', myPosition: '', myLocation: '', today: DateTime(2026), earlier: []);
+    expect(rep.answer(form.questions.firstWhere((q) => q.label == 'Position').id), 'Millwright Apprentice');
+    expect(rep.answer(form.questions.firstWhere((q) => q.label == 'Employee name').id), 'Al');
+  });
 }
