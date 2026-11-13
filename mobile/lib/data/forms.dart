@@ -2,6 +2,7 @@
 // text into questions, filling it in for a crew member, and working out the average of the ratings.
 // The same rules as the classic app's FormReader.java / FormFill.java.
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
@@ -70,6 +71,27 @@ class Choice {
   String toString() => legend;
 }
 
+/// Where an answer is written on the form's page picture: page number and x, y as fractions of the page's
+/// width and height (y is the bottom of the text).
+class Place {
+  final int page;
+  final double x, y;
+
+  const Place(this.page, this.x, this.y);
+
+  Map<String, dynamic> toJson() => {'page': page, 'x': x, 'y': y};
+
+  static Place? fromJson(dynamic o) {
+    if (o is! Map) return null;
+    final x = o['x'], y = o['y'];
+    if (x is! num || y is! num) return null;
+    return Place(o['page'] is int ? o['page'] as int : 0, x.toDouble().clamp(0, 1), y.toDouble().clamp(0, 1));
+  }
+
+  @override
+  String toString() => 'p$page(${x.toStringAsFixed(3)},${y.toStringAsFixed(3)})';
+}
+
 /// One question on a report form.
 class ReportQuestion {
   static const text = 'text', long = 'long', rating = 'rating', average = 'average';
@@ -79,13 +101,17 @@ class ReportQuestion {
   String kind;
   List<Choice> choices;
 
-  ReportQuestion(this.id, this.label, this.kind, [List<Choice>? choices]) : choices = choices ?? [];
+  /// Where the answer goes on the form's pictures, or null.
+  Place? place;
+
+  ReportQuestion(this.id, this.label, this.kind, [List<Choice>? choices, this.place]) : choices = choices ?? [];
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
         'kind': kind,
         'choices': [for (final c in choices) c.toJson()],
+        if (place != null) 'place': place!.toJson(),
       };
 
   static ReportQuestion fromJson(Map<String, dynamic> o) => ReportQuestion(
@@ -97,6 +123,7 @@ class ReportQuestion {
             for (final c in o['choices'] as List)
               if (c is Map) Choice((c['label'] ?? '').toString(), (c['value'] ?? '').toString()),
         ],
+        Place.fromJson(o['place']),
       );
 
   /// "Short answer", "Rating (Excellent 4.0 … Poor 0.0)" and so on, for the Check the questions screen.
@@ -123,6 +150,11 @@ class ReportForm {
   List<String> signatures = [];
   int createdAt = nowMs();
 
+  /// Size of the answers written on the form: [textSize] (a fraction of the page height, from the form's own
+  /// text) times [fontScale] (A- / A+ on Place the answers).
+  double textSize = 0.014;
+  double fontScale = 1.0;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'group': group,
@@ -132,7 +164,18 @@ class ReportForm {
         'questions': [for (final q in questions) q.toJson()],
         'signatures': signatures,
         'createdAt': createdAt,
+        'textSize': textSize,
+        'fontScale': fontScale,
       };
+
+  /// The page pictures answers are written on: a photo form's photos, a PDF form's page pictures.
+  List<String> get pagePictures => kind == Doc.photo
+      ? files
+      : kind == Doc.pdf
+          ? [for (final f in files) if (f.toLowerCase().endsWith('.png')) f]
+          : const [];
+
+  ReportForm copy() => ReportForm.fromJson(jsonDecode(jsonEncode(toJson())) as Map<String, dynamic>);
 
   static ReportForm fromJson(Map<String, dynamic> o) => ReportForm()
     ..id = (o['id'] ?? newId()).toString()
@@ -146,7 +189,9 @@ class ReportForm {
           if (q is Map) ReportQuestion.fromJson(Map<String, dynamic>.from(q)),
     ]
     ..signatures = [if (o['signatures'] is List) for (final s in o['signatures'] as List) s.toString()]
-    ..createdAt = o['createdAt'] is int ? o['createdAt'] as int : 0;
+    ..createdAt = o['createdAt'] is int ? o['createdAt'] as int : 0
+    ..textSize = o['textSize'] is num ? (o['textSize'] as num).toDouble().clamp(0.004, 0.05) : 0.014
+    ..fontScale = o['fontScale'] is num ? (o['fontScale'] as num).toDouble().clamp(0.6, 2.0) : 1.0;
 
   /// The next free question id ("q7").
   String newQuestionId() {
@@ -183,6 +228,9 @@ class FilledReport {
   int createdAt = nowMs();
   late int updatedAt = createdAt;
 
+  /// A copy of the form as it was when this report was started, used if the form is later replaced or deleted.
+  ReportForm? form;
+
   String answer(String questionId) => (answers[questionId] ?? '').trim();
 
   Map<String, dynamic> toJson() => {
@@ -195,6 +243,7 @@ class FilledReport {
         'answers': answers,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
+        if (form != null) 'form': form!.toJson(),
       };
 
   static FilledReport fromJson(Map<String, dynamic> o) {
@@ -209,7 +258,8 @@ class FilledReport {
         if (o['answers'] is Map)
           for (final e in (o['answers'] as Map).entries) e.key.toString(): (e.value ?? '').toString(),
       }
-      ..createdAt = o['createdAt'] is int ? o['createdAt'] as int : 0;
+      ..createdAt = o['createdAt'] is int ? o['createdAt'] as int : 0
+      ..form = o['form'] is Map ? ReportForm.fromJson(Map<String, dynamic>.from(o['form'] as Map)) : null;
     r.updatedAt = o['updatedAt'] is int ? o['updatedAt'] as int : r.createdAt;
     return r;
   }
@@ -220,7 +270,23 @@ class ReadForm {
   final List<ReportQuestion> questions;
   final List<String> signatures;
 
-  ReadForm(this.questions, this.signatures);
+  /// Size for answers written on the form (fraction of the page height).
+  final double textSize;
+
+  ReadForm(this.questions, this.signatures, [this.textSize = 0.014]);
+}
+
+/// A line of a form's text, with its box on the page picture as fractions (0..1) when it came from a picture.
+class FormLine {
+  final String text;
+  final int page;
+  final double left, top, right, bottom;
+  final bool hasBox;
+
+  const FormLine(this.text, {this.page = 0, this.left = 0, this.top = 0, this.right = 0, this.bottom = 0})
+      : hasBox = right > left && bottom > top;
+
+  double get height => bottom - top;
 }
 
 class FormReader {
@@ -248,31 +314,47 @@ class FormReader {
   static String normalize(String line) =>
       line.replaceAll(_blanks, ' $blank ').replaceAll(RegExp(r'\s+'), ' ').trim();
 
-  static ReadForm read(List<String> rawLines) {
+  static ReadForm read(List<String> rawLines) => readLines([for (final l in rawLines) FormLine(l)]);
+
+  /// Reads the lines into questions and signature lines; when the lines have boxes, also works out where
+  /// each answer is written on the page.
+  static ReadForm readLines(List<FormLine> input) {
     final found = <_Found>[];
     final choices = <Choice>[];
     final signatures = <String>[];
     var hasAverage = false;
 
-    void add(String label, String kind) {
+    void add(String label, String kind, FormLine src, double labelEnd) {
       final l = cleanLabel(label);
       if (l.isEmpty) return;
       if (found.any((f) => f.label.toLowerCase() == l.toLowerCase())) return;
       // "To" right after "... from" is the end of the same period.
       if (l.toLowerCase() == 'to' && found.isNotEmpty && found.last.label.toLowerCase().endsWith(' from')) {
         final prev = found.last.label;
-        found.add(_Found('${prev.substring(0, prev.length - 5)} to', kind));
+        found.add(_Found('${prev.substring(0, prev.length - 5)} to', kind, src, labelEnd));
         return;
       }
-      found.add(_Found(l, kind));
+      found.add(_Found(l, kind, src, labelEnd));
     }
 
-    for (final raw in rawLines) {
-      for (final part in raw.split('\n')) {
-        var line = normalize(part);
+    for (final src in input) {
+      final parts = src.text.split('\n');
+      for (final part in parts) {
+        // A line split in two (Word line breaks) has no box of its own.
+        final box = parts.length == 1 ? src : FormLine(part, page: src.page);
+        final full = normalize(part);
+        var line = full;
         if (RegExp('[A-Za-z]').allMatches(line).length < 2) continue;
-        if (line.startsWith('(') && line.endsWith(')')) continue;
+        if (line.startsWith('(') && line.endsWith(')')) {
+          if (found.isNotEmpty && found.last.kind == ReportQuestion.average && !found.last.parenAfter) {
+            found.last.parenAfter = true;
+            found.last.parenRight = box.right;
+          }
+          continue;
+        }
         final noBlanks = line.replaceAll(blank, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+        double endAt(int charIndex) =>
+            box.left + (box.right - box.left) * (full.isEmpty ? 1 : (charIndex / full.length).clamp(0.0, 1.0));
 
         // 1. signature lines
         if (noBlanks.toLowerCase().contains('signature')) {
@@ -294,15 +376,17 @@ class FormReader {
         if (_scaleHeading.hasMatch(noBlanks)) continue;
         // 3. section letter: a longer answer
         var section = false;
+        var prefix = 0;
         final sec = _section.firstMatch(line);
         if (sec != null) {
           section = true;
+          prefix = sec.end;
           line = line.substring(sec.end).trim();
         }
         // 4. numbered items
         final num = _numbered.firstMatch(line);
         if (num != null) {
-          add(num.group(2)!, 'numbered');
+          add(num.group(2)!, 'numbered', box, box.right);
           continue;
         }
         // 5. the overall average
@@ -311,15 +395,20 @@ class FormReader {
             (lower.contains('of above') || lower.contains('total') || noBlanks.endsWith(':'))) {
           if (!hasAverage) {
             hasAverage = true;
-            found.add(_Found('Overall average', ReportQuestion.average));
+            found.add(_Found('Overall average', ReportQuestion.average, box, box.right));
           }
           continue;
         }
         // 6. labels with colons or fill-in lines
         final before = found.length;
         final segments = line.split(blank);
+        var offset = prefix + (full.length - full.substring(prefix).trimLeft().length - prefix).clamp(0, 9999);
+        final several = segments.where((x) => x.trim().isNotEmpty).length > 1 || ':'.allMatches(line).length > 1;
         for (var i = 0; i < segments.length; i++) {
-          final s = segments[i].trim();
+          final seg = segments[i];
+          final s = seg.trim();
+          final segStart = offset + (seg.length - seg.trimLeft().length);
+          offset += seg.length + 1;
           if (s.isEmpty) continue;
           final followedByBlank = i < segments.length - 1;
           if (s.contains(':')) {
@@ -328,10 +417,12 @@ class FormReader {
               final label = chunks[c].group(1)!;
               final afterEnd = c + 1 < chunks.length ? chunks[c + 1].start : s.length;
               final after = s.substring(chunks[c].end, afterEnd).trim();
-              if (after.isEmpty) add(label, section ? ReportQuestion.long : '');
+              if (after.isEmpty) {
+                add(label, section ? ReportQuestion.long : '', box, several ? endAt(segStart + chunks[c].end) : box.right);
+              }
             }
           } else if (followedByBlank) {
-            add(s, section ? ReportQuestion.long : '');
+            add(s, section ? ReportQuestion.long : '', box, several ? endAt(segStart + s.length) : box.right);
           }
         }
         if (found.length > before || line.contains(':') || line.contains(blank)) continue;
@@ -341,15 +432,17 @@ class FormReader {
             noBlanks.split(' ').length <= 4 &&
             noBlanks == noBlanks.toUpperCase() &&
             RegExp('[A-Z]').hasMatch(noBlanks)) {
-          add(noBlanks, section ? ReportQuestion.long : '');
+          add(noBlanks, section ? ReportQuestion.long : '', box, box.right);
           continue;
         }
         // 8. a question
-        if (noBlanks.endsWith('?') && noBlanks.length <= 120) add(noBlanks, section ? ReportQuestion.long : '');
+        if (noBlanks.endsWith('?') && noBlanks.length <= 120) {
+          add(noBlanks, section ? ReportQuestion.long : '', box, box.right);
+        }
       }
     }
 
-    final questions = <ReportQuestion>[];
+    final kinds = <String>[];
     for (final f in found) {
       var kind = f.kind;
       if (kind == 'numbered') {
@@ -358,10 +451,44 @@ class FormReader {
         kind = ReportQuestion.text;
       }
       if (kind == ReportQuestion.text && _longWords.hasMatch(f.label)) kind = ReportQuestion.long;
-      questions.add(ReportQuestion('q${questions.length + 1}', f.label, kind,
-          kind == ReportQuestion.rating ? List.of(choices) : null));
+      kinds.add(kind);
     }
-    return ReadForm(questions, signatures);
+
+    // Where answers go: right of the label, under it for long answers, in one column for ratings.
+    var ratingRight = 0.0;
+    for (var i = 0; i < found.length; i++) {
+      if (kinds[i] == ReportQuestion.rating && found[i].src.hasBox && found[i].src.right > ratingRight) {
+        ratingRight = found[i].src.right;
+      }
+    }
+    final column = ratingRight + 0.06;
+    final heights = <double>[
+      for (final f in found)
+        if (f.src.hasBox) f.src.height,
+    ]..sort();
+    final textSize =
+        heights.isEmpty ? 0.014 : (heights[heights.length ~/ 2] * 0.75).clamp(0.008, 0.03).toDouble();
+
+    final questions = <ReportQuestion>[];
+    for (var i = 0; i < found.length; i++) {
+      final f = found[i], b = f.src, kind = kinds[i];
+      Place? place;
+      if (b.hasBox) {
+        place = switch (kind) {
+          ReportQuestion.long => Place(b.page, b.left, b.bottom + 1.1 * b.height),
+          ReportQuestion.rating => Place(b.page, column, b.bottom),
+          // On the rating column, but never on top of the "Overall average ... (total ...)" words.
+          ReportQuestion.average => Place(
+              b.page,
+              math.max(ratingRight > 0 ? column : 0.0, (f.parenAfter ? math.max(b.right, f.parenRight) : b.right) + 0.015),
+              f.parenAfter ? b.bottom + 1.2 * b.height : b.bottom),
+          _ => Place(b.page, f.labelEnd + 0.012, b.bottom),
+        };
+      }
+      questions.add(ReportQuestion('q${questions.length + 1}', f.label, kind,
+          kind == ReportQuestion.rating ? List.of(choices) : null, place));
+    }
+    return ReadForm(questions, signatures, textSize);
   }
 
   /// Trimmed, without trailing ":" or blanks; ALL CAPS becomes sentence case ("Employee #").
@@ -435,8 +562,16 @@ class FormReader {
 
 class _Found {
   final String label, kind;
+  final FormLine src;
 
-  _Found(this.label, this.kind);
+  /// Where the label ends on the page (fraction of the width).
+  final double labelEnd;
+
+  /// The "(total #1 - #10 ...)" line comes right after the average, and where it ends.
+  bool parenAfter = false;
+  double parenRight = 0;
+
+  _Found(this.label, this.kind, this.src, this.labelEnd);
 }
 
 /// One row of a pasted crew list.
@@ -588,7 +723,7 @@ class FormFill {
     'name of apprentice',
     'name of worker',
   ];
-  static final _carry = RegExp(r'employer|company|term|department|shift');
+  static final _carry = RegExp(r'\b(employer|company|term|department|shift)\b');
 
   /// Which detail a question asks for: 'me.name', 'me.phone', 'me.email', 'me.position', 'date', 'employeeNo',
   /// 'name', 'trade', 'local', 'level', 'phone', 'project', 'location', 'group', 'carry', or null.
@@ -606,13 +741,15 @@ class FormFill {
     if (_bp.hasMatch(l)) return 'bp';
     if (l.contains('disn')) return 'disn';
     if (_names.contains(l) || _nameParts.any(l.contains)) return 'name';
-    if (l.contains('trade') || l.contains('craft')) return 'trade';
-    if (l.contains('union') || l.contains('local')) return 'local';
-    if (l.contains('level') || l.contains('classification')) return 'level';
-    if (l.contains('phone') || l.contains('cell')) return 'phone';
-    if (l.contains('project') || l.contains('job name') || l.contains('job site')) return 'project';
-    if (l.contains('location') || l.contains('area')) return 'location';
-    if (l.contains('group') || l.contains('crew')) return 'group';
+    // Single words match whole words only ("Work location" isn't a union local, "determine" isn't a term).
+    bool w(String words) => RegExp('\\b($words)\\b').hasMatch(l);
+    if (w('trade|craft')) return 'trade';
+    if (w('union|local')) return 'local';
+    if (w('level|classification')) return 'level';
+    if (w('phone|cell')) return 'phone';
+    if (w('project') || l.contains('job name') || l.contains('job site')) return 'project';
+    if (w('location|area')) return 'location';
+    if (w('group|crew')) return 'group';
     if (_carry.hasMatch(l)) return 'carry';
     return null;
   }
@@ -706,7 +843,7 @@ class FormFill {
     final nums = <double>[];
     for (final q in form.questions) {
       if (q.kind != ReportQuestion.rating) continue;
-      final v = double.tryParse(r.answer(q.id));
+      final v = double.tryParse(choiceOf(q, r.answer(q.id))?.value ?? r.answer(q.id));
       if (v != null) nums.add(v);
     }
     if (nums.isEmpty) return '';
@@ -717,13 +854,38 @@ class FormFill {
   static String shown(ReportQuestion q, FilledReport r, ReportForm form) {
     if (q.kind == ReportQuestion.average) return average(r, form);
     final a = r.answer(q.id);
+    if (q.kind == ReportQuestion.rating) return choiceOf(q, a)?.display ?? a;
+    return a;
+  }
+
+  /// What's written on the form itself: a rating's number ("4.0", or its word when the scale has none),
+  /// the average, or the text.
+  static String onForm(ReportQuestion q, FilledReport r, ReportForm form) {
+    if (q.kind == ReportQuestion.average) return average(r, form);
+    final a = r.answer(q.id);
     if (q.kind == ReportQuestion.rating) {
-      for (final c in q.choices) {
-        if ((c.value.isNotEmpty ? c.value : c.label) == a) return c.display;
-      }
+      final c = choiceOf(q, a);
+      if (c != null) return c.value.isNotEmpty ? c.value : c.label;
     }
     return a;
   }
+
+  /// A rating answer is saved as the choice's word ("Excellent", as the classic app does); a saved number also
+  /// finds its choice.
+  static Choice? choiceOf(ReportQuestion q, String answer) {
+    final a = answer.trim().toLowerCase();
+    if (a.isEmpty) return null;
+    for (final c in q.choices) {
+      if (c.label.toLowerCase() == a) return c;
+    }
+    for (final c in q.choices) {
+      if (c.value.isNotEmpty && c.value == a) return c;
+    }
+    return null;
+  }
+
+  /// The scale for a question changed to Rating on a form that has none.
+  static const plainScale = [Choice('Excellent', ''), Choice('Good', ''), Choice('Fair', ''), Choice('Poor', '')];
 
   /// Questions still to answer (not the worked-out average).
   static List<ReportQuestion> missing(FilledReport r, ReportForm form) => [

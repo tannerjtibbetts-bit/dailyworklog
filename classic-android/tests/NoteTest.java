@@ -1344,10 +1344,123 @@ class FormPdfTest {
     r.answers.put("q1", "Nov 13, 2026"); r.answers.put("q9", "Excellent"); r.answers.put("q20", "Good progress this term.");
     java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
     try {
-      FormPdf.write(f, r, 0L, out);
+      FormPdf.write(f, r, 0L, null, out);
       NoteTest.check(out.size() > 0, "PDF built");
     } catch (UnsatisfiedLinkError | RuntimeException e) {
       // android.graphics.pdf.PdfDocument needs the phone's native code; on the JVM it can't run.
       System.out.println("skipped: PdfDocument isn't available on the JVM (" + e.getClass().getSimpleName() + ")");
     }
     System.out.println("FORMPDF PASS"); } }
+class PlacementTest {
+  static void near(double got, double want, String name) {
+    if (Math.abs(got - want) > 0.002) System.out.println("got " + got + " want " + want);
+    NoteTest.check(Math.abs(got - want) <= 0.002, name);
+  }
+  public static void main(String[] a) throws Exception {
+    java.util.List<FormReader.Line> lines = new java.util.ArrayList<>();
+    lines.add(new FormReader.Line("NAME:", 0, 0.107, 0.274, 0.165, 0.287));
+    lines.add(new FormReader.Line("A. WORK DONE IN THE ABOVE PERIOD:", 0, 0.107, 0.336, 0.497, 0.349));
+    lines.add(new FormReader.Line("B. 1. Improvement shown in above period", 0, 0.143, 0.403, 0.487, 0.416));
+    lines.add(new FormReader.Line("3. Progress in learning this phase of work", 0, 0.143, 0.430, 0.506, 0.443));
+    lines.add(new FormReader.Line("Excellent 4.0", 0, 0.6, 0.5, 0.7, 0.513));
+    lines.add(new FormReader.Line("Poor 0.0", 0, 0.6, 0.52, 0.7, 0.533));
+    lines.add(new FormReader.Line("Overall average of above:", 0, 0.143, 0.6, 0.4, 0.613));
+    lines.add(new FormReader.Line("(total #1 - #10 and divide by 10)", 0, 0.143, 0.62, 0.4, 0.633));
+    lines.add(new FormReader.Line("NAME2: ____ DATE: ____", 1, 0.1, 0.1, 0.9, 0.12));
+    lines.add(new FormReader.Line("Comments"));  // no box (e.g. from Word)
+    FormReader.Result r = FormReader.readLines(lines);
+    RichTest.eq(FormsTest.qs(r), "Name(text) | Work done in the above period(long) | Improvement shown in above period(rating) | "
+        + "Progress in learning this phase of work(rating) | Overall average(average) | Name2(text) | Date(text)", "questions");
+    Models.Place name = r.questions.get(0).place;
+    near(name.x, 0.177, "Name x"); near(name.y, 0.287, "Name y"); NoteTest.check(name.page == 0, "Name page");
+    near(r.questions.get(1).place.x, 0.107, "Work done x"); near(r.questions.get(1).place.y, 0.349 + 1.1 * 0.013, "Work done y");
+    near(r.questions.get(2).place.x, 0.566, "rating x (widest + 0.06)"); near(r.questions.get(2).place.y, 0.416, "rating y");
+    near(r.questions.get(3).place.x, 0.566, "rating x same column");
+    near(r.questions.get(4).place.x, 0.566, "average in the rating column (right of (total...) is further left)"); near(r.questions.get(4).place.y, 0.613 + 1.2 * 0.013, "average under, (total...) follows");
+    // Two on one line: label ends estimated from character positions
+    Models.Place n2 = r.questions.get(5).place, d = r.questions.get(6).place;
+    String norm = FormReader.normalize("NAME2: ____ DATE: ____");
+    near(n2.x, 0.1 + 0.8 * (norm.indexOf(':') + 1) / norm.length() + 0.012, "first label end");
+    near(d.x, 0.1 + 0.8 * (norm.indexOf("DATE:") + 5) / (double) norm.length() + 0.012, "second label end");
+    NoteTest.check(n2.page == 1 && Math.abs(d.y - 0.12) < 1e-9, "page 2, baseline at the bottom");
+    // Average right of a wide "(total ...)" line
+    java.util.List<FormReader.Line> wide = new java.util.ArrayList<>();
+    wide.add(new FormReader.Line("1. Attitude", 0, 0.1, 0.1, 0.3, 0.11));
+    wide.add(new FormReader.Line("Excellent 4.0", 0, 0.1, 0.2, 0.2, 0.21));
+    wide.add(new FormReader.Line("Poor 0.0", 0, 0.1, 0.22, 0.2, 0.23));
+    wide.add(new FormReader.Line("Overall average of above:", 0, 0.1, 0.3, 0.35, 0.31));
+    wide.add(new FormReader.Line("(total #1 - #10 and divide by 10)", 0, 0.1, 0.32, 0.6, 0.33));
+    FormReader.Result w = FormReader.readLines(wide);
+    near(w.questions.get(1).place.x, 0.615, "average right of the (total ...) line");
+    java.util.List<FormReader.Line> noParen = new java.util.ArrayList<>(wide.subList(0, 4));
+    near(FormReader.readLines(noParen).questions.get(1).place.x, 0.365, "average right of its own line, past the rating column");
+    near(FormReader.readLines(noParen).questions.get(1).place.y, 0.31, "average on its line when no (total ...)");
+    near(r.textSize, 0.013 * 0.75, "text size from the median line height");
+    NoteTest.check(FormReader.read(java.util.Arrays.asList("NAME:")).questions.get(0).place == null
+        && FormReader.read(java.util.Arrays.asList("NAME:")).textSize == 0.014, "no boxes: no places, default size");
+    // JSON: place and fontScale
+    Models.ReportForm f = new Models.ReportForm(); f.questions = r.questions; f.fontScale = 1.3; f.textSize = r.textSize;
+    Models.ReportForm g = Models.ReportForm.fromJson(new org.json.JSONObject(f.toJson().toString()));
+    NoteTest.check(Math.abs(g.fontScale - 1.3) < 1e-9 && Math.abs(g.questions.get(0).place.x - name.x) < 1e-9 && g.questions.get(5).place.page == 1
+        && Math.abs(g.textSize - r.textSize) < 1e-9, "place / fontScale round trip");
+    org.json.JSONObject q = f.toJson().getJSONArray("questions").getJSONObject(0);
+    org.json.JSONObject plain = new Models.FormQuestion("q9", "X", "text").toJson();
+    NoteTest.check(q.has("place") && !plain.has("place"), "place omitted when none");
+    org.json.JSONObject old = f.toJson(); old.remove("fontScale"); old.put("textSize", 5);
+    Models.ReportForm o = Models.ReportForm.fromJson(old);
+    NoteTest.check(o.fontScale == 1.0 && o.textSize == 0.03, "old form: fontScale 1.0, textSize clamped");
+    System.out.println("PLACEMENT PASS"); } }
+class FormCopyTest {
+  public static void main(String[] a) throws Exception {
+    java.io.File home = java.nio.file.Files.createTempDirectory("dwl-copy").toFile();
+    Store s = new Store(home);
+    Models.ReportForm f = FormsTest.sampleForm(); f.files.add("doc-a.jpg"); f.files.add("doc-b.png");
+    for (String n : f.files) java.nio.file.Files.write(s.photoFile(n).toPath(), new byte[]{1});
+    s.reportForms.add(f);
+    // A report started on the form keeps a copy
+    Models.FilledReport r = new Models.FilledReport(); r.formId = f.id; r.form = f.copy(); r.answers.put("q2", "Al");
+    s.filledReports.add(r);
+    NoteTest.check(s.formFor(r) == f, "live form used while it exists");
+    Models.FilledReport back = Models.FilledReport.fromJson(new org.json.JSONObject(r.toJson().toString()));
+    NoteTest.check(back.form != null && back.form.questions.size() == 20 && back.form.id.equals(f.id), "report keeps its copy in JSON");
+    NoteTest.check(!new Models.FilledReport().toJson().has("form"), "no copy: no key");
+    // Delete the form: the report uses its copy, and the files stay because the copy uses them
+    s.removeForm(f);
+    NoteTest.check(s.form(f.id) == null && s.formFor(r) == r.form && s.formFor(r).question("q2").label.equals("Name"), "copy used when the form is deleted");
+    NoteTest.check(s.photoFile("doc-a.jpg").exists() && s.photoFile("doc-b.png").exists() && s.fileInUse("doc-a.jpg"), "files kept while a copy uses them");
+    // An old report with no copy gets one when its form goes
+    Models.ReportForm g = new Models.ReportForm(); g.files.add("doc-c.jpg"); java.nio.file.Files.write(s.photoFile("doc-c.jpg").toPath(), new byte[]{1});
+    s.reportForms.add(g);
+    Models.FilledReport old = new Models.FilledReport(); old.formId = g.id; s.filledReports.add(old);
+    s.removeForm(g);
+    NoteTest.check(old.form != null && s.formFor(old) != null && s.photoFile("doc-c.jpg").exists(), "old report gets a copy before its form goes");
+    // Files go once nothing uses them
+    s.filledReports.clear();
+    Models.ReportForm h = new Models.ReportForm(); h.files.add("doc-a.jpg"); s.reportForms.add(h);
+    s.removeForm(h);
+    NoteTest.check(!s.photoFile("doc-a.jpg").exists(), "files deleted when no report copy uses them");
+    // pictures(): photos and PDF pages, not the source file
+    Models.ReportForm p = new Models.ReportForm(); p.files.add("doc-1.pdf"); p.files.add("doc-2.png"); p.files.add("doc-3.png");
+    RichTest.eq(p.pictures(), java.util.Arrays.asList("doc-2.png", "doc-3.png"), "page pictures");
+    // What's written on the form
+    Models.ReportForm sf = FormsTest.sampleForm();
+    Models.FilledReport fr = new Models.FilledReport(); fr.answers.put("q9", "Excellent"); fr.answers.put("q10", "Average"); fr.answers.put("q1", "Nov 13, 2026");
+    RichTest.eq(FormPdf.written(sf, fr, sf.question("q9")), "4.0", "rating writes its value");
+    RichTest.eq(FormPdf.written(sf, fr, sf.question("q19")), "3.0", "average worked out");
+    RichTest.eq(FormPdf.written(sf, fr, sf.question("q1")), "Nov 13, 2026", "text as typed");
+    Models.FormQuestion noValue = new Models.FormQuestion("x", "Q", "rating"); noValue.choices.add(new Models.Choice("Good", ""));
+    fr.answers.put("x", "Good");
+    RichTest.eq(FormPdf.written(sf, fr, noValue), "Good", "rating with no value writes its label");
+    // PDF with pictures (needs the phone's PDF code; skipped on the JVM)
+    sf.files.add("doc-z.png");
+    sf.question("q1").place = new Models.Place(0, 0.3, 0.2);
+    try {
+      java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+      FormPdf.write(sf, fr, 0L, s.photoDir(), out);
+      NoteTest.check(out.size() > 0, "PDF with pictures built");
+    } catch (UnsatisfiedLinkError | RuntimeException e) {
+      System.out.println("skipped: PdfDocument isn't available on the JVM (" + e.getClass().getSimpleName() + ")");
+    }
+    System.out.println("FORMCOPY PASS");
+    System.exit(0);
+  } }

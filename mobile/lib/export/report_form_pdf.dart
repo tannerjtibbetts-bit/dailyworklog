@@ -32,6 +32,68 @@ class ReportFormPdf {
     return '${base.replaceAll(RegExp(r'[\\/:*?"<>|]'), '-')}.pdf';
   }
 
+  static const _ink = PdfColor.fromInt(0xFF0B2E83);
+
+  /// The form's own pages with the answers written on their blanks (see Place the answers). [pictures] are the
+  /// page pictures' bytes, in page order. Answers that have no place go on a last page, "More answers".
+  static Future<Uint8List> writeOnForm(ReportForm form, FilledReport r, List<Uint8List> pictures) async {
+    final doc = pw.Document(title: plain(form.name), author: 'Daily Work Log');
+    for (var page = 0; page < pictures.length; page++) {
+      final image = pw.MemoryImage(pictures[page]);
+      const w = 612.0;
+      final h = w * (image.height ?? 792) / (image.width ?? 612);
+      final size = form.textSize * h * form.fontScale;
+      final style = pw.TextStyle(fontSize: size, color: _ink, lineSpacing: size * 0.7);
+      doc.addPage(pw.Page(
+        pageFormat: PdfPageFormat(w, h, marginAll: 0),
+        build: (c) => pw.Stack(children: [
+          pw.Image(image, width: w, height: h, fit: pw.BoxFit.fill),
+          for (final q in form.questions)
+            if (q.place != null && q.place!.page == page && FormFill.onForm(q, r, form).trim().isNotEmpty)
+              pw.Positioned(
+                left: q.place!.x * w,
+                top: q.place!.y * h - size * 0.95,
+                child: q.kind == ReportQuestion.long
+                    ? pw.SizedBox(
+                        width: ((0.96 - q.place!.x) * w).clamp(40, w),
+                        child: pw.Text(plain(FormFill.onForm(q, r, form)), style: style),
+                      )
+                    : pw.Text(plain(FormFill.onForm(q, r, form).replaceAll('\n', ' ')), style: style),
+              ),
+        ]),
+      ));
+    }
+    final more = [
+      for (final q in form.questions)
+        if ((q.place == null || q.place!.page >= pictures.length) && FormFill.shown(q, r, form).trim().isNotEmpty) q,
+    ];
+    if (more.isNotEmpty) {
+      doc.addPage(pw.MultiPage(
+        pageFormat: PdfPageFormat.letter.copyWith(marginLeft: 43, marginRight: 43, marginTop: 43, marginBottom: 43),
+        build: (c) => [
+          pw.Text('More answers', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: _navy)),
+          pw.SizedBox(height: 4),
+          pw.Text(plain('${form.name} - ${r.person}'), style: const pw.TextStyle(fontSize: 10, color: _grey)),
+          pw.SizedBox(height: 10),
+          for (final q in more)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 6),
+              child: pw.RichText(
+                text: pw.TextSpan(children: [
+                  pw.TextSpan(
+                      text: '${plain(q.label)}: ',
+                      style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: _navy)),
+                  pw.TextSpan(
+                      text: plain(FormFill.shown(q, r, form)), style: const pw.TextStyle(fontSize: 10.5, color: _navy)),
+                ]),
+              ),
+            ),
+        ],
+      ));
+    }
+    return doc.save();
+  }
+
   static Future<Uint8List> write(ReportForm form, FilledReport r, DateTime made) async {
     final doc = pw.Document(title: plain(form.name), author: 'Daily Work Log');
     pw.TextStyle st(double size, {bool bold = false, PdfColor color = _navy}) =>

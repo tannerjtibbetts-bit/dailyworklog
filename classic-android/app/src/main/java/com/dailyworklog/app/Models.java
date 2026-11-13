@@ -588,11 +588,38 @@ public final class Models {
         }
     }
 
+    /** Where an answer is written on a form's page picture: page index, x, and y of the text's baseline (fractions). */
+    public static class Place {
+        public int page;
+        public double x, y;
+
+        public Place(int page, double x, double y) {
+            this.page = page;
+            this.x = x;
+            this.y = y;
+        }
+
+        JSONObject toJson() throws JSONException {
+            return new JSONObject().put("page", page).put("x", x).put("y", y);
+        }
+
+        static Place fromJson(JSONObject o) {
+            if (o == null) return null;
+            return new Place(Math.max(0, o.optInt("page", 0)), clamp01(o.optDouble("x", 0)), clamp01(o.optDouble("y", 0)));
+        }
+
+        static double clamp01(double v) {
+            return Double.isNaN(v) ? 0 : Math.max(0, Math.min(1, v));
+        }
+    }
+
     /** A question on a report form. */
     public static class FormQuestion {
         public static final String TEXT = "text", LONG = "long", RATING = "rating", AVERAGE = "average";
         public String id = "", label = "", kind = TEXT;
         public List<Choice> choices = new ArrayList<>();
+        /** Where its answer goes on the form's pictures (null: not placed). */
+        public Place place;
 
         public FormQuestion() {}
 
@@ -610,6 +637,7 @@ public final class Models {
             JSONArray c = new JSONArray();
             for (Choice x : choices) c.put(new JSONObject().put("label", x.label).put("value", x.value));
             o.put("choices", c);
+            if (place != null) o.put("place", place.toJson());
             return o;
         }
 
@@ -620,6 +648,7 @@ public final class Models {
                 JSONObject x = c.optJSONObject(i);
                 if (x != null) q.choices.add(new Choice(x.optString("label", ""), x.optString("value", "")));
             }
+            q.place = Place.fromJson(o.optJSONObject("place"));
             return q;
         }
     }
@@ -634,6 +663,24 @@ public final class Models {
         public List<FormQuestion> questions = new ArrayList<>();
         public List<String> signatures = new ArrayList<>();
         public long createdAt = System.currentTimeMillis();
+        /** Size of the answers written on the pictures: textSize is a fraction of the page height, times fontScale (0.6..2.0). */
+        public double fontScale = 1.0, textSize = 0.014;
+
+        /** The page pictures (photos, or a PDF's pages), in order. */
+        public List<String> pictures() {
+            List<String> out = new ArrayList<>();
+            for (String f : files) if (Document.PHOTO.equals(Document.kindOf(f))) out.add(f);
+            return out;
+        }
+
+        /** A copy (for a filled report to keep). */
+        public ReportForm copy() {
+            try {
+                return fromJson(new JSONObject(toJson().toString()));
+            } catch (JSONException e) {
+                return this;
+            }
+        }
 
         public FormQuestion question(String id) {
             for (FormQuestion q : questions) if (q.id.equals(id)) return q;
@@ -659,6 +706,8 @@ public final class Models {
             o.put("questions", qs);
             o.put("signatures", toArray(signatures));
             o.put("createdAt", createdAt);
+            o.put("fontScale", fontScale);
+            o.put("textSize", textSize);
             return o;
         }
 
@@ -676,6 +725,10 @@ public final class Models {
             }
             f.signatures = fromArray(o.optJSONArray("signatures"));
             f.createdAt = o.optLong("createdAt", 0L);
+            double fs = o.optDouble("fontScale", 1.0);
+            f.fontScale = Double.isNaN(fs) ? 1.0 : Math.max(0.6, Math.min(2.0, fs));
+            double ts = o.optDouble("textSize", 0.014);
+            f.textSize = Double.isNaN(ts) || ts <= 0 ? 0.014 : Math.max(0.008, Math.min(0.03, ts));
             return f;
         }
     }
@@ -687,6 +740,8 @@ public final class Models {
         /** Answers by question id. A rating's answer is the label of the choice picked. */
         public Map<String, String> answers = new LinkedHashMap<>();
         public long createdAt = System.currentTimeMillis(), updatedAt = createdAt;
+        /** A copy of the form taken when the report was started (used if the form is deleted or replaced). */
+        public ReportForm form;
 
         public String answer(String questionId) {
             String v = answers.get(questionId);
@@ -704,6 +759,7 @@ public final class Models {
             o.put("answers", mapJson(answers));
             o.put("createdAt", createdAt);
             o.put("updatedAt", updatedAt);
+            if (form != null) o.put("form", form.toJson());
             return o;
         }
 
@@ -718,6 +774,8 @@ public final class Models {
             readMap(o.optJSONObject("answers"), r.answers);
             r.createdAt = o.optLong("createdAt", 0L);
             r.updatedAt = o.optLong("updatedAt", r.createdAt);
+            JSONObject f = o.optJSONObject("form");
+            if (f != null) r.form = ReportForm.fromJson(f);
             return r;
         }
     }

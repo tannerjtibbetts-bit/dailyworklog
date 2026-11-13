@@ -14,6 +14,7 @@ import '../services/form_files.dart';
 import '../services/photos.dart';
 import '../ui/common.dart';
 import '../ui/theme.dart';
+import 'form_layout.dart';
 import 'note_screen.dart' show SmallTopBar, bottomPill;
 
 /// A text box with a mic button that adds spoken words to the end.
@@ -155,7 +156,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   List<FilledReport> get filled => [
         for (final r in store.filledReports)
-          if (r.group == widget.group) r,
+          if (r.group == widget.group && r.project == (project?.name ?? '')) r,
       ]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
   void _refresh() {
@@ -164,7 +165,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // ----- adding a form -----
 
-  Future<void> _addForm() async {
+  Future<void> _addForm({ReportForm? replacing}) async {
     var choice = 0;
     await menu(context, null, [
       SheetItem(Icons.photo_camera_outlined, 'Take photos of a form', () => choice = 1),
@@ -178,6 +179,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (!mounted) return;
         final n = await Photos.take(context);
         if (n == null || !mounted) break;
+        // Crop off anything around the page (the desk, or a screen's buttons).
+        await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CropScreen(file: n)));
+        if (!mounted) return;
         form.files.add(n);
         final more = await showDialog<bool>(
           context: context,
@@ -201,8 +205,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       suggested = picked.$2;
     }
     if (!mounted || form.files.isEmpty) return;
-    final name = await prompt(context, 'Name this form', 'e.g. Apprentice review', suggested, 'Save',
-        caps: TextCapitalization.sentences);
+    final name = replacing != null
+        ? replacing.name
+        : await prompt(context, 'Name this form', 'e.g. Apprentice review', suggested, 'Save',
+            caps: TextCapitalization.sentences);
     if (name == null || !mounted) {
       FormFiles.deleteFiles(form.files);
       return;
@@ -235,8 +241,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (read == null) toast(context, "Couldn't read the text on that form. Add the questions yourself.", long: true);
     form.questions = read?.questions ?? [];
     form.signatures = (read?.signatures.isNotEmpty ?? false) ? read!.signatures : ReportForm.defaultSignatures(form.group);
-    store.reportForms.add(form);
+    form.textSize = read?.textSize ?? 0.014;
+    if (replacing != null) {
+      final i = store.reportForms.indexOf(replacing);
+      deleteFormFiles(replacing);
+      store.reportForms.remove(replacing);
+      store.reportForms.insert(i < 0 ? store.reportForms.length : i, form);
+    } else {
+      store.reportForms.add(form);
+    }
     store.save();
+    if (replacing != null) toast(context, 'Form replaced. Reports already filled in keep the old form.', long: true);
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => FormCheckScreen(formId: form.id)));
     _refresh();
   }
@@ -288,7 +303,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ..formName = form.name
       ..group = form.group
       ..person = who
-      ..project = p.name;
+      ..project = p.name
+      ..form = form.copy();
     FormFill.autoFill(r, form, p,
         myName: store.me(),
         myPhone: store.contactPhone,
@@ -314,6 +330,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _refresh();
       }),
       SheetItem(Icons.image_outlined, 'View the form', () => showPages(context, f.name, f.files, f.kind)),
+      if (f.pagePictures.isNotEmpty)
+        SheetItem(Icons.open_with, 'Place the answers', () async {
+          await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PlaceScreen(formId: f.id)));
+          _refresh();
+        }),
+      SheetItem(Icons.find_replace, 'Replace the form', () => _addForm(replacing: f)),
       SheetItem(Icons.drive_file_rename_outline, 'Rename', () async {
         final n = await prompt(context, 'Rename form', 'Form name', f.name, 'Save');
         if (n == null) return;
@@ -323,7 +345,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }),
       SheetItem(Icons.delete_outline, 'Delete form', () {
         confirm(context, 'Delete this form?', 'Reports already filled in stay.', 'Delete', () {
-          FormFiles.deleteFiles(f.files);
+          deleteFormFiles(f);
           store.reportForms.remove(f);
           store.save();
           _refresh();
@@ -336,7 +358,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     menu(context, '${r.person} · ${r.formName}', [
       SheetItem(Icons.open_in_new, 'Open', () => _open(r)),
       SheetItem(Icons.picture_as_pdf_outlined, 'Export PDF', () {
-        final f = store.reportForms.where((x) => x.id == r.formId).firstOrNull;
+        final f = formFor(r);
         if (f == null) {
           toast(context, 'The form for this report was deleted');
           return;
@@ -354,7 +376,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _open(FilledReport r) async {
-    if (!store.reportForms.any((x) => x.id == r.formId)) {
+    if (formFor(r) == null) {
       toast(context, 'The form for this report was deleted');
       return;
     }
@@ -462,11 +484,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 }
 
+/// The form a report uses: the form itself while it exists, else the copy kept with the report.
+ReportForm? formFor(FilledReport r) =>
+    Store.instance.reportForms.where((x) => x.id == r.formId).firstOrNull ?? r.form;
+
+/// Deletes a form's files unless a filled report's copy of the form still uses them.
+void deleteFormFiles(ReportForm f) {
+  final used = {
+    for (final r in Store.instance.filledReports)
+      if (r.form != null) ...r.form!.files,
+  };
+  FormFiles.deleteFiles(f.files.where((x) => !used.contains(x)));
+}
+
 /// Builds the PDF and offers Share or email / Save to phone.
 Future<void> exportReportPdf(BuildContext context, ReportForm form, FilledReport r) {
   final now = DateTime.now();
-  return Export.offer(context, 'Building PDF…', ReportFormPdf.fileName(r, now), Export.pdf,
-      () => ReportFormPdf.write(form, r, now));
+  final pages = form.pagePictures;
+  return Export.offer(context, 'Building PDF…', ReportFormPdf.fileName(r, now), Export.pdf, () async {
+    // Photo and PDF forms: the answers are written on the form itself.
+    if (pages.isNotEmpty) {
+      final pictures = [for (final p in pages) await Store.instance.photoFile(p).readAsBytes()];
+      return ReportFormPdf.writeOnForm(form, r, pictures);
+    }
+    return ReportFormPdf.write(form, r, now);
+  });
 }
 
 /// Asks each unanswered question one at a time. Answers save as they're given.
@@ -477,7 +519,7 @@ Future<void> askMissing(BuildContext context, FilledReport r, ReportForm form) a
     if (!context.mounted) return;
     final q = list[i];
     final ctl = TextEditingController(text: r.answer(q.id));
-    var picked = r.answer(q.id);
+    var picked = FormFill.choiceOf(q, r.answer(q.id))?.label ?? r.answer(q.id);
     void keep(String v) {
       r.answers[q.id] = v;
       r.updatedAt = nowMs();
@@ -506,7 +548,7 @@ Future<void> askMissing(BuildContext context, FilledReport r, ReportForm form) a
                       RadioListTile<String>(
                         contentPadding: EdgeInsets.zero,
                         dense: true,
-                        value: ch.value.isNotEmpty ? ch.value : ch.label,
+                        value: ch.label,
                         title: Text(ch.display, style: const TextStyle(fontSize: 17)),
                       ),
                   ]),
@@ -544,7 +586,7 @@ class FillScreen extends StatefulWidget {
 class _FillScreenState extends State<FillScreen> {
   Store get store => Store.instance;
   late final FilledReport? r = store.filledReports.where((x) => x.id == widget.reportId).firstOrNull;
-  late final ReportForm? form = r == null ? null : store.reportForms.where((x) => x.id == r!.formId).firstOrNull;
+  late final ReportForm? form = r == null ? null : formFor(r!);
   final Map<String, TextEditingController> _boxes = {};
 
   @override
@@ -577,8 +619,8 @@ class _FillScreenState extends State<FillScreen> {
         answer = Text(v.isEmpty ? 'Worked out from the ratings' : v,
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: v.isEmpty ? C.greyLight : C.navy));
       case ReportQuestion.rating:
-        final current = rr.answer(q.id);
-        final values = [for (final c in q.choices) c.value.isNotEmpty ? c.value : c.label];
+        final current = FormFill.choiceOf(q, rr.answer(q.id))?.label ?? '';
+        final values = [for (final c in q.choices) c.label];
         answer = DropdownButtonFormField<String>(
           initialValue: values.contains(current) ? current : '',
           isExpanded: true,
@@ -638,6 +680,17 @@ class _FillScreenState extends State<FillScreen> {
                 const Text('This form has no questions. Long-press it on the list and pick Edit questions.',
                     style: TextStyle(color: C.grey, fontSize: 16)),
               for (final q in f.questions) _question(q),
+              if (f.pagePictures.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.open_with),
+                    label: const Text('Check where the answers go'),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => PlaceScreen(formId: f.id, report: rr, form: f))),
+                  ),
+                ),
               if (missing.isNotEmpty)
                 OutlinedButton.icon(
                   icon: const Icon(Icons.question_answer_outlined),
@@ -713,7 +766,7 @@ class _FormCheckScreenState extends State<FormCheckScreen> {
                 ]),
               ),
               if (kind == ReportQuestion.rating && scale.isEmpty)
-                const Text('This form has no point system, so ratings are typed in.',
+                const Text('This form has no point system, so the choices are Excellent, Good, Fair and Poor.',
                     style: TextStyle(color: C.grey, fontSize: 14)),
             ]),
           ),
@@ -735,15 +788,15 @@ class _FormCheckScreenState extends State<FormCheckScreen> {
     );
     if (ok != true) return;
     var k = kind;
-    if (k == ReportQuestion.rating && scale.isEmpty) k = ReportQuestion.text;
+    final useScale = scale.isEmpty ? FormFill.plainScale : scale;
     if (q == null) {
       form.questions.add(ReportQuestion(form.newQuestionId(), label.text.trim(), k,
-          k == ReportQuestion.rating ? List.of(scale) : null));
+          k == ReportQuestion.rating ? List.of(useScale) : null));
     } else {
       q
         ..label = label.text.trim()
         ..kind = k
-        ..choices = k == ReportQuestion.rating ? (q.choices.isNotEmpty ? q.choices : List.of(scale)) : [];
+        ..choices = k == ReportQuestion.rating ? (q.choices.isNotEmpty ? q.choices : List.of(useScale)) : [];
     }
     _save();
   }
@@ -799,14 +852,23 @@ class _FormCheckScreenState extends State<FormCheckScreen> {
                     : 'These are the questions the app found. Tap one to fix it, × to remove it.',
                 style: const TextStyle(color: C.grey, fontSize: 15),
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
+              Wrap(children: [
+                TextButton.icon(
                   icon: const Icon(Icons.image_outlined),
                   label: const Text('View the form'),
                   onPressed: () => showPages(context, form.name, form.files, form.kind),
                 ),
-              ),
+                if (form.pagePictures.isNotEmpty)
+                  TextButton.icon(
+                    icon: const Icon(Icons.open_with),
+                    label: const Text('Place the answers on the form'),
+                    onPressed: () async {
+                      await Navigator.of(context)
+                          .push(MaterialPageRoute<void>(builder: (_) => PlaceScreen(formId: form.id)));
+                      if (mounted) setState(() {});
+                    },
+                  ),
+              ]),
               for (final q in List.of(form.questions))
                 _row(q.label, q.kindText(), () => _edit(q), () {
                   form.questions.remove(q);

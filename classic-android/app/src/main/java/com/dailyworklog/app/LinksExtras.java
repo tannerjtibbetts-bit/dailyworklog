@@ -130,6 +130,15 @@ final class LinksExtras {
         sub.setTextSize(15);
         texts.addView(sub, wrap());
         card.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        ImageView more = new ImageView(a);
+        more.setId(R.id.more);
+        more.setImageResource(R.drawable.ic_more);
+        more.setColorFilter(a.getColor(R.color.grey));
+        more.setPadding(Ui.dp(a, 10), Ui.dp(a, 10), Ui.dp(a, 10), Ui.dp(a, 10));
+        more.setBackgroundResource(android.R.drawable.list_selector_background);
+        more.setContentDescription("More");
+        if (android.os.Build.VERSION.SDK_INT >= 26) more.setTooltipText("More");
+        card.addView(more, new LinearLayout.LayoutParams(Ui.dp(a, 44), Ui.dp(a, 44)));
         return card;
     }
 
@@ -142,6 +151,7 @@ final class LinksExtras {
             menu(a, d, changed);
             return true;
         });
+        card.findViewById(R.id.more).setOnClickListener(v -> menu(a, d, changed));
     }
 
     static void open(Activity a, Models.Document d) {

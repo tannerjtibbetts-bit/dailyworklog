@@ -28,9 +28,39 @@ final class FormReader {
         final List<String> signatures = new ArrayList<>();
         /** The rating scale found on the form, in order. */
         final List<Models.Choice> scale = new ArrayList<>();
+        /** Answer text height as a fraction of the page height (from the line boxes; 0.014 when there are none). */
+        double textSize = DEFAULT_TEXT_SIZE;
     }
 
-    private static final Pattern BLANKS = Pattern.compile("_{3,}|\\.{3,}|\u2026|-{3,}");
+    static final double DEFAULT_TEXT_SIZE = 0.014;
+
+    /** A line of text, with where it sits on its page picture (fractions 0..1) when it was read from a picture. */
+    static final class Line {
+        final String text;
+        final int page;
+        final double left, top, right, bottom;
+        final boolean hasBox;
+
+        Line(String text) {
+            this(text, 0, 0, 0, 0, 0, false);
+        }
+
+        Line(String text, int page, double left, double top, double right, double bottom) {
+            this(text, page, left, top, right, bottom, true);
+        }
+
+        private Line(String text, int page, double left, double top, double right, double bottom, boolean hasBox) {
+            this.text = text;
+            this.page = page;
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.hasBox = hasBox;
+        }
+    }
+
+    private static final Pattern BLANKS = Pattern.compile("_{3,}|\\.{3,}|…|-{3,}");
     private static final Pattern SCALE = Pattern.compile(
             "^(excellent|very good|good|above average|average plus|average|average minus|below average|fair|satisfactory"
                     + "|needs improvement|unsatisfactory|poor)\\s*[:=-]?\\s*(\\d+(\\.\\d+)?)?$", Pattern.CASE_INSENSITIVE);
@@ -47,11 +77,15 @@ final class FormReader {
         String label;
         String kind;  // "numbered", "long", "average" or "text"
         boolean section;
+        /** Index of its input line, and (for several on one line) the character just after its label. */
+        int line;
+        int endChar = -1;
 
-        Found(String label, String kind, boolean section) {
+        Found(String label, String kind, boolean section, int line) {
             this.label = label;
             this.kind = kind;
             this.section = section;
+            this.line = line;
         }
     }
 
@@ -81,13 +115,23 @@ final class FormReader {
         return lower.substring(0, 1).toUpperCase(Locale.ROOT) + lower.substring(1);
     }
 
+    /** Lines without positions (Word, Excel, tests). */
     static Result read(List<String> lines) {
+        List<Line> out = new ArrayList<>();
+        for (String l : lines) out.add(new Line(l == null ? "" : l));
+        return readLines(out);
+    }
+
+    static Result readLines(List<Line> lines) {
         Result r = new Result();
         List<Found> found = new ArrayList<>();
+        String[] normalized = new String[lines.size()];
         boolean haveAverage = false;
-        for (String raw : lines) {
+        for (int li = 0; li < lines.size(); li++) {
+            String raw = lines.get(li).text;
             if (raw == null) continue;
             String line = normalize(raw);
+            normalized[li] = line;
             if (letters(line) < 2) continue;
             if (line.startsWith("(") && line.endsWith(")")) continue;
             String lower = line.toLowerCase(Locale.ROOT);
@@ -118,60 +162,77 @@ final class FormReader {
             }
             // 3. Section letter ("A. ", "B) ")
             boolean section = false;
+            int offset = 0;
             Matcher sec = SECTION.matcher(line);
             if (sec.find()) {
                 section = true;
-                line = line.substring(sec.end()).trim();
+                offset = sec.end();
+                line = line.substring(sec.end());
                 lower = line.toLowerCase(Locale.ROOT);
             }
             // 4. Numbered items
             Matcher num = NUMBERED.matcher(line);
             if (num.matches()) {
-                found.add(new Found(num.group(2), "numbered", section));
+                found.add(new Found(num.group(2), "numbered", section, li));
                 continue;
             }
             // 5. The overall average
             if (lower.contains("average") && (lower.contains("of above") || lower.contains("total") || lower.endsWith(":"))) {
-                if (!haveAverage) found.add(new Found("Overall average", Models.FormQuestion.AVERAGE, false));
+                if (!haveAverage) found.add(new Found("Overall average", Models.FormQuestion.AVERAGE, false, li));
                 haveAverage = true;
                 continue;
             }
             // 6. Labels with colons or blanks
             boolean hasBlank = line.indexOf(BLANK) >= 0;
             if (line.contains(":") || hasBlank) {
-                String[] segs = line.split(String.valueOf(BLANK), -1);
-                for (int i = 0; i < segs.length; i++) {
-                    String s = segs[i].trim();
-                    if (s.isEmpty()) continue;
-                    boolean followedByBlank = i < segs.length - 1;
-                    if (s.contains(":")) {
-                        Matcher ch = CHUNK.matcher(s);
-                        List<int[]> chunks = new ArrayList<>();
-                        while (ch.find()) chunks.add(new int[]{ch.start(1), ch.end(1), ch.end()});
-                        for (int k = 0; k < chunks.size(); k++) {
-                            int[] c = chunks.get(k);
-                            int nextStart = k + 1 < chunks.size() ? chunks.get(k + 1)[0] : s.length();
-                            String after = s.substring(c[2], nextStart).trim();
-                            if (after.isEmpty()) found.add(new Found(s.substring(c[0], c[1]), "text", section));
+                int segStart = 0;
+                while (segStart <= line.length()) {
+                    int segEnd = line.indexOf(BLANK, segStart);
+                    boolean followedByBlank = segEnd >= 0;
+                    if (segEnd < 0) segEnd = line.length();
+                    String raw6 = line.substring(segStart, segEnd);
+                    String s = raw6.trim();
+                    int sAt = segStart + raw6.indexOf(s.isEmpty() ? "" : s.substring(0, 1));
+                    if (!s.isEmpty()) {
+                        if (s.contains(":")) {
+                            Matcher ch = CHUNK.matcher(s);
+                            List<int[]> chunks = new ArrayList<>();
+                            while (ch.find()) chunks.add(new int[]{ch.start(1), ch.end(1), ch.end()});
+                            for (int k = 0; k < chunks.size(); k++) {
+                                int[] c = chunks.get(k);
+                                int nextStart = k + 1 < chunks.size() ? chunks.get(k + 1)[0] : s.length();
+                                String after = s.substring(c[2], nextStart).trim();
+                                if (after.isEmpty()) {
+                                    Found f = new Found(s.substring(c[0], c[1]), "text", section, li);
+                                    f.endChar = offset + sAt + c[2];
+                                    found.add(f);
+                                }
+                            }
+                        } else if (followedByBlank) {
+                            Found f = new Found(s, "text", section, li);
+                            f.endChar = offset + sAt + s.length();
+                            found.add(f);
                         }
-                    } else if (followedByBlank) {
-                        found.add(new Found(s, "text", section));
                     }
+                    if (segEnd >= line.length()) break;
+                    segStart = segEnd + 1;
                 }
                 continue;
             }
+            line = line.trim();
             // 7. ALL-CAPS labels ("EMPLOYER", "EMPLOYEE #")
             if (line.equals(line.toUpperCase(Locale.ROOT)) && line.length() >= 2 && line.length() <= 30
                     && line.split(" ").length <= 4) {
-                found.add(new Found(line, "text", section));
+                found.add(new Found(line, "text", section, li));
                 continue;
             }
             // 8. Questions
-            if (line.endsWith("?") && line.length() <= 120) found.add(new Found(line, "text", section));
+            if (line.endsWith("?") && line.length() <= 120) found.add(new Found(line, "text", section, li));
         }
 
         // Labels, "To" after "... from", duplicates, then kinds.
         List<String> labels = new ArrayList<>();
+        List<Found> kept = new ArrayList<>();
         for (Found f : found) {
             String label = f.kind.equals(Models.FormQuestion.AVERAGE) ? f.label : cleanLabel(f.label);
             if (label.isEmpty()) continue;
@@ -196,8 +257,79 @@ final class FormReader {
                 for (Models.Choice c : r.scale) q.choices.add(new Models.Choice(c.label, c.value));
             }
             r.questions.add(q);
+            kept.add(f);
         }
+        place(r, kept, lines, normalized);
         return r;
+    }
+
+    /** Where each answer goes on the page picture, from its line's box (only for lines read from a picture). */
+    private static void place(Result r, List<Found> kept, List<Line> lines, String[] normalized) {
+        double ratingRight = -1;
+        for (int i = 0; i < kept.size(); i++) {
+            Line l = lines.get(kept.get(i).line);
+            if (l.hasBox && Models.FormQuestion.RATING.equals(r.questions.get(i).kind)) ratingRight = Math.max(ratingRight, l.right);
+        }
+        double ratingX = ratingRight < 0 ? -1 : ratingRight + 0.06;
+        List<Double> heights = new ArrayList<>();
+        for (int i = 0; i < kept.size(); i++) {
+            Found f = kept.get(i);
+            Line l = lines.get(f.line);
+            if (!l.hasBox) continue;
+            Models.FormQuestion q = r.questions.get(i);
+            double h = l.bottom - l.top;
+            heights.add(h);
+            int onLine = 0;
+            for (Found o : kept) if (o.line == f.line) onLine++;
+            double labelEnd = l.right;
+            String norm = normalized[f.line];
+            if (onLine > 1 && f.endChar >= 0 && norm != null && !norm.isEmpty()) {
+                labelEnd = l.left + (l.right - l.left) * f.endChar / norm.length();
+            }
+            double x, y;
+            switch (q.kind) {
+                case Models.FormQuestion.LONG:
+                    x = l.left;
+                    y = l.bottom + 1.1 * h;
+                    break;
+                case Models.FormQuestion.RATING:
+                    x = ratingX;
+                    y = l.bottom;
+                    break;
+                case Models.FormQuestion.AVERAGE:
+                    // Right of the "(total ...)" line when it follows (else of the average line), and in the rating column.
+                    int paren = nextParenthesis(normalized, f.line);
+                    Line pl = paren >= 0 ? lines.get(paren) : null;
+                    double right = pl != null && pl.hasBox ? pl.right : l.right;
+                    x = Math.max(ratingX, right + 0.015);
+                    y = paren >= 0 ? l.bottom + 1.2 * h : l.bottom;
+                    break;
+                default:
+                    x = labelEnd + 0.012;
+                    y = l.bottom;
+            }
+            q.place = new Models.Place(l.page, clamp(x), clamp(y));
+        }
+        if (!heights.isEmpty()) {
+            java.util.Collections.sort(heights);
+            int n = heights.size();
+            double median = n % 2 == 1 ? heights.get(n / 2) : (heights.get(n / 2 - 1) + heights.get(n / 2)) / 2;
+            r.textSize = Math.max(0.008, Math.min(0.03, median * 0.75));
+        }
+    }
+
+    private static double clamp(double v) {
+        return Math.max(0, Math.min(1, v));
+    }
+
+    /** The next line with any text, if it's wholly in parentheses ("(total #1 - #10 ...)"); else -1. */
+    private static int nextParenthesis(String[] normalized, int at) {
+        for (int i = at + 1; i < normalized.length; i++) {
+            String s = normalized[i];
+            if (s == null || s.isEmpty()) continue;
+            return s.startsWith("(") && s.endsWith(")") ? i : -1;
+        }
+        return -1;
     }
 
     static boolean isLong(String label) {

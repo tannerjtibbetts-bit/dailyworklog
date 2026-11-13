@@ -48,7 +48,7 @@ public class FilledReportActivity extends FormScreen {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         report = store.filled(getIntent().getStringExtra("report"));
-        form = report == null ? null : store.form(report.formId);
+        form = report == null ? null : store.formFor(report);
         if (report == null || form == null) {
             finish();
             return;
@@ -102,6 +102,10 @@ public class FilledReportActivity extends FormScreen {
         }
         TextView ask = button("Ask the missing questions", false, v -> askMissing());
         refreshers.add(() -> ask.setVisibility(ReportFill.missing(form, report).isEmpty() ? View.GONE : View.VISIBLE));
+        if (!form.pictures().isEmpty()) {
+            button("Check where the answers go", false, v -> startActivity(new android.content.Intent(this, PlaceActivity.class)
+                    .putExtra("report", report.id)));
+        }
         button("Export PDF", true, v -> ReportsActivity.exportPdf(this, exporter, store, report));
         for (Runnable r : refreshers) r.run();
     }

@@ -1,6 +1,7 @@
 // Files for documents and report forms: copying them into the app (the photo folder, so backups include
 // them), turning PDF pages into pictures, reading their text, and speaking answers.
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -65,16 +66,29 @@ class FormFiles {
     return names;
   }
 
-  /// The text lines in pictures (in page order), read on the phone.
-  static Future<List<String>> readPictures(List<String> names) async {
+  /// A picture's width and height in pixels.
+  static Future<(int, int)> pictureSize(String name) async {
+    final buf = await ui.ImmutableBuffer.fromFilePath(Store.instance.photoFile(name).path);
+    final d = await ui.ImageDescriptor.encoded(buf);
+    final size = (d.width, d.height);
+    d.dispose();
+    buf.dispose();
+    return size;
+  }
+
+  /// The text lines in pictures (in page order), read on the phone, with where each line is on its page.
+  static Future<List<FormLine>> readPictures(List<String> names) async {
     final rec = TextRecognizer(script: TextRecognitionScript.latin);
-    final lines = <String>[];
+    final lines = <FormLine>[];
     try {
-      for (final n in names) {
-        final t = await rec.processImage(InputImage.fromFilePath(Store.instance.photoFile(n).path));
+      for (var page = 0; page < names.length; page++) {
+        final (w, h) = await pictureSize(names[page]);
+        final t = await rec.processImage(InputImage.fromFilePath(Store.instance.photoFile(names[page]).path));
         for (final b in t.blocks) {
           for (final l in b.lines) {
-            lines.add(l.text);
+            final r = l.boundingBox;
+            lines.add(FormLine(l.text,
+                page: page, left: r.left / w, top: r.top / h, right: r.right / w, bottom: r.bottom / h));
           }
         }
       }
@@ -87,20 +101,18 @@ class FormFiles {
   /// Reads a form's text into questions. [files] are in the app; [kind] is the source's kind.
   /// For a PDF, the page pictures are added to the form's files so it can be viewed.
   static Future<ReadForm> readForm(ReportForm form) async {
-    final List<String> lines;
     switch (form.kind) {
       case Doc.pdf:
         final pages = await pdfPages(form.files.first);
         form.files = [form.files.first, ...pages];
-        lines = await readPictures(pages);
+        return FormReader.readLines(await readPictures(pages));
       case Doc.docx:
-        lines = FormReader.docxLines(await Store.instance.photoFile(form.files.first).readAsBytes());
+        return FormReader.read(FormReader.docxLines(await Store.instance.photoFile(form.files.first).readAsBytes()));
       case Doc.xlsx:
-        lines = FormReader.xlsxLines(await Store.instance.photoFile(form.files.first).readAsBytes());
+        return FormReader.read(FormReader.xlsxLines(await Store.instance.photoFile(form.files.first).readAsBytes()));
       default:
-        lines = await readPictures(form.files);
+        return FormReader.readLines(await readPictures(form.files));
     }
-    return FormReader.read(lines);
   }
 
   /// The pictures to show for a form or document: photos as they are, a PDF's pages.

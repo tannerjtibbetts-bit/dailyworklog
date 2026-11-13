@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-11-12",
+  "updated": "2026-11-13",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -2284,7 +2284,18 @@
         "electrician",
         "pipefitter",
         "labourer",
-        "teamster"
+        "teamster",
+        "employee number",
+        "employee #",
+        "bp",
+        "bp #",
+        "disn",
+        "disn #",
+        "prnnr",
+        "numbers",
+        "paste",
+        "paste crew numbers",
+        "import numbers"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2340,12 +2351,40 @@
           "items": [
             "\"Name\"",
             "\"Phone number (optional)\"",
+            "\"Employee # (optional)\", \"BP # (optional)\" and \"DISN # (optional)\": the person's numbers. They fill in report forms.",
             "\"Group\": pick one of your groups",
             "\"Level\": tap \"Apprentice\" or \"Journeyman\" (tap it again to clear it)",
             "\"Trade\": pick from the list, for example Millwright or Pipefitter",
             "\"Union local\": pick from the list",
             "\"This contact will receive texts when assigned to a field or task\": tick it to text them when you assign them."
           ]
+        },
+        {
+          "type": "text",
+          "text": "Pasting everyone's numbers at once:"
+        },
+        {
+          "type": "image",
+          "file": "paste_numbers.png",
+          "caption": "Paste crew numbers"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "In your crew list (for example in Excel), select the rows with the headings, including the names and the numbers, and copy them.",
+            "In Manage crew, tap \"Paste crew numbers\" at the bottom.",
+            "Paste into the box and tap \"Add numbers\".",
+            "The app matches each row to a crew member by name and fills in their Employee #, BP # and DISN #. It tells you how many it updated.",
+            "If some names aren't on this project's crew, it lists them. Tap \"Add them to the crew\" to add them, or check the spelling and try again."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "The headings can be like \"Aecon PRNNR #\" (the employee number), \"BP #\", \"DISN #\" and \"Name\". Other columns, like Position, are left alone. Without headings, each row needs the name, then Employee #, BP # and DISN #, separated by | or commas."
+        },
+        {
+          "type": "text",
+          "text": "Each person's numbers show under their name in Manage crew."
         },
         {
           "type": "text",
@@ -2645,7 +2684,7 @@
       "id": "links-tab",
       "title": "Links: saving and opening web links",
       "group": "Tabs",
-      "summary": "Save links to tools, procedures and forms. They show in every project.",
+      "summary": "Save web links, documents (a photo or a file) and open Apprentice reports and Disciplinary action.",
       "keywords": [
         "links",
         "web",
@@ -2654,7 +2693,15 @@
         "add link",
         "open link",
         "share link",
-        "bookmark"
+        "bookmark",
+        "document",
+        "documents",
+        "photo of a document",
+        "upload",
+        "file",
+        "pdf",
+        "word",
+        "excel"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2662,6 +2709,10 @@
         {
           "type": "text",
           "text": "The \"Links\" tab keeps web links handy. The same links show in every project."
+        },
+        {
+          "type": "text",
+          "text": "At the top of the Links tab are two buttons: \"Apprentice reports\" and \"Disciplinary action\". See their own sections."
         },
         {
           "type": "image",
@@ -2672,6 +2723,7 @@
           "type": "steps",
           "items": [
             "Tap \"Links\", then the big \"+\".",
+            "Tap \"Add web link\".",
             "In \"Add link\", type or paste the web address. If you just copied one, it is filled in already.",
             "Type a name if you like, for example \"Tool tracking portal\".",
             "Tap \"Save\"."
@@ -2683,7 +2735,7 @@
         },
         {
           "type": "text",
-          "text": "Press and hold a link for more: \"Open\", \"Edit link\", \"Copy link\", \"Share link\" and \"Delete link\". Deleting removes it from every project."
+          "text": "Tap ⋮ on a link (or press and hold it) for more: \"Open\", \"Edit link\", \"Copy link\", \"Share link\" and \"Delete link\". Deleting removes it from every project."
         },
         {
           "type": "text",
@@ -2693,6 +2745,269 @@
           "type": "see",
           "id": "formstack-forms",
           "text": "Related: Forms filled in with your answers"
+        },
+        {
+          "type": "see",
+          "id": "documents",
+          "text": "Related: Documents: a photo or a file"
+        },
+        {
+          "type": "see",
+          "id": "apprentice-reports",
+          "text": "Related: Apprentice reports"
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Documents: a photo or a file",
+      "group": "Tabs",
+      "summary": "Keep documents on the Links tab: take a photo of one, or upload a PDF, Word, Excel or other file.",
+      "keywords": [
+        "document",
+        "documents",
+        "photo of a document",
+        "upload",
+        "upload a file",
+        "pdf",
+        "word",
+        "excel",
+        "file",
+        "scan"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Documents sit on the Links tab under \"Documents\", newest first. The same documents show in every project."
+        },
+        {
+          "type": "image",
+          "file": "links_reports.png",
+          "caption": "The Links tab with the report buttons and a document"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open a project and tap \"Links\", then the big \"+\".",
+            "Tap \"Take a photo of a document\" and take the photo, or tap \"Upload a file\" and pick the file.",
+            "Type a name in \"Name this document\", for example \"Lifting plan\", and tap \"Save\"."
+          ]
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Tap a document to open it. Photos and PDFs open on screen (pinch to zoom). Word, Excel and other files open in another app.",
+            "Tap ⋮ on a document (or press and hold it) for \"Open\", \"Rename\", \"Share\" and \"Delete document\".",
+            "\"Search links\" finds documents by name too."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "links-tab",
+          "text": "Related: Links: saving and opening web links"
+        }
+      ]
+    },
+    {
+      "id": "apprentice-reports",
+      "title": "Apprentice reports",
+      "group": "Tabs",
+      "summary": "Load your approved blank form (photos or a file). Fill it in for any apprentice and the app writes the answers onto the form itself, ready to sign.",
+      "keywords": [
+        "apprentice",
+        "apprentice report",
+        "apprentice review",
+        "review",
+        "evaluation",
+        "form",
+        "report form",
+        "fill in",
+        "speak",
+        "mic",
+        "pdf",
+        "sign",
+        "signature",
+        "rating",
+        "point system",
+        "average",
+        "crop",
+        "place the answers",
+        "replace the form",
+        "on the form",
+        "approved form",
+        "move answers",
+        "text size"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Apprentice reports turns your paper or emailed review form into one you fill in on the phone."
+        },
+        {
+          "type": "text",
+          "text": "1. Add the blank form (once):"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the Links tab, tap \"Apprentice reports\".",
+            "Tap \"+  Add a form\".",
+            "Tap \"Take photos of a form\" and photograph each page. After each photo, \"Crop the page\" opens: drag the four corners to the edges of the form and tap \"Crop\" (or \"Use whole photo\"). Tap \"Add page\" for the next page, \"Done\" when finished.",
+            "Or tap \"Upload a file\" and pick a PDF, Word, Excel or photo of the form.",
+            "Type a name in \"Name this form\", for example \"Apprentice review\", and tap \"Save\".",
+            "Wait for \"Reading the form…\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "For the cleanest result, upload the form's own PDF (for example from the email it came in), or photograph a printed copy flat and straight on. A photo of a computer screen works too; crop off the screen's edges."
+        },
+        {
+          "type": "text",
+          "text": "2. Check the questions. The app reads the form and lists the questions it found: boxes like \"Name\" or \"Date\", numbered items it scores with the form's point system, the \"Overall average\" (worked out for you) and comment boxes. It also finds the signature lines."
+        },
+        {
+          "type": "image",
+          "file": "form_check.png",
+          "caption": "Check the questions"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Tap a question to fix its wording or type: \"Short answer\", \"Long answer\", \"Rating\" or \"Average of ratings\".",
+            "Tap the red × to remove one the app picked up by mistake.",
+            "Tap \"+  Add a question\" for anything it missed.",
+            "\"View the form\" shows the pages you added.",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Take the photo straight on, in good light, with the whole page in view. You can always fix the questions later: press and hold the form and tap \"Edit questions\"."
+        },
+        {
+          "type": "text",
+          "text": "3. Fill it in:"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap the form.",
+            "In \"Who is this report for?\", pick the apprentice and tap \"Start\". Only crew marked \"Apprentice\" in Manage crew are listed.",
+            "The app fills in what it knows: their name, Employee #, BP #, DISN #, trade, level and union local from Manage crew, your name for supervisor questions, and today's date. Answers like Employer and Term are copied from the last report for that person.",
+            "Then it asks each empty question, one at a time. Type the answer, or tap the mic and speak it. For ratings, tap one (for example \"Excellent (4.0)\"). Tap \"Next\", \"Skip\", or \"Stop\"."
+          ]
+        },
+        {
+          "type": "image",
+          "file": "report_pick.png",
+          "caption": "Picking the apprentice"
+        },
+        {
+          "type": "image",
+          "file": "report_ask.png",
+          "caption": "The app asks each missing question"
+        },
+        {
+          "type": "text",
+          "text": "You then see the whole report. Questions still empty are light orange. Change any answer, or tap \"Ask the missing questions\". It all saves as you go."
+        },
+        {
+          "type": "image",
+          "file": "report_fill.png",
+          "caption": "The filled-in report"
+        },
+        {
+          "type": "text",
+          "text": "4. Tap \"Export PDF\", then \"Share or email\" or \"Save to phone\". For a photo or PDF form, the PDF is your form itself with the answers written on its blanks in blue: the details beside their labels, the scores on the score lines, the overall average worked out, and the comments on their lines. The signature lines are left empty to sign by hand."
+        },
+        {
+          "type": "image",
+          "file": "report_on_form.png",
+          "caption": "The answers written on the approved form"
+        },
+        {
+          "type": "text",
+          "text": "Moving an answer: the first time, check where the answers land. On the report, tap \"Check where the answers go\" (or press and hold the form and tap \"Place the answers\"). Press and drag any answer onto its line. Tap \"A-\" or \"A+\" to make all the answers smaller or bigger. The app remembers this for every report on that form."
+        },
+        {
+          "type": "image",
+          "file": "place_answers.png",
+          "caption": "Place the answers: drag each one onto its line"
+        },
+        {
+          "type": "tip",
+          "text": "Word and Excel forms can't be drawn on, so their PDF lists the questions and answers with signature lines instead. To keep the form's look, save it as a PDF in Word or Excel and upload that."
+        },
+        {
+          "type": "text",
+          "text": "When the approved form changes: press and hold the form and tap \"Replace the form\", then take new photos or upload the new file. Reports already filled in keep the old form. \"Delete form\" removes it; nothing is preloaded, so you always choose the forms."
+        },
+        {
+          "type": "text",
+          "text": "Filled-in reports are listed under \"Filled in\". Tap one to open it again; press and hold for \"Export PDF\" or \"Delete\"."
+        },
+        {
+          "type": "image",
+          "file": "reports_list.png",
+          "caption": "Forms and filled-in reports"
+        },
+        {
+          "type": "tip",
+          "text": "If speaking doesn't work on your phone, tap the mic on your keyboard instead."
+        },
+        {
+          "type": "see",
+          "id": "disciplinary-action",
+          "text": "Related: Disciplinary action"
+        },
+        {
+          "type": "see",
+          "id": "manage-crew",
+          "text": "Related: Managing your crew"
+        }
+      ]
+    },
+    {
+      "id": "disciplinary-action",
+      "title": "Disciplinary action",
+      "group": "Tabs",
+      "summary": "Works like Apprentice reports, but you can pick anyone on the crew.",
+      "keywords": [
+        "disciplinary",
+        "discipline",
+        "disciplinary action",
+        "warning",
+        "write up",
+        "write-up",
+        "incident",
+        "form",
+        "pdf",
+        "sign"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "\"Disciplinary action\" on the Links tab works the same way as Apprentice reports: add your company's form once, check its questions, then fill it in and export a PDF to sign."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "When you fill it in, \"Who is this report for?\" lists everyone on the project's crew.",
+            "If the form has no signature lines the app could read, the PDF gets \"Supervisor signature\", \"Employee signature\" and \"Witness signature\".",
+            "Forms and filled-in reports here are kept separate from Apprentice reports."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "apprentice-reports",
+          "text": "Related: Apprentice reports"
         }
       ]
     },

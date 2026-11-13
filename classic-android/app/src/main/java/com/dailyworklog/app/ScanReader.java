@@ -132,7 +132,7 @@ final class ScanReader {
     }
 
     /** Decodes the photo upright (camera photos are often stored sideways) and not too large. */
-    private static Bitmap load(Context c, Uri uri) {
+    static Bitmap load(Context c, Uri uri) {
         try {
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;

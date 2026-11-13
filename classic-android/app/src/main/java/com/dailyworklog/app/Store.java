@@ -84,6 +84,32 @@ public final class Store {
         return null;
     }
 
+    /** The form a report uses: the live one when it still exists, else the copy the report kept. */
+    public Models.ReportForm formFor(Models.FilledReport r) {
+        Models.ReportForm live = form(r.formId);
+        return live != null ? live : r.form;
+    }
+
+    /** True if a filled report's copy of a form still uses this file. */
+    public boolean fileInUse(String name) {
+        for (Models.FilledReport r : filledReports) if (r.form != null && r.form.files.contains(name)) return true;
+        for (Models.ReportForm f : reportForms) if (f.files.contains(name)) return true;
+        return false;
+    }
+
+    /** Removes a form; its files go too unless a report's copy (or another form) still uses them. */
+    public void removeForm(Models.ReportForm f) {
+        // Reports started before reports kept a copy of their form get one now.
+        for (Models.FilledReport r : filledReports) if (r.form == null && r.formId.equals(f.id)) r.form = f.copy();
+        reportForms.remove(f);
+        for (String n : f.files) {
+            if (!fileInUse(n)) {
+                //noinspection ResultOfMethodCallIgnored
+                photoFile(n).delete();
+            }
+        }
+    }
+
     public Models.FilledReport filled(String id) {
         for (Models.FilledReport r : filledReports) if (r.id.equals(id)) return r;
         return null;

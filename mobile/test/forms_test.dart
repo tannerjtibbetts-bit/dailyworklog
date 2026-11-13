@@ -256,4 +256,59 @@ void main() {
         myName: '', myPhone: '', myEmail: '', myPosition: '', myLocation: '', today: DateTime(2026), earlier: []);
     expect([r.answer('q1'), r.answer('q2'), r.answer('q3')], ['501226', '371151', '30027219']);
   });
+
+  test('where answers are written on the form, from the line boxes', () {
+    FormLine l(String t, double x1, double y1, double x2, double y2) =>
+        FormLine(t, left: x1, top: y1, right: x2, bottom: y2);
+    final r = FormReader.readLines([
+      l('NAME:', 0.107, 0.274, 0.165, 0.287),
+      l('A. WORK DONE IN THE ABOVE PERIOD:', 0.107, 0.336, 0.497, 0.349),
+      l('1. Improvement shown in above period', 0.143, 0.403, 0.487, 0.416),
+      l('3. Progress in learning this phase of work', 0.143, 0.430, 0.506, 0.443),
+      l('Excellent 4.0', 0.66, 0.42, 0.87, 0.43),
+      l('Poor 0.0', 0.66, 0.47, 0.87, 0.48),
+      l('Overall average of above:', 0.32, 0.539, 0.529, 0.548),
+      l('(total #1 - #10 and divide by 10)', 0.30, 0.549, 0.554, 0.558),
+      l('DATE: ______  TERM: ______', 0.5, 0.2, 0.9, 0.21),
+    ]);
+    Place p(String label) => r.questions.firstWhere((q) => q.label == label).place!;
+    expect(p('Name').x, closeTo(0.177, 0.002));
+    expect(p('Name').y, closeTo(0.287, 0.002));
+    expect(p('Work done in the above period').x, closeTo(0.107, 0.002));
+    expect(p('Work done in the above period').y, closeTo(0.349 + 1.1 * 0.013, 0.002));
+    expect(p('Improvement shown in above period').x, closeTo(0.566, 0.002));
+    expect(p('Progress in learning this phase of work').y, closeTo(0.443, 0.002));
+    // The average is after the "(total ...)" words, below the average line.
+    expect(p('Overall average').x, closeTo(0.569, 0.002));
+    expect(p('Overall average').y, closeTo(0.548 + 1.2 * 0.009, 0.002));
+    // Two labels on one line: each answer goes after its own label.
+    expect(p('Date').x, lessThan(p('Term').x));
+    expect(r.textSize, closeTo(0.0098, 0.0005));
+    // No boxes (Word): no places.
+    expect(FormReader.read(['NAME:']).questions.single.place, isNull);
+  });
+
+  test('ratings are saved as the word; places, sizes and the report copy are kept', () {
+    final f = formFrom(FormReader.read(sample))
+      ..id = 'f9'
+      ..fontScale = 1.3
+      ..textSize = 0.011;
+    f.questions.first.place = const Place(0, 0.2, 0.3);
+    final rating = f.questions.firstWhere((q) => q.kind == ReportQuestion.rating);
+    final r = FilledReport()
+      ..formId = 'f9'
+      ..form = f.copy()
+      ..answers = {rating.id: 'Excellent'};
+    expect(FormFill.shown(rating, r, f), 'Excellent (4.0)');
+    expect(FormFill.onForm(rating, r, f), '4.0');
+    expect(FormFill.average(r, f), '4.0');
+    final back = FilledReport.fromJson(jsonDecode(jsonEncode(r.toJson())) as Map<String, dynamic>);
+    expect(back.form!.fontScale, 1.3);
+    expect(back.form!.textSize, 0.011);
+    expect(back.form!.questions.first.place.toString(), 'p0(0.200,0.300)');
+    // "Work location" isn't a union local; "Term" carries over but "determine" doesn't.
+    expect(FormFill.ruleFor(ReportQuestion('a', 'Work location', 'text')), 'location');
+    expect(FormFill.ruleFor(ReportQuestion('a', 'Determine next steps', 'text')), isNull);
+  });
 }
+

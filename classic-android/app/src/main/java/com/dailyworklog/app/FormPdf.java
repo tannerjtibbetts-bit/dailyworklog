@@ -51,10 +51,12 @@ final class FormPdf {
         return p;
     }
 
-    static void write(Models.ReportForm f, Models.FilledReport r, long now, OutputStream out) throws IOException {
+    /** photoDir: where the form's page pictures are (null: always the typed layout). */
+    static void write(Models.ReportForm f, Models.FilledReport r, long now, java.io.File photoDir, OutputStream out) throws IOException {
         FormPdf pdf = new FormPdf("Filled in with Daily Work Log on " + ReportFill.day(now));
         try {
-            pdf.render(f, r);
+            if (photoDir != null && !f.pictures().isEmpty()) pdf.renderOnPictures(f, r, photoDir);
+            else pdf.render(f, r);
             pdf.doc.writeTo(out);
         } finally {
             pdf.doc.close();
@@ -70,16 +72,83 @@ final class FormPdf {
         text(f.name.isEmpty() ? r.formName : f.name, title, M, BODY_W, 6);
         String who = Models.ReportForm.DISCIPLINE.equals(f.group) ? "Employee" : "Apprentice";
         text(who + ": " + r.person + "   Project: " + r.project + "   Date: " + ReportFill.day(r.createdAt), meta, M, BODY_W, 14);
+        typed(f, r, f.questions);
+        signatures(f.signatures);
+        finishPage();
+    }
+
+    /** The answer as written on the form: a rating's value ("4.0"), the worked-out average, or the text. */
+    static String written(Models.ReportForm f, Models.FilledReport r, Models.FormQuestion q) {
+        if (Models.FormQuestion.AVERAGE.equals(q.kind)) return ReportFill.average(f, r);
+        String a = r.answer(q.id).trim();
+        if (Models.FormQuestion.RATING.equals(q.kind)) {
+            for (Models.Choice c : q.choices) if (c.label.equalsIgnoreCase(a) && !c.value.isEmpty()) return c.value;
+        }
+        return a;
+    }
+
+    /** One page per page picture with the answers written on it; answers with no place go on a last page. */
+    private void renderOnPictures(Models.ReportForm f, Models.FilledReport r, java.io.File photoDir) {
+        java.util.List<String> pictures = f.pictures();
+        TextPaint ink = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        ink.setColor(0xFF0B2E83);
+        ink.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL));
+        for (int p = 0; p < pictures.size(); p++) {
+            android.graphics.Bitmap b = ImageLoader.decode(new java.io.File(photoDir, pictures.get(p)), 2200);
+            float pw = W, ph = b == null ? H : W * b.getHeight() / b.getWidth();
+            pageNo++;
+            page = doc.startPage(new PdfDocument.PageInfo.Builder((int) pw, Math.round(ph), pageNo).create());
+            c = page.getCanvas();
+            if (b != null) {
+                c.drawBitmap(b, null, new android.graphics.RectF(0, 0, pw, ph), new Paint(Paint.FILTER_BITMAP_FLAG));
+                b.recycle();
+            }
+            float size = (float) (f.textSize * ph * f.fontScale);
+            ink.setTextSize(size);
+            for (Models.FormQuestion q : f.questions) {
+                if (q.place == null || q.place.page != p) continue;
+                String a = written(f, r, q);
+                if (a.isEmpty()) continue;
+                float x = (float) (q.place.x * pw), y = (float) (q.place.y * ph);
+                if (Models.FormQuestion.LONG.equals(q.kind)) {
+                    StaticLayout l = layout(a, ink, (float) ((0.96 - q.place.x) * pw));
+                    for (int i = 0; i < l.getLineCount(); i++) {
+                        String line = a.substring(l.getLineStart(i), l.getLineEnd(i)).replace("\n", "").trim();
+                        c.drawText(line, x, y + i * 1.7f * size, ink);
+                    }
+                } else {
+                    c.drawText(a.replace('\n', ' '), x, y, ink);
+                }
+            }
+            doc.finishPage(page);
+            page = null;
+        }
+        // Answers with nowhere to go on the pictures
+        java.util.List<Models.FormQuestion> rest = new ArrayList<>();
+        for (Models.FormQuestion q : f.questions) {
+            boolean placed = q.place != null && q.place.page < pictures.size();
+            if (!placed && !written(f, r, q).isEmpty()) rest.add(q);
+        }
+        if (rest.isEmpty()) return;
+        newPage();
+        text("More answers", title, M, BODY_W, 6);
+        text((f.name.isEmpty() ? r.formName : f.name) + " \u00B7 " + r.person, meta, M, BODY_W, 14);
+        typed(f, r, rest);
+        finishPage();
+    }
+
+    /** The questions in the typed layout: "Label: answer", long answers under their label, ratings in a table. */
+    private void typed(Models.ReportForm f, Models.FilledReport r, java.util.List<Models.FormQuestion> questions) {
 
         boolean hasAverage = false;
-        for (Models.FormQuestion q : f.questions) if (Models.FormQuestion.AVERAGE.equals(q.kind)) hasAverage = true;
+        for (Models.FormQuestion q : questions) if (Models.FormQuestion.AVERAGE.equals(q.kind)) hasAverage = true;
         boolean tableDone = false;
         int ratings = 0;
-        for (Models.FormQuestion q : f.questions) if (Models.FormQuestion.RATING.equals(q.kind)) ratings++;
-        for (Models.FormQuestion q : f.questions) {
+        for (Models.FormQuestion q : questions) if (Models.FormQuestion.RATING.equals(q.kind)) ratings++;
+        for (Models.FormQuestion q : questions) {
             switch (q.kind) {
                 case Models.FormQuestion.RATING:
-                    if (!tableDone) ratingTable(f, r, hasAverage);
+                    if (!tableDone) ratingTable(f, r, questions, hasAverage);
                     tableDone = true;
                     break;
                 case Models.FormQuestion.AVERAGE:
@@ -94,8 +163,6 @@ final class FormPdf {
                     labelled(q.label, answer(r.answer(q.id)));
             }
         }
-        signatures(f.signatures);
-        finishPage();
     }
 
     /** "Label: answer" with the label in bold. */
@@ -106,12 +173,12 @@ final class FormPdf {
         text(b, body, M, BODY_W, 6);
     }
 
-    private void ratingTable(Models.ReportForm f, Models.FilledReport r, boolean hasAverage) {
+    private void ratingTable(Models.ReportForm f, Models.FilledReport r, java.util.List<Models.FormQuestion> questions, boolean hasAverage) {
         float left = BODY_W * 0.62f, pad = 6;
         y += 4;
         int n = 0;
         List<Models.Choice> scale = new ArrayList<>();
-        for (Models.FormQuestion q : f.questions) {
+        for (Models.FormQuestion q : questions) {
             if (!Models.FormQuestion.RATING.equals(q.kind)) continue;
             n++;
             if (scale.isEmpty()) scale = q.choices;

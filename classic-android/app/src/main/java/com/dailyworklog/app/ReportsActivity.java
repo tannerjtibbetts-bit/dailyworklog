@@ -31,6 +31,8 @@ public class ReportsActivity extends FormScreen {
     /** Pages taken so far for a new form, and the one the camera is taking now. */
     private ArrayList<String> pages = new ArrayList<>();
     private String pendingPage;
+    /** The form being replaced by the one being added (null when adding a new one). */
+    private String replacing;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +47,7 @@ public class ReportsActivity extends FormScreen {
             ArrayList<String> p = savedInstanceState.getStringArrayList("pages");
             if (p != null) pages = p;
             pendingPage = savedInstanceState.getString("pendingPage");
+            replacing = savedInstanceState.getString("replacing");
         }
         exporter = new ExportHelper(this);
         takePage = registerForActivityResult(new ActivityResultContracts.TakePicture(), ok -> {
@@ -60,10 +63,10 @@ public class ReportsActivity extends FormScreen {
             }
             PhotoUtil.BG.execute(() -> {
                 PhotoUtil.normalize(f);
-                runOnUiThread(() -> {
+                runOnUiThread(() -> CropView.show(this, f, () -> {
                     pages.add(name);
                     askAnotherPage();
-                });
+                }));
             });
         });
         pickFile = registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
@@ -102,6 +105,7 @@ public class ReportsActivity extends FormScreen {
         super.onSaveInstanceState(out);
         out.putStringArrayList("pages", pages);
         out.putString("pendingPage", pendingPage);
+        out.putString("replacing", replacing);
     }
 
     private boolean isApprentice() {
@@ -121,7 +125,10 @@ public class ReportsActivity extends FormScreen {
                         return true;
                     });
         }
-        action("+  Add a form", v -> addForm());
+        action("+  Add a form", v -> {
+            replacing = null;
+            addForm();
+        });
 
         List<Models.FilledReport> done = new ArrayList<>();
         for (Models.FilledReport r : store.filledReports) {
@@ -147,6 +154,14 @@ public class ReportsActivity extends FormScreen {
         items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Edit questions", () -> startActivity(new Intent(this, QuestionsActivity.class)
                 .putExtra("form", f.id))));
         items.add(new Ui.SheetItem(R.drawable.ic_open, "View the form", () -> Docs.showForm(this, store, f)));
+        items.add(new Ui.SheetItem(R.drawable.ic_camera, "Replace the form", () -> {
+            replacing = f.id;
+            addForm();
+        }));
+        if (!f.pictures().isEmpty()) {
+            items.add(new Ui.SheetItem(R.drawable.ic_drag, "Place the answers", () -> startActivity(new Intent(this, PlaceActivity.class)
+                    .putExtra("form", f.id))));
+        }
         items.add(new Ui.SheetItem(R.drawable.ic_edit, "Rename", () -> Ui.prompt(this, "Rename", "e.g. Apprentice review", f.name, "Save", n -> {
             f.name = n;
             store.save();
@@ -154,8 +169,7 @@ public class ReportsActivity extends FormScreen {
         })));
         items.add(new Ui.SheetItem(R.drawable.ic_delete, "Delete form", () -> Ui.confirm(this, "Delete this form?",
                 "Reports already filled in stay.", "Delete", () -> {
-                    store.reportForms.remove(f);
-                    Docs.deleteFiles(store, f.files);
+                    store.removeForm(f);  // its files stay while a filled report's copy uses them
                     store.save();
                     render();
                 }), true));
@@ -164,14 +178,16 @@ public class ReportsActivity extends FormScreen {
 
     private void addForm() {
         List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_camera, "Take photos of a form", () -> {
+        items.add(new Ui.SheetItem(R.drawable.ic_camera, replacing != null ? "Take photos of the new form" : "Take photos of a form", () -> {
             pages = new ArrayList<>();
             takeAPage();
         }));
         items.add(new Ui.SheetItem(R.drawable.ic_folder, "Upload a file", () -> pickFile.launch(new String[]{"application/pdf",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "image/*"})));
-        Ui.menu(this, null, items);
+        com.google.android.material.bottomsheet.BottomSheetDialog sheet = Ui.menu(this, replacing != null ? "Replace the form" : null, items);
+        // Closing the menu without picking anything stops a replace.
+        sheet.setOnCancelListener(x -> replacing = null);
     }
 
     private void takeAPage() {
@@ -199,6 +215,11 @@ public class ReportsActivity extends FormScreen {
     }
 
     private void nameForm(List<String> files, String kind, String suggested) {
+        Models.ReportForm old = replacing == null ? null : store.form(replacing);
+        if (old != null) {
+            readForm(files, kind, old.name);  // a replacement keeps the old form's name
+            return;
+        }
         Ui.prompt(this, "Name this form", "e.g. Apprentice review", suggested, "Save", n -> readForm(files, kind, n));
     }
 
@@ -210,12 +231,19 @@ public class ReportsActivity extends FormScreen {
         f.name = name;
         f.kind = kind;
         f.files.addAll(files);
-        Docs.Lines done = (lines, error) -> {
+        Docs.BoxLines done = (lines, error) -> {
             busy.dismiss();
-            FormReader.Result r = FormReader.read(lines);
+            FormReader.Result r = FormReader.readLines(lines);
             f.questions = r.questions;
+            f.textSize = r.textSize;
             f.signatures = r.signatures.isEmpty() ? FormReader.defaultSignatures(group) : r.signatures;
             store.reportForms.add(f);
+            Models.ReportForm old = replacing == null ? null : store.form(replacing);
+            replacing = null;
+            if (old != null && old != f) {
+                store.removeForm(old);
+                Toast.makeText(this, "Form replaced. Reports already filled in keep the old form.", Toast.LENGTH_LONG).show();
+            }
             store.save();
             if (error != null) Toast.makeText(this, error, Toast.LENGTH_LONG).show();
             startActivity(new Intent(this, QuestionsActivity.class).putExtra("form", f.id));
@@ -224,17 +252,22 @@ public class ReportsActivity extends FormScreen {
         if (Models.Document.PHOTO.equals(kind)) {
             List<File> images = new ArrayList<>();
             for (String n : files) images.add(store.photoFile(n));
-            Docs.ocr(this, images, done);
+            // Uploaded photos are straightened like camera ones, so the answers line up with what's shown.
+            PhotoUtil.BG.execute(() -> {
+                for (File img : images) PhotoUtil.normalize(img);
+                runOnUiThread(() -> Docs.ocrBoxes(this, images, done));
+            });
             return;
         }
         PhotoUtil.BG.execute(() -> {
-            List<String> lines = new ArrayList<>();
+            List<FormReader.Line> lines = new ArrayList<>();
             List<File> images = new ArrayList<>();
             String error = null;
             try {
-                if (Models.Document.DOCX.equals(kind)) lines = FormReader.docxLines(first);
-                else if (Models.Document.XLSX.equals(kind)) lines = FormReader.xlsxLines(first);
-                else if (Models.Document.PDF.equals(kind)) {
+                List<String> text = Models.Document.DOCX.equals(kind) ? FormReader.docxLines(first)
+                        : Models.Document.XLSX.equals(kind) ? FormReader.xlsxLines(first) : new ArrayList<>();
+                for (String t : text) lines.add(new FormReader.Line(t));
+                if (Models.Document.PDF.equals(kind)) {
                     for (String n : Docs.renderPdfPages(store, first)) {
                         f.files.add(n);
                         images.add(store.photoFile(n));
@@ -243,10 +276,10 @@ public class ReportsActivity extends FormScreen {
             } catch (Exception | OutOfMemoryError e) {
                 error = "Couldn't read that file";
             }
-            final List<String> found = lines;
+            final List<FormReader.Line> found = lines;
             final String err = error;
             runOnUiThread(() -> {
-                if (!images.isEmpty()) Docs.ocr(this, images, done);
+                if (!images.isEmpty()) Docs.ocrBoxes(this, images, done);
                 else done.onLines(found, err);
             });
         });
@@ -285,6 +318,7 @@ public class ReportsActivity extends FormScreen {
                     r.project = project.name;
                     r.createdAt = now;
                     r.updatedAt = now;
+                    r.form = f.copy();  // kept with the report, in case the form is replaced or deleted later
                     ReportFill.autoFill(store, project, f, r, store.filledReports, now);
                     store.filledReports.add(r);
                     store.save();
@@ -294,7 +328,7 @@ public class ReportsActivity extends FormScreen {
     }
 
     private void openReport(Models.FilledReport r, boolean ask) {
-        if (store.form(r.formId) == null) {
+        if (store.formFor(r) == null) {
             Toast.makeText(this, "The form for this report was deleted", Toast.LENGTH_LONG).show();
             return;
         }
@@ -316,12 +350,12 @@ public class ReportsActivity extends FormScreen {
     }
 
     static void exportPdf(android.app.Activity a, ExportHelper exporter, Store store, Models.FilledReport r) {
-        Models.ReportForm f = store.form(r.formId);
+        Models.ReportForm f = store.formFor(r);
         if (f == null) {
             Toast.makeText(a, "The form for this report was deleted", Toast.LENGTH_LONG).show();
             return;
         }
         long now = System.currentTimeMillis();
-        exporter.exportPdf("Building PDF…", ReportFill.pdfName(r, f.name), os -> FormPdf.write(f, r, now, os));
+        exporter.exportPdf("Building PDF…", ReportFill.pdfName(r, f.name), os -> FormPdf.write(f, r, now, store.photoDir(), os));
     }
 }

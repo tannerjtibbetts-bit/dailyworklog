@@ -101,13 +101,37 @@ public class QuestionsActivity extends FormScreen {
         }));
 
         button("View the form", false, v -> Docs.showForm(this, store, form));
+        if (!form.pictures().isEmpty()) {
+            button("Place the answers on the form", false, v -> {
+                // Keep what's been checked so far, then place.
+                commit();
+                startActivity(new android.content.Intent(this, PlaceActivity.class).putExtra("form", form.id));
+            });
+        }
         button("Save", true, v -> {
-            form.questions = draft.questions;
-            form.signatures = draft.signatures;
-            store.save();
+            commit();
             finish();
         });
     }
+
+    private void commit() {
+        form.questions = draft.questions;
+        form.signatures = draft.signatures;
+        store.save();
+        placing = true;
+    }
+
+    /** Back from placing the answers: carry on from the form as saved (with the new places). */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!placing) return;
+        placing = false;
+        draft = form.copy();
+        render();
+    }
+
+    private boolean placing;
 
     /** A card with the label, an optional grey line, and a red × on the right. */
     private void row(String label, String sub, View.OnClickListener tap, View.OnClickListener remove) {

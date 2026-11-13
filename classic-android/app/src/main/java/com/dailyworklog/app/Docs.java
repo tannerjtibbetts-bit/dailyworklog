@@ -269,6 +269,55 @@ final class Docs {
         });
     }
 
+    interface BoxLines {
+        void onLines(List<FormReader.Line> lines, String error);
+    }
+
+    /**
+     * OCR of each page picture in turn, keeping where each line sits (fractions of that picture's width and
+     * height), in block order, then line order, page after page. Calls back on the UI thread.
+     */
+    static void ocrBoxes(Context c, List<File> images, BoxLines done) {
+        List<FormReader.Line> all = new ArrayList<>();
+        ocrBoxesNext(c.getApplicationContext(), images, 0, all, done);
+    }
+
+    private static void ocrBoxesNext(Context c, List<File> images, int i, List<FormReader.Line> all, BoxLines done) {
+        if (i >= images.size()) {
+            done.onLines(all, null);
+            return;
+        }
+        android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        PhotoUtil.BG.execute(() -> {
+            Bitmap bmp = ScanReader.load(c, Uri.fromFile(images.get(i)));
+            main.post(() -> {
+                if (bmp == null) {
+                    done.onLines(all, "Couldn't open page " + (i + 1));
+                    return;
+                }
+                float w = bmp.getWidth(), h = bmp.getHeight();
+                com.google.mlkit.vision.text.TextRecognizer rec = com.google.mlkit.vision.text.TextRecognition.getClient(
+                        com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS);
+                rec.process(com.google.mlkit.vision.common.InputImage.fromBitmap(bmp, 0))
+                        .addOnSuccessListener(text -> {
+                            rec.close();
+                            for (com.google.mlkit.vision.text.Text.TextBlock b : text.getTextBlocks()) {
+                                for (com.google.mlkit.vision.text.Text.Line l : b.getLines()) {
+                                    android.graphics.Rect r = l.getBoundingBox();
+                                    if (r == null) all.add(new FormReader.Line(l.getText()));
+                                    else all.add(new FormReader.Line(l.getText(), i, r.left / w, r.top / h, r.right / w, r.bottom / h));
+                                }
+                            }
+                            ocrBoxesNext(c, images, i + 1, all, done);
+                        })
+                        .addOnFailureListener(e -> {
+                            rec.close();
+                            done.onLines(all, "Couldn't read the text on page " + (i + 1));
+                        });
+            });
+        });
+    }
+
     /** Deletes a document's or form's files from the photos folder. */
     static void deleteFiles(Store store, List<String> names) {
         for (String n : names) {

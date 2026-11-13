@@ -2735,7 +2735,7 @@
         },
         {
           "type": "text",
-          "text": "Press and hold a link for more: \"Open\", \"Edit link\", \"Copy link\", \"Share link\" and \"Delete link\". Deleting removes it from every project."
+          "text": "Tap ⋮ on a link (or press and hold it) for more: \"Open\", \"Edit link\", \"Copy link\", \"Share link\" and \"Delete link\". Deleting removes it from every project."
         },
         {
           "type": "text",
@@ -2799,7 +2799,7 @@
           "type": "bullets",
           "items": [
             "Tap a document to open it. Photos and PDFs open on screen (pinch to zoom). Word, Excel and other files open in another app.",
-            "Press and hold a document for \"Open\", \"Rename\", \"Share\" and \"Delete document\".",
+            "Tap ⋮ on a document (or press and hold it) for \"Open\", \"Rename\", \"Share\" and \"Delete document\".",
             "\"Search links\" finds documents by name too."
           ]
         },
@@ -2814,7 +2814,7 @@
       "id": "apprentice-reports",
       "title": "Apprentice reports",
       "group": "Tabs",
-      "summary": "Load a blank form (photos or a file) once, then fill it in for any apprentice: their details fill in by themselves, the app asks the rest, and you export a PDF to sign.",
+      "summary": "Load your approved blank form (photos or a file). Fill it in for any apprentice and the app writes the answers onto the form itself, ready to sign.",
       "keywords": [
         "apprentice",
         "apprentice report",
@@ -2831,7 +2831,14 @@
         "signature",
         "rating",
         "point system",
-        "average"
+        "average",
+        "crop",
+        "place the answers",
+        "replace the form",
+        "on the form",
+        "approved form",
+        "move answers",
+        "text size"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2849,10 +2856,15 @@
           "items": [
             "On the Links tab, tap \"Apprentice reports\".",
             "Tap \"+  Add a form\".",
-            "Tap \"Take photos of a form\" and photograph each page (tap \"Add page\" for the next one, \"Done\" when finished). Or tap \"Upload a file\" and pick a PDF, Word, Excel or photo of the form.",
+            "Tap \"Take photos of a form\" and photograph each page. After each photo, \"Crop the page\" opens: drag the four corners to the edges of the form and tap \"Crop\" (or \"Use whole photo\"). Tap \"Add page\" for the next page, \"Done\" when finished.",
+            "Or tap \"Upload a file\" and pick a PDF, Word, Excel or photo of the form.",
             "Type a name in \"Name this form\", for example \"Apprentice review\", and tap \"Save\".",
             "Wait for \"Reading the form…\"."
           ]
+        },
+        {
+          "type": "tip",
+          "text": "For the cleanest result, upload the form's own PDF (for example from the email it came in), or photograph a printed copy flat and straight on. A photo of a computer screen works too; crop off the screen's edges."
         },
         {
           "type": "text",
@@ -2911,12 +2923,29 @@
         },
         {
           "type": "text",
-          "text": "4. Tap \"Export PDF\", then \"Share or email\" or \"Save to phone\". The PDF has the answers, the ratings with the point system and the overall average, and the form's signature lines with a date line under each, ready to print and sign."
+          "text": "4. Tap \"Export PDF\", then \"Share or email\" or \"Save to phone\". For a photo or PDF form, the PDF is your form itself with the answers written on its blanks in blue: the details beside their labels, the scores on the score lines, the overall average worked out, and the comments on their lines. The signature lines are left empty to sign by hand."
         },
         {
           "type": "image",
-          "file": "report_pdf.png",
-          "caption": "The PDF, ready to sign"
+          "file": "report_on_form.png",
+          "caption": "The answers written on the approved form"
+        },
+        {
+          "type": "text",
+          "text": "Moving an answer: the first time, check where the answers land. On the report, tap \"Check where the answers go\" (or press and hold the form and tap \"Place the answers\"). Press and drag any answer onto its line. Tap \"A-\" or \"A+\" to make all the answers smaller or bigger. The app remembers this for every report on that form."
+        },
+        {
+          "type": "image",
+          "file": "place_answers.png",
+          "caption": "Place the answers: drag each one onto its line"
+        },
+        {
+          "type": "tip",
+          "text": "Word and Excel forms can't be drawn on, so their PDF lists the questions and answers with signature lines instead. To keep the form's look, save it as a PDF in Word or Excel and upload that."
+        },
+        {
+          "type": "text",
+          "text": "When the approved form changes: press and hold the form and tap \"Replace the form\", then take new photos or upload the new file. Reports already filled in keep the old form. \"Delete form\" removes it; nothing is preloaded, so you always choose the forms."
         },
         {
           "type": "text",

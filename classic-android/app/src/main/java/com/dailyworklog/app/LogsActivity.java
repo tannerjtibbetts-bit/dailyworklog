@@ -956,9 +956,12 @@ public class LogsActivity extends AppCompatActivity {
         class LinkVH extends RecyclerView.ViewHolder {
             final TextView title, url;
             final CheckBox include;
+            final View more;
 
             LinkVH(View v) {
                 super(v);
+                more = v.findViewById(R.id.more);
+                if (android.os.Build.VERSION.SDK_INT >= 26) more.setTooltipText("More");
                 title = v.findViewById(R.id.title);
                 url = v.findViewById(R.id.url);
                 include = v.findViewById(R.id.include);
@@ -1083,6 +1086,7 @@ public class LogsActivity extends AppCompatActivity {
                     linkMenu(l);
                     return true;
                 });
+                lh.more.setOnClickListener(v -> linkMenu(l));
                 return;
             }
             VH h = (VH) holder;
