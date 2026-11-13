@@ -269,6 +269,7 @@ final class FormReader {
             kept.add(f);
         }
         place(r, kept, lines, normalized, segments);
+        Models.ReportForm.pairPeriods(r.questions);
         return r;
     }
 

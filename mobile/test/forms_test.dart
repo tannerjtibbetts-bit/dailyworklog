@@ -459,4 +459,27 @@ void main() {
     expect(ReportQuestion.fromJson({'id': 'q2', 'label': 'Name', 'kind': 'text'}).kind, 'text');
     expect(ReportQuestion.fromJson({'id': 'q3', 'label': 'Date', 'kind': 'long'}).kind, 'long');
   });
+
+  test('"To" printed in another column is joined to its "Period covered from"', () {
+    // The phone read the right-hand column (Date, Employee #, Term, To) apart from the left one.
+    final f = formFrom(FormReader.read(
+        ['DATE:', 'EMPLOYEE #', 'TERM:', 'TO:', 'NAME:', 'EMPLOYER', 'PERIOD COVERED FROM:', 'A. WORK DONE IN THE ABOVE PERIOD:']));
+    expect(f.questions.map((q) => '${q.label}/${q.kind}'), [
+      'Date/date', 'Employee #/text', 'Term/text', 'Name/text', 'Employer/text',
+      'Period covered from/date', 'Period covered to/date', 'Work done in the above period/long',
+    ]);
+    expect(FormFill.rangeEnd(f, f.questions[5])!.label, 'Period covered to');
+    // A form saved that way before this fix is joined up when it's opened.
+    final saved = ReportForm.fromJson({
+      'name': 'Apprentice review',
+      'questions': [
+        {'id': 'q1', 'label': 'To', 'kind': 'text'},
+        {'id': 'q2', 'label': 'Name', 'kind': 'text'},
+        {'id': 'q3', 'label': 'Period covered from', 'kind': 'text'},
+      ],
+    });
+    expect(saved.questions.map((q) => '${q.id}:${q.label}/${q.kind}'),
+        ['q2:Name/text', 'q3:Period covered from/date', 'q1:Period covered to/date']);
+    expect(FormFill.rangeEnd(saved, saved.questions[1])!.id, 'q1');
+  });
 }

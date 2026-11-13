@@ -1585,6 +1585,21 @@ class SafeguardsTest {
 class RowsAndDatesTest {
   static FormReader.Line l(String t, double x0, double y0, double x1, double y1) { return new FormReader.Line(t, 0, x0, y0, x1, y1); }
   public static void main(String[] a) throws Exception {
+    // "To" printed in another column is joined to its "Period covered from" (reading, and saved forms).
+    FormReader.Result cols = FormReader.read(java.util.Arrays.asList("DATE:", "EMPLOYEE #", "TERM:", "TO:", "NAME:", "EMPLOYER",
+        "PERIOD COVERED FROM:", "A. WORK DONE IN THE ABOVE PERIOD:"));
+    java.util.List<String> lab = new java.util.ArrayList<>();
+    for (Models.FormQuestion q : cols.questions) lab.add(q.label + "/" + q.kind);
+    RichTest.eq(lab, java.util.Arrays.asList("Date/date", "Employee #/text", "Term/text", "Name/text", "Employer/text",
+        "Period covered from/date", "Period covered to/date", "Work done in the above period/long"), "to joined to from");
+    Models.ReportForm saved = Models.ReportForm.fromJson(new org.json.JSONObject("{\"name\":\"x\",\"questions\":["
+        + "{\"id\":\"q1\",\"label\":\"To\",\"kind\":\"text\"},{\"id\":\"q2\",\"label\":\"Name\",\"kind\":\"text\"},"
+        + "{\"id\":\"q3\",\"label\":\"Period covered from\",\"kind\":\"text\"}]}"));
+    java.util.List<String> sv = new java.util.ArrayList<>();
+    for (Models.FormQuestion q : saved.questions) sv.add(q.id + ":" + q.label + "/" + q.kind);
+    RichTest.eq(sv, java.util.Arrays.asList("q2:Name/text", "q3:Period covered from/date", "q1:Period covered to/date"), "saved form joined");
+    NoteTest.check(ReportFill.rangeEnd(saved, saved.questions.get(1)) == saved.questions.get(2), "saved pair picks together");
+
     // Item numbers and points read as their own column are joined back to their words.
     FormReader.Result r = FormReader.readLines(java.util.Arrays.asList(
         l("1.", 0.14, 0.400, 0.16, 0.410), l("2.", 0.14, 0.414, 0.16, 0.424), l("10.", 0.13, 0.428, 0.16, 0.438),

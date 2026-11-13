@@ -226,15 +226,42 @@ class ReportForm {
     ..name = (o['name'] ?? '').toString()
     ..files = [if (o['files'] is List) for (final f in o['files'] as List) f.toString()]
     ..kind = (o['kind'] ?? Doc.photo).toString()
-    ..questions = [
+    ..questions = pairPeriods([
       if (o['questions'] is List)
         for (final q in o['questions'] as List)
           if (q is Map) ReportQuestion.fromJson(Map<String, dynamic>.from(q)),
-    ]
+    ])
     ..signatures = [if (o['signatures'] is List) for (final s in o['signatures'] as List) s.toString()]
     ..createdAt = o['createdAt'] is int ? o['createdAt'] as int : 0
     ..textSize = o['textSize'] is num ? (o['textSize'] as num).toDouble().clamp(0.004, 0.05) : 0.014
     ..fontScale = o['fontScale'] is num ? (o['fontScale'] as num).toDouble().clamp(0.6, 2.0) : 1.0;
+
+  /// A lone "To" (the end of a period printed apart from its "... from", e.g. in another column) is joined to that
+  /// "... from": renamed "(period) to", made a date, and moved right after it, so both are picked as one period.
+  static List<ReportQuestion> pairPeriods(List<ReportQuestion> qs) {
+    bool isFrom(ReportQuestion q) => q.label.toLowerCase().trim().endsWith(' from');
+    bool isTo(ReportQuestion q, ReportQuestion from) =>
+        q.label.toLowerCase().trim() == '${from.label.toLowerCase().trim().substring(0, from.label.trim().length - 5)} to';
+    for (final to in List.of(qs)) {
+      if (to.label.toLowerCase().trim() != 'to') continue;
+      final i = qs.indexOf(to);
+      // The nearest "... from" before it that has no end yet, else the nearest after.
+      ReportQuestion? from;
+      for (var k = i - 1; k >= 0 && from == null; k--) {
+        if (isFrom(qs[k]) && !qs.any((x) => isTo(x, qs[k]))) from = qs[k];
+      }
+      for (var k = i + 1; k < qs.length && from == null; k++) {
+        if (isFrom(qs[k]) && !qs.any((x) => isTo(x, qs[k]))) from = qs[k];
+      }
+      if (from == null) continue;
+      to.label = '${from.label.trim().substring(0, from.label.trim().length - 5)} to';
+      to.kind = ReportQuestion.date;
+      if (from.kind != ReportQuestion.average && from.kind != ReportQuestion.rating) from.kind = ReportQuestion.date;
+      qs.remove(to);
+      qs.insert(qs.indexOf(from) + 1, to);
+    }
+    return qs;
+  }
 
   /// The next free question id ("q7").
   String newQuestionId() {
@@ -564,7 +591,7 @@ class FormReader {
       questions.add(ReportQuestion('q${questions.length + 1}', f.label, kind,
           kind == ReportQuestion.rating ? List.of(choices) : null, place));
     }
-    return ReadForm(questions, signatures, textSize);
+    return ReadForm(ReportForm.pairPeriods(questions), signatures, textSize);
   }
 
   /// Puts an answer on the form's own fill-in line: a short answer on the nearest line to the right of its

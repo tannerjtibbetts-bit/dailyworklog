@@ -700,6 +700,37 @@ public final class Models {
 
     /** A blank form read into questions: an apprentice review or a disciplinary form. App-wide. */
     public static class ReportForm {
+        /**
+         * A lone "To" (the end of a period printed apart from its "... from", e.g. in another column) is joined to
+         * that "... from": renamed "(period) to", made a date, and moved right after it (one pick for the period).
+         */
+        static List<FormQuestion> pairPeriods(List<FormQuestion> qs) {
+            for (FormQuestion to : new ArrayList<>(qs)) {
+                if (!to.label.trim().equalsIgnoreCase("to")) continue;
+                int i = qs.indexOf(to);
+                FormQuestion from = null;
+                for (int k = i - 1; k >= 0 && from == null; k--) if (openFrom(qs, qs.get(k))) from = qs.get(k);
+                for (int k = i + 1; k < qs.size() && from == null; k++) if (openFrom(qs, qs.get(k))) from = qs.get(k);
+                if (from == null) continue;
+                String f = from.label.trim();
+                to.label = f.substring(0, f.length() - 5) + " to";
+                to.kind = FormQuestion.DATE;
+                if (!FormQuestion.AVERAGE.equals(from.kind) && !FormQuestion.RATING.equals(from.kind)) from.kind = FormQuestion.DATE;
+                qs.remove(to);
+                qs.add(qs.indexOf(from) + 1, to);
+            }
+            return qs;
+        }
+
+        /** A "... from" that has no "... to" yet. */
+        private static boolean openFrom(List<FormQuestion> qs, FormQuestion q) {
+            String l = q.label.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!l.endsWith(" from")) return false;
+            String end = l.substring(0, l.length() - 5) + " to";
+            for (FormQuestion x : qs) if (x.label.trim().toLowerCase(java.util.Locale.ROOT).equals(end)) return false;
+            return true;
+        }
+
         public static final String APPRENTICE = "apprentice", DISCIPLINE = "discipline";
         public String id = newId();
         public String group = APPRENTICE, name = "", kind = Document.PHOTO;
@@ -768,6 +799,7 @@ public final class Models {
                 JSONObject q = qs.optJSONObject(i);
                 if (q != null) f.questions.add(FormQuestion.fromJson(q));
             }
+            pairPeriods(f.questions);
             f.signatures = fromArray(o.optJSONArray("signatures"));
             f.createdAt = o.optLong("createdAt", 0L);
             double fs = o.optDouble("fontScale", 1.0);
