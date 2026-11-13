@@ -2295,7 +2295,13 @@
         "numbers",
         "paste",
         "paste crew numbers",
-        "import numbers"
+        "import numbers",
+        "term",
+        "1st term",
+        "2nd term",
+        "3rd term",
+        "4th term",
+        "apprentice term"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2354,6 +2360,7 @@
             "\"Employee # (optional)\", \"BP # (optional)\" and \"DISN # (optional)\": the person's numbers. They fill in report forms.",
             "\"Group\": pick one of your groups",
             "\"Level\": tap \"Apprentice\" or \"Journeyman\" (tap it again to clear it)",
+            "\"Term\": only shows when \"Apprentice\" is picked. Pick \"1st term\", \"2nd term\", \"3rd term\" or \"4th term\" (or \"None\"). It fills in the Term on apprentice reports.",
             "\"Trade\": pick from the list, for example Millwright or Pipefitter",
             "\"Union local\": pick from the list",
             "\"This contact will receive texts when assigned to a field or task\": tick it to text them when you assign them."
@@ -2838,7 +2845,12 @@
         "on the form",
         "approved form",
         "move answers",
-        "text size"
+        "text size",
+        "fit",
+        "line",
+        "lines",
+        "too long",
+        "smaller"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2898,7 +2910,7 @@
           "items": [
             "Tap the form.",
             "In \"Who is this report for?\", pick the apprentice and tap \"Start\". Only crew marked \"Apprentice\" in Manage crew are listed.",
-            "The app fills in what it knows: their name, Employee #, BP #, DISN #, trade, level and union local from Manage crew, your name for supervisor questions, and today's date. Answers like Employer and Term are copied from the last report for that person.",
+            "The app fills in what it knows: their name, Employee #, BP #, DISN #, trade, level, term and union local from Manage crew, your name for supervisor questions, and today's date. If no term is picked for them, the Term box is left blank. The Employer is copied from the last report.",
             "Then it asks each empty question, one at a time. Type the answer, or tap the mic and speak it. For ratings, tap one (for example \"Excellent (4.0)\"). Tap \"Next\", \"Skip\", or \"Stop\"."
           ]
         },
@@ -2923,7 +2935,7 @@
         },
         {
           "type": "text",
-          "text": "4. Tap \"Export PDF\", then \"Share or email\" or \"Save to phone\". For a photo or PDF form, the PDF is your form itself with the answers written on its blanks in blue: the details beside their labels, the scores on the score lines, the overall average worked out, and the comments on their lines. The signature lines are left empty to sign by hand."
+          "text": "4. Tap \"Export PDF\", then \"Share or email\" or \"Save to phone\". For a photo or PDF form, the PDF is your form itself with the answers written in blue on the form's own lines: each answer starts where its line starts and ends before the line ends. A long answer that doesn't fit gets smaller, and long answers like \"Work done\" carry on from one ruled line to the next. The scores go on the score lines and the overall average is worked out. The signature lines are left empty to sign by hand."
         },
         {
           "type": "image",
@@ -2932,7 +2944,7 @@
         },
         {
           "type": "text",
-          "text": "Moving an answer: the first time, check where the answers land. On the report, tap \"Check where the answers go\" (or press and hold the form and tap \"Place the answers\"). Press and drag any answer onto its line. Tap \"A-\" or \"A+\" to make all the answers smaller or bigger. The app remembers this for every report on that form."
+          "text": "Moving an answer: the first time, check where the answers land. On the report, tap \"Check where the answers go\" (or press and hold the form and tap \"Place the answers\"). Press and drag any answer onto its line; a long answer moves with all its lines. Tap \"A-\" or \"A+\" to make all the answers smaller or bigger. The app remembers this for every report on that form."
         },
         {
           "type": "image",
