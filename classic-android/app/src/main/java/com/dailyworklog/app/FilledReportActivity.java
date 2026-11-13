@@ -85,6 +85,16 @@ public class FilledReportActivity extends FormScreen {
                 });
             } else if (Models.FormQuestion.RATING.equals(q.kind)) {
                 block.addView(ratingSpinner(q));
+            } else if (Models.FormQuestion.DATE.equals(q.kind)) {
+                Models.FormQuestion start = ReportFill.rangeStart(form, q);
+                if (start != null) {
+                    // The end of a period: picked with its start.
+                    String v = report.answer(q.id).trim();
+                    block.addView(text(v.isEmpty() ? "Picked with \u201C" + start.label + "\u201D" : v, 17,
+                            v.isEmpty() ? R.color.grey : R.color.text, false));
+                } else {
+                    block.addView(dateButton(q, this::render));
+                }
             } else {
                 block.addView(textBox(q, report.answer(q.id), Models.FormQuestion.LONG.equals(q.kind), t -> save(q, t)));
             }
@@ -214,9 +224,60 @@ public class FilledReportActivity extends FormScreen {
     // ----- asking the missing questions, one at a time -----
 
     private void askMissing() {
-        List<Models.FormQuestion> list = ReportFill.missing(form, report);
+        // The "to" of a period is asked with its "from" (one pick), not on its own; the average is never asked.
+        List<Models.FormQuestion> list = new ArrayList<>();
+        for (Models.FormQuestion q : ReportFill.missing(form, report)) {
+            Models.FormQuestion start = ReportFill.rangeStart(form, q);
+            Models.FormQuestion ask = start != null ? start : q;
+            if (!list.contains(ask)) list.add(ask);
+        }
         if (list.isEmpty()) return;
         ask(list, 0);
+    }
+
+    /** "Pick a date" / the date, or for a period "Pick the start and end dates" / "Aug 1, 2026  to  Oct 31, 2026". */
+    private TextView dateButton(Models.FormQuestion q, Runnable after) {
+        Models.FormQuestion end = ReportFill.rangeEnd(form, q);
+        TextView b = new TextView(this);
+        b.setTextSize(17);
+        b.setTextColor(getColor(R.color.deep_blue));
+        b.setTypeface(null, android.graphics.Typeface.BOLD);
+        b.setBackgroundResource(R.drawable.bg_chip_sky);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
+        b.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_calendar, 0, 0, 0);
+        b.setCompoundDrawablePadding(Ui.dp(this, 10));
+        if (android.os.Build.VERSION.SDK_INT >= 23) b.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.deep_blue)));
+        Runnable show = () -> {
+            String from = report.answer(q.id).trim();
+            if (end == null) {
+                b.setText(from.isEmpty() ? "Pick a date" : from);
+            } else {
+                String to = report.answer(end.id).trim();
+                b.setText(from.isEmpty() && to.isEmpty() ? "Pick the start and end dates" : from + "  to  " + to);
+            }
+        };
+        show.run();
+        b.setOnClickListener(v -> {
+            if (end == null) {
+                DatePick.pick(this, q.label, report.answer(q.id), d -> {
+                    save(q, d);
+                    show.run();
+                    after.run();
+                });
+            } else {
+                DatePick.pickRange(this, DatePick.periodLabel(q.label), report.answer(q.id), report.answer(end.id), (f, t) -> {
+                    save(q, f);
+                    save(end, t);
+                    show.run();
+                    after.run();
+                });
+            }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = Ui.dp(this, 6);
+        b.setLayoutParams(lp);
+        return b;
     }
 
     private void ask(List<Models.FormQuestion> list, int i) {
@@ -228,7 +289,8 @@ public class FilledReportActivity extends FormScreen {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(Ui.dp(this, 22), Ui.dp(this, 4), Ui.dp(this, 22), 0);
-        TextView label = text(q.label, 18, R.color.navy, true);
+        boolean period = ReportFill.rangeEnd(form, q) != null;
+        TextView label = text(period ? DatePick.periodLabel(q.label) : q.label, 18, R.color.navy, true);
         label.setPadding(0, 0, 0, Ui.dp(this, 8));
         box.addView(label);
         if (Models.FormQuestion.RATING.equals(q.kind)) {
@@ -244,6 +306,8 @@ public class FilledReportActivity extends FormScreen {
                 rb.setOnClickListener(v -> save(q, c.label));
             }
             box.addView(g);
+        } else if (Models.FormQuestion.DATE.equals(q.kind)) {
+            box.addView(dateButton(q, () -> {}));
         } else {
             box.addView(textBox(q, report.answer(q.id), Models.FormQuestion.LONG.equals(q.kind), t -> save(q, t)));
         }

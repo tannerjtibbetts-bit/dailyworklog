@@ -25,9 +25,9 @@ public class QuestionsActivity extends FormScreen {
     /** A working copy; the form only changes on Save. */
     private Models.ReportForm draft;
 
-    private static final String[] KIND_IDS = {Models.FormQuestion.TEXT, Models.FormQuestion.LONG, Models.FormQuestion.RATING,
-            Models.FormQuestion.AVERAGE};
-    private static final String[] KIND_NAMES = {"Short answer", "Long answer", "Rating", "Average of ratings"};
+    private static final String[] KIND_IDS = {Models.FormQuestion.TEXT, Models.FormQuestion.LONG, Models.FormQuestion.DATE,
+            Models.FormQuestion.RATING, Models.FormQuestion.AVERAGE};
+    private static final String[] KIND_NAMES = {"Short answer", "Long answer", "Date (calendar)", "Rating", "Average of ratings"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +62,7 @@ public class QuestionsActivity extends FormScreen {
     static String describe(Models.FormQuestion q) {
         switch (q.kind) {
             case Models.FormQuestion.LONG: return "Long answer";
+            case Models.FormQuestion.DATE: return "Date (picked on a calendar)";
             case Models.FormQuestion.AVERAGE: return "Worked out: average of the ratings";
             case Models.FormQuestion.RATING:
                 if (q.choices.isEmpty()) return "Rating";
