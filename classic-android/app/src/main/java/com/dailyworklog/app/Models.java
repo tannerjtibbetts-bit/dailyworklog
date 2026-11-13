@@ -692,6 +692,8 @@ public final class Models {
                 if (x != null) q.choices.add(new Choice(x.optString("label", ""), x.optString("value", "")));
             }
             q.place = Place.fromJson(o.optJSONObject("place"));
+            // Forms read before dates had a calendar: a date question gets one now.
+            if (TEXT.equals(q.kind) && FormReader.isDateLabel(q.label)) q.kind = DATE;
             return q;
         }
     }

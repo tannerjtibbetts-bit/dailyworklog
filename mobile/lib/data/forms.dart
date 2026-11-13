@@ -153,7 +153,7 @@ class ReportQuestion {
   static ReportQuestion fromJson(Map<String, dynamic> o) => ReportQuestion(
         (o['id'] ?? '').toString(),
         (o['label'] ?? '').toString(),
-        const [text, long, rating, average, date].contains(o['kind']) ? o['kind'] as String : text,
+        _kind(o),
         [
           if (o['choices'] is List)
             for (final c in o['choices'] as List)
@@ -161,6 +161,12 @@ class ReportQuestion {
         ],
         Place.fromJson(o['place']),
       );
+
+  /// The saved kind; forms read before dates had a calendar get one for their date questions.
+  static String _kind(Map<String, dynamic> o) {
+    final k = const [text, long, rating, average, date].contains(o['kind']) ? o['kind'] as String : text;
+    return k == text && FormReader.isDateLabel((o['label'] ?? '').toString()) ? date : k;
+  }
 
   /// "Short answer", "Rating (Excellent 4.0 … Poor 0.0)" and so on, for the Check the questions screen.
   String kindText() => switch (kind) {

@@ -526,8 +526,10 @@ class DateAnswer extends StatelessWidget {
     final end = FormFill.rangeEnd(form, q);
     final now = DateTime.now();
     final first = DateTime(now.year - 5), last = DateTime(now.year + 5, 12, 31);
+    // A saved date outside the calendar's years would stop it opening.
+    DateTime? within(DateTime? d) => d == null || d.isBefore(first) || d.isAfter(last) ? null : d;
     if (end != null) {
-      final from = FormFill.parseDate(report.answer(q.id)), to = FormFill.parseDate(report.answer(end.id));
+      final from = within(FormFill.parseDate(report.answer(q.id))), to = within(FormFill.parseDate(report.answer(end.id)));
       final range = await showDateRangePicker(
         context: context,
         firstDate: first,
@@ -544,7 +546,7 @@ class DateAnswer extends StatelessWidget {
         context: context,
         firstDate: first,
         lastDate: last,
-        initialDate: FormFill.parseDate(report.answer(q.id)) ?? now,
+        initialDate: within(FormFill.parseDate(report.answer(q.id))) ?? now,
         helpText: q.label,
       );
       if (d == null) return;

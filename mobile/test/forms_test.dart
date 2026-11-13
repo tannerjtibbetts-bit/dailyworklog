@@ -452,4 +452,11 @@ void main() {
     expect(r.answers, {'q1': 'Nov 13, 2026'});
     expect(FormFill.missing(r, f).map((q) => q.label), ['Period covered from', 'Period covered to', 'Date of incident', 'Update']);
   });
+
+  test('forms saved before dates had a calendar get one', () {
+    final q = ReportQuestion.fromJson({'id': 'q1', 'label': 'Period covered from', 'kind': 'text'});
+    expect(q.kind, 'date');
+    expect(ReportQuestion.fromJson({'id': 'q2', 'label': 'Name', 'kind': 'text'}).kind, 'text');
+    expect(ReportQuestion.fromJson({'id': 'q3', 'label': 'Date', 'kind': 'long'}).kind, 'long');
+  });
 }

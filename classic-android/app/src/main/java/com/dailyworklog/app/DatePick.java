@@ -60,28 +60,61 @@ final class DatePick {
         return new CalendarConstraints.Builder().setStart(a.getTimeInMillis()).setEnd(b.getTimeInMillis()).setOpenAt(open).build();
     }
 
+    /** A saved date outside the calendar's 10 years would stop it opening: use today then. */
+    private static long within(Long at) {
+        if (at == null) return todayUtc();
+        Calendar a = Calendar.getInstance(UTC), b = Calendar.getInstance(UTC);
+        a.setTimeInMillis(todayUtc());
+        a.add(Calendar.YEAR, -5);
+        b.setTimeInMillis(todayUtc());
+        b.add(Calendar.YEAR, 5);
+        return at < a.getTimeInMillis() || at > b.getTimeInMillis() ? todayUtc() : at;
+    }
+
     static void pick(FragmentActivity a, String title, String current, One done) {
-        Long at = utc(current);
-        long sel = at != null ? at : todayUtc();
-        MaterialDatePicker<Long> p = MaterialDatePicker.Builder.datePicker()
-                .setTitleText(title).setSelection(sel).setCalendarConstraints(range(sel)).build();
-        p.addOnPositiveButtonClickListener(v -> {
-            if (v != null) done.onDate(format(v));
-        });
-        p.show(a.getSupportFragmentManager(), "date");
+        long sel = within(utc(current));
+        try {
+            MaterialDatePicker<Long> p = MaterialDatePicker.Builder.datePicker()
+                    .setTitleText(title).setSelection(sel).setCalendarConstraints(range(sel)).build();
+            p.addOnPositiveButtonClickListener(v -> {
+                if (v != null) done.onDate(format(v));
+            });
+            p.show(a.getSupportFragmentManager(), "date");
+        } catch (RuntimeException e) {
+            simple(a, title, sel, done); // the phone's own date picker instead
+        }
+    }
+
+    /** Android's built-in calendar (month by month), if the Material one can't open. */
+    static void simple(android.app.Activity a, String title, long utcMillis, One done) {
+        Calendar c = Calendar.getInstance(UTC);
+        c.setTimeInMillis(utcMillis);
+        android.app.DatePickerDialog d = new android.app.DatePickerDialog(a, (view, y, m, day) -> {
+            Calendar out = Calendar.getInstance(UTC);
+            out.clear();
+            out.set(y, m, day);
+            done.onDate(format(out.getTimeInMillis()));
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
+        d.setTitle(title);
+        d.show();
     }
 
     static void pickRange(FragmentActivity a, String title, String from, String to, Two done) {
-        Long f = utc(from), t = utc(to);
-        long start = f != null ? f : todayUtc();
-        long end = t != null && t >= start ? t : start;
-        MaterialDatePicker<androidx.core.util.Pair<Long, Long>> p = MaterialDatePicker.Builder.dateRangePicker()
-                .setTitleText(title).setSelection(androidx.core.util.Pair.create(start, end))
-                .setCalendarConstraints(range(start)).build();
-        p.addOnPositiveButtonClickListener(v -> {
-            if (v != null && v.first != null && v.second != null) done.onRange(format(v.first), format(v.second));
-        });
-        p.show(a.getSupportFragmentManager(), "range");
+        long start = within(utc(from));
+        Long t = utc(to);
+        long end = t != null && t >= start ? within(t) : start;
+        try {
+            MaterialDatePicker<androidx.core.util.Pair<Long, Long>> p = MaterialDatePicker.Builder.dateRangePicker()
+                    .setTitleText(title).setSelection(androidx.core.util.Pair.create(start, end))
+                    .setCalendarConstraints(range(start)).build();
+            p.addOnPositiveButtonClickListener(v -> {
+                if (v != null && v.first != null && v.second != null) done.onRange(format(v.first), format(v.second));
+            });
+            p.show(a.getSupportFragmentManager(), "range");
+        } catch (RuntimeException e) {
+            // The phone's own date picker, twice: the start, then the end.
+            simple(a, title + ": start date", start, s -> simple(a, title + ": end date", end, e2 -> done.onRange(s, e2)));
+        }
     }
 
     /** "Period covered from" -> "Period covered". */
