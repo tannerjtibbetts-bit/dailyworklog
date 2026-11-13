@@ -7,6 +7,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -50,9 +51,8 @@ final class LinksExtras {
     static View reportCards(Activity a, String projectId) {
         LinearLayout row = new LinearLayout(a);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = Ui.dp(a, 12);
-        row.setLayoutParams(lp);
+        row.setBaselineAligned(false);
+        row.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         row.addView(bigCard(a, R.drawable.ic_school, "Apprentice reports", projectId, Models.ReportForm.APPRENTICE));
         View gap = new View(a);
         row.addView(gap, new LinearLayout.LayoutParams(Ui.dp(a, 12), 1));
@@ -83,7 +83,7 @@ final class LinksExtras {
         card.addView(t);
         card.setOnClickListener(v -> a.startActivity(new Intent(a, ReportsActivity.class)
                 .putExtra("project", projectId).putExtra("group", group)));
-        card.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        card.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         return card;
     }
 

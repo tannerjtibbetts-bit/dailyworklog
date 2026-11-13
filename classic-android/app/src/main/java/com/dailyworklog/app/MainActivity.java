@@ -43,6 +43,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_projects);
         Ui.applyInsets(findViewById(R.id.root));
         store = Store.get(this);
+        // The owner's crew list built into this copy: numbers go onto matching crew members, once.
+        int filled = CrewNumbers.applyBuiltIn(this, store);
+        if (filled > 0) {
+            android.widget.Toast.makeText(this, "Employee #, BP # and DISN # added for "
+                    + Fmt.plural(filled, "crew member", "crew members"), android.widget.Toast.LENGTH_LONG).show();
+        }
         pickBackup = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
                 uri -> {
                     if (uri != null) restorePicked(uri);

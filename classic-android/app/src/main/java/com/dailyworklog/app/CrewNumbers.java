@@ -168,4 +168,37 @@ final class CrewNumbers {
         }
         return s;
     }
+
+    /**
+     * A crew list built into this copy of the app (assets/crew_numbers.txt, added to the owner's own build, never
+     * to the shared code): fills in the matching crew members' numbers in every project, once for each new list.
+     * Returns how many people got numbers, or -1 when there's nothing new to do.
+     */
+    static int applyBuiltIn(android.content.Context c, Store store) {
+        String text;
+        try (java.io.InputStream in = c.getAssets().open("crew_numbers.txt")) {
+            text = new String(readAll(in), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return -1; // none in this build
+        }
+        android.content.SharedPreferences prefs = c.getSharedPreferences("crewNumbers", android.content.Context.MODE_PRIVATE);
+        String sig = Integer.toHexString(text.hashCode()) + ":" + text.length();
+        if (sig.equals(prefs.getString("applied", ""))) return -1;
+        List<Row> rows = parse(text);
+        java.util.Set<String> people = new java.util.HashSet<>();
+        for (Models.Project p : store.projects) {
+            for (String who : apply(p, rows).updated) people.add(key(who));
+        }
+        store.save();
+        prefs.edit().putString("applied", sig).apply();
+        return people.size();
+    }
+
+    private static byte[] readAll(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] b = new byte[8192];
+        int n;
+        while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        return out.toByteArray();
+    }
 }

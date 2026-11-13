@@ -276,6 +276,7 @@ public class LogsActivity extends AppCompatActivity {
         findViewById(R.id.fab).setVisibility(ot ? View.GONE : View.VISIBLE);
         findViewById(R.id.clearAll).setVisibility(mode == MODE_NOTES && !project.notes.isEmpty() ? View.VISIBLE : View.GONE);
         if (ot) {
+            findViewById(R.id.reportCards).setVisibility(View.GONE);
             empty.setVisibility(View.GONE);
             if (mode == MODE_SEACANS) SeaCanPane.render(this, store, project, findViewById(R.id.overtimeContent));
             else if (mode == MODE_ATTENDANCE) AttendancePane.render(this, store, project, findViewById(R.id.overtimeContent));
@@ -299,7 +300,6 @@ public class LogsActivity extends AppCompatActivity {
                 if (query.isEmpty() || n.text.toLowerCase(Locale.ROOT).contains(query)) rows.add(n);
             }
         } else if (mode == MODE_LINKS) {
-            rows.add(LinksExtras.REPORT_CARDS);
             for (Models.Link l : store.links) {
                 if (query.isEmpty() || l.title.toLowerCase(Locale.ROOT).contains(query)
                         || l.url.toLowerCase(Locale.ROOT).contains(query)) rows.add(l);
@@ -327,7 +327,12 @@ public class LogsActivity extends AppCompatActivity {
             rows.addAll(ProjectSearch.sortedLogs(project));
         }
         adapter.notifyDataSetChanged();
-        if (rows.isEmpty() || (mode == MODE_LINKS && rows.size() == 1)) {
+        // Links: the report buttons sit in their own place above the list (not in it), so they always show.
+        android.widget.FrameLayout cards = findViewById(R.id.reportCards);
+        boolean showCards = mode == MODE_LINKS && query.isEmpty();
+        if (showCards && cards.getChildCount() == 0) cards.addView(LinksExtras.reportCards(this, project.id));
+        cards.setVisibility(showCards ? View.VISIBLE : View.GONE);
+        if (rows.isEmpty()) {
             empty.setVisibility(View.VISIBLE);
             if (!query.isEmpty()) empty.setText("Nothing matches \u201C" + search.getText().toString().trim() + "\u201D");
             else if (mode == MODE_NOTIFY) empty.setText("No notes sent yet.\nTap + to send a crew member a note or photo.\nTexts send straight away; with photos,\nMessages opens and you tap Send.");

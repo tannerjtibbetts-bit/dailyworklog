@@ -26,10 +26,12 @@ final appNavigator = GlobalKey<NavigatorState>();
 void toast(BuildContext context, String message, {bool long = false}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message),
-      duration: Duration(seconds: long ? 4 : 2),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(seconds: long ? 4 : 2),
+      ),
+    );
 }
 
 /// Yes/Cancel dialog; runs [onYes] if the positive button is tapped.
@@ -49,10 +51,16 @@ Future<void> confirm(BuildContext context, String title, String message, String 
 }
 
 /// One-line text prompt. Returns the trimmed text, or null if cancelled. Empty isn't allowed.
-Future<String?> prompt(BuildContext context, String title, String hint, String? prefill, String positive,
-    {TextInputType keyboard = TextInputType.text,
-    String? Function(String)? validate,
-    TextCapitalization caps = TextCapitalization.sentences}) {
+Future<String?> prompt(
+  BuildContext context,
+  String title,
+  String hint,
+  String? prefill,
+  String positive, {
+  TextInputType keyboard = TextInputType.text,
+  String? Function(String)? validate,
+  TextCapitalization caps = TextCapitalization.sentences,
+}) {
   final ctl = TextEditingController(text: prefill ?? '');
   String? error;
   return showDialog<String>(
@@ -91,15 +99,15 @@ Future<String?> prompt(BuildContext context, String title, String hint, String? 
 
 /// Phone number prompt with the phone keypad.
 Future<String?> promptPhone(BuildContext context, String title, String? prefill) => prompt(
-      context,
-      title,
-      'e.g. 519-555-0123',
-      prefill,
-      'Save',
-      keyboard: TextInputType.phone,
-      caps: TextCapitalization.none,
-      validate: (s) => phoneDigits(s).length < 7 ? 'Enter a phone number' : null,
-    );
+  context,
+  title,
+  'e.g. 519-555-0123',
+  prefill,
+  'Save',
+  keyboard: TextInputType.phone,
+  caps: TextCapitalization.none,
+  validate: (s) => phoneDigits(s).length < 7 ? 'Enter a phone number' : null,
+);
 
 class CrewDetails {
   final String name, phone, role;
@@ -111,24 +119,41 @@ class CrewDetails {
   /// An apprentice's term ("1st term" … "4th term"), '' for none.
   final String term;
 
-  const CrewDetails(this.name, this.phone, this.role, this.texts,
-      {this.level = '',
-      this.trade = '',
-      this.local = '',
-      this.employeeNo = '',
-      this.bp = '',
-      this.disn = '',
-      this.term = ''});
+  const CrewDetails(
+    this.name,
+    this.phone,
+    this.role,
+    this.texts, {
+    this.level = '',
+    this.trade = '',
+    this.local = '',
+    this.employeeNo = '',
+    this.bp = '',
+    this.disn = '',
+    this.term = '',
+  });
 }
 
 /// Name + optional phone number for a new crew member.
 Future<CrewDetails?> promptCrew(BuildContext context, Project project, String prefillName) => crewDialog(
-    context, project, 'Add crew member', 'Add', CrewDetails(prefillName, '', project.groups.first.id, false), null);
+  context,
+  project,
+  'Add crew member',
+  'Add',
+  CrewDetails(prefillName, '', project.groups.first.id, false),
+  null,
+);
 
 /// One crew member's details: name, phone, group, level, trade, union local and whether they're texted when
 /// assigned. [onRemove] adds a Remove button when not null.
-Future<CrewDetails?> crewDialog(BuildContext context, Project project, String title, String positive, CrewDetails start,
-    VoidCallback? onRemove) {
+Future<CrewDetails?> crewDialog(
+  BuildContext context,
+  Project project,
+  String title,
+  String positive,
+  CrewDetails start,
+  VoidCallback? onRemove,
+) {
   final store = Store.instance;
   final name = TextEditingController(text: start.name);
   final phone = TextEditingController(text: start.phone);
@@ -140,9 +165,23 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
   var textOn = start.texts;
   String? error;
   const add = '\u0000add', edit = '\u0000edit';
+  // The box scrolls: its scroll bar always shows, and picking Apprentice brings Term into view.
+  final scroller = ScrollController();
+  final termKey = GlobalKey();
 
-  Widget pickList(BuildContext c, void Function(void Function()) set, String label, String value, List<String> options,
-      String addLabel, String editLabel, String addTitle, String addHint, String editTitle, void Function(String) pick) {
+  Widget pickList(
+    BuildContext c,
+    void Function(void Function()) set,
+    String label,
+    String value,
+    List<String> options,
+    String addLabel,
+    String editLabel,
+    String addTitle,
+    String addHint,
+    String editTitle,
+    void Function(String) pick,
+  ) {
     final items = [...options, if (value.isNotEmpty && !options.contains(value)) value];
     return DropdownButtonFormField<String>(
       key: ValueKey('$label|$value|${options.length}'),
@@ -151,9 +190,19 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
       decoration: InputDecoration(labelText: label),
       items: [
         const DropdownMenuItem(value: '', child: Text('None')),
-        for (final o in items) DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis)),
-        DropdownMenuItem(value: add, child: Text(addLabel, style: const TextStyle(color: C.blue))),
-        DropdownMenuItem(value: edit, child: Text(editLabel, style: const TextStyle(color: C.blue))),
+        for (final o in items)
+          DropdownMenuItem(
+            value: o,
+            child: Text(o, overflow: TextOverflow.ellipsis),
+          ),
+        DropdownMenuItem(
+          value: add,
+          child: Text(addLabel, style: const TextStyle(color: C.blue)),
+        ),
+        DropdownMenuItem(
+          value: edit,
+          child: Text(editLabel, style: const TextStyle(color: C.blue)),
+        ),
       ],
       onChanged: (v) async {
         if (v == add) {
@@ -183,71 +232,125 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
     builder: (c) => StatefulBuilder(
       builder: (c, set) => AlertDialog(
         title: Text(title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: name,
-                autofocus: onRemove == null,
-                textCapitalization: TextCapitalization.words,
-                decoration: InputDecoration(labelText: 'Name', errorText: error),
-              ),
-              TextField(
-                controller: phone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone number (optional)'),
-              ),
-              TextField(
-                controller: employeeNo,
-                decoration: const InputDecoration(labelText: 'Employee # (optional)'),
-              ),
-              TextField(controller: bp, decoration: const InputDecoration(labelText: 'BP # (optional)')),
-              TextField(controller: disn, decoration: const InputDecoration(labelText: 'DISN # (optional)')),
-              DropdownButtonFormField<String>(
-                initialValue: group,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Group'),
-                items: [
-                  for (final g in project.groups)
-                    DropdownMenuItem(value: g.id, child: Text(g.name, overflow: TextOverflow.ellipsis)),
-                ],
-                onChanged: (v) => set(() => group = v ?? group),
-              ),
-              const SizedBox(height: 12),
-              const Text('Level', style: TextStyle(color: C.grey)),
-              Wrap(spacing: 8, children: [
-                for (final l in Project.levelOptions)
-                  ChoiceChip(
-                    label: Text(l),
-                    selected: level == l,
-                    onSelected: (_) => set(() => level = level == l ? '' : l),
-                  ),
-              ]),
-              if (level == 'Apprentice')
-                DropdownButtonFormField<String>(
-                  initialValue: Project.termOptions.contains(term) ? term : '',
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Term'),
-                  items: [
-                    const DropdownMenuItem(value: '', child: Text('None')),
-                    for (final t in Project.termOptions) DropdownMenuItem(value: t, child: Text(t)),
-                  ],
-                  onChanged: (v) => set(() => term = v ?? ''),
+        content: Scrollbar(
+          controller: scroller,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: scroller,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: name,
+                  autofocus: onRemove == null,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(labelText: 'Name', errorText: error),
                 ),
-              pickList(c, set, 'Trade', trade, store.tradeOptions, 'Add a trade…', 'Edit trades…', 'Add a trade',
-                  'e.g. Ironworker', 'Trades', (v) => trade = v),
-              pickList(c, set, 'Union local', local, store.localOptions, 'Add a union local…', 'Edit union locals…',
-                  'Add a union local', 'e.g. Local 128', 'Union locals', (v) => local = v),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                value: textOn,
-                onChanged: (v) => set(() => textOn = v ?? false),
-                title: const Text('This contact will receive texts when assigned to a field or task'),
-              ),
-            ],
+                TextField(
+                  controller: phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'Phone number (optional)'),
+                ),
+                TextField(
+                  controller: employeeNo,
+                  decoration: const InputDecoration(labelText: 'Employee # (optional)'),
+                ),
+                TextField(
+                  controller: bp,
+                  decoration: const InputDecoration(labelText: 'BP # (optional)'),
+                ),
+                TextField(
+                  controller: disn,
+                  decoration: const InputDecoration(labelText: 'DISN # (optional)'),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: group,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Group'),
+                  items: [
+                    for (final g in project.groups)
+                      DropdownMenuItem(
+                        value: g.id,
+                        child: Text(g.name, overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (v) => set(() => group = v ?? group),
+                ),
+                const SizedBox(height: 12),
+                const Text('Level', style: TextStyle(color: C.grey)),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final l in Project.levelOptions)
+                      ChoiceChip(
+                        label: Text(l),
+                        selected: level == l,
+                        onSelected: (_) {
+                          set(() => level = level == l ? '' : l);
+                          if (level == 'Apprentice') {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              final tc = termKey.currentContext;
+                              if (tc != null && tc.mounted) {
+                                Scrollable.ensureVisible(
+                                  tc,
+                                  alignment: 0.5,
+                                  duration: const Duration(milliseconds: 250),
+                                );
+                              }
+                            });
+                          }
+                        },
+                      ),
+                  ],
+                ),
+                if (level == 'Apprentice')
+                  DropdownButtonFormField<String>(
+                    key: termKey,
+                    initialValue: Project.termOptions.contains(term) ? term : '',
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Term'),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('None')),
+                      for (final t in Project.termOptions) DropdownMenuItem(value: t, child: Text(t)),
+                    ],
+                    onChanged: (v) => set(() => term = v ?? ''),
+                  ),
+                pickList(
+                  c,
+                  set,
+                  'Trade',
+                  trade,
+                  store.tradeOptions,
+                  'Add a trade…',
+                  'Edit trades…',
+                  'Add a trade',
+                  'e.g. Ironworker',
+                  'Trades',
+                  (v) => trade = v,
+                ),
+                pickList(
+                  c,
+                  set,
+                  'Union local',
+                  local,
+                  store.localOptions,
+                  'Add a union local…',
+                  'Edit union locals…',
+                  'Add a union local',
+                  'e.g. Local 128',
+                  'Union locals',
+                  (v) => local = v,
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: textOn,
+                  onChanged: (v) => set(() => textOn = v ?? false),
+                  title: const Text('This contact will receive texts when assigned to a field or task'),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -268,15 +371,21 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
                 return;
               }
               Navigator.pop(
-                  c,
-                  CrewDetails(Fmt.capitalize(n), phone.text.trim(), group, textOn,
-                      level: level,
-                      trade: trade,
-                      local: local,
-                      employeeNo: employeeNo.text.trim(),
-                      bp: bp.text.trim(),
-                      disn: disn.text.trim(),
-                      term: level == 'Apprentice' ? term : ''));
+                c,
+                CrewDetails(
+                  Fmt.capitalize(n),
+                  phone.text.trim(),
+                  group,
+                  textOn,
+                  level: level,
+                  trade: trade,
+                  local: local,
+                  employeeNo: employeeNo.text.trim(),
+                  bp: bp.text.trim(),
+                  disn: disn.text.trim(),
+                  term: level == 'Apprentice' ? term : '',
+                ),
+              );
             },
             child: Text(positive),
           ),
@@ -306,36 +415,43 @@ Future<void> editOptions(BuildContext context, String title, String hint, List<S
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (options.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Nothing in the list yet.', style: TextStyle(color: C.grey)),
-                  ),
-                for (final o in List.of(options))
-                  Row(children: [
-                    Expanded(child: Text(o, style: const TextStyle(fontSize: 17))),
-                    IconButton(
-                      tooltip: 'Remove $o',
-                      icon: const Icon(Icons.close, color: C.red),
-                      onPressed: () {
-                        set(() => options.remove(o));
-                        Store.instance.save();
-                      },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (options.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text('Nothing in the list yet.', style: TextStyle(color: C.grey)),
                     ),
-                  ]),
-                Row(children: [
-                  Expanded(
-                    child: TextField(
-                      controller: box,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(hintText: hint),
-                      onSubmitted: (_) => addIt(),
+                  for (final o in List.of(options))
+                    Row(
+                      children: [
+                        Expanded(child: Text(o, style: const TextStyle(fontSize: 17))),
+                        IconButton(
+                          tooltip: 'Remove $o',
+                          icon: const Icon(Icons.close, color: C.red),
+                          onPressed: () {
+                            set(() => options.remove(o));
+                            Store.instance.save();
+                          },
+                        ),
+                      ],
                     ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: box,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(hintText: hint),
+                          onSubmitted: (_) => addIt(),
+                        ),
+                      ),
+                      TextButton(onPressed: addIt, child: const Text('Add')),
+                    ],
                   ),
-                  TextButton(onPressed: addIt, child: const Text('Add')),
-                ]),
-              ]),
+                ],
+              ),
             ),
           ),
           actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Done'))],
@@ -372,19 +488,20 @@ Future<void> menu(BuildContext context, String? title, List<SheetItem> items) {
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(color: C.sky, borderRadius: BorderRadius.circular(14)),
-                      child: Icon(it.icon, color: it.danger ? C.red : C.deepBlue),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(it.label,
-                          style: TextStyle(fontSize: 18, color: it.danger ? C.red : C.text)),
-                    ),
-                  ]),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(color: C.sky, borderRadius: BorderRadius.circular(14)),
+                        child: Icon(it.icon, color: it.danger ? C.red : C.deepBlue),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(it.label, style: TextStyle(fontSize: 18, color: it.danger ? C.red : C.text)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -404,19 +521,19 @@ class InitialsBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: C.sky,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: Text(
-          label ?? Fmt.initials(name),
-          style: TextStyle(color: C.deepBlue, fontWeight: FontWeight.bold, fontSize: size * 0.32),
-        ),
-      );
+    width: size,
+    height: size,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: C.sky,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white, width: 2),
+    ),
+    child: Text(
+      label ?? Fmt.initials(name),
+      style: TextStyle(color: C.deepBlue, fontWeight: FontWeight.bold, fontSize: size * 0.32),
+    ),
+  );
 }
 
 /// Overlapping badges for up to [max] people, then "+N".
@@ -437,38 +554,46 @@ class Badges extends StatelessWidget {
     return SizedBox(
       height: size,
       width: kids.isEmpty ? 0 : size + (kids.length - 1) * (size - 6),
-      child: Stack(children: [
-        for (var i = 0; i < kids.length; i++) Positioned(left: i * (size - 6), child: kids[i]),
-      ]),
+      child: Stack(
+        children: [for (var i = 0; i < kids.length; i++) Positioned(left: i * (size - 6), child: kids[i])],
+      ),
     );
   }
 }
 
 /// Full-screen photo with who took it and when. Tap anywhere to close.
 void showPhoto(BuildContext context, Photo p, File f) {
-  Navigator.of(context).push(PageRouteBuilder(
-    opaque: false,
-    pageBuilder: (c, _, _) => GestureDetector(
-      onTap: () => Navigator.pop(c),
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(children: [
-          Positioned.fill(child: InteractiveViewer(child: Image.file(f, fit: BoxFit.contain))),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              color: const Color(0x99000000),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 56),
-              child: Text('${p.addedBy}, ${Fmt.stamp(p.addedAt)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 16)),
-            ),
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      opaque: false,
+      pageBuilder: (c, _, _) => GestureDetector(
+        onTap: () => Navigator.pop(c),
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(child: Image.file(f, fit: BoxFit.contain)),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  color: const Color(0x99000000),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 56),
+                  child: Text(
+                    '${p.addedBy}, ${Fmt.stamp(p.addedAt)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
     ),
-  ));
+  );
 }
 
 /// Big rounded button: filled blue, or light sky with blue text.
@@ -481,25 +606,24 @@ class BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: SizedBox(
-          height: filled ? 56 : 46,
-          width: double.infinity,
-          child: Material(
-            color: filled ? C.blue : C.sky,
-            borderRadius: BorderRadius.circular(100),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(100),
-              onTap: onTap,
-              child: Center(
-                child: Text(label,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: filled ? Colors.white : C.deepBlue)),
-              ),
+    padding: const EdgeInsets.only(top: 10),
+    child: SizedBox(
+      height: filled ? 56 : 46,
+      width: double.infinity,
+      child: Material(
+        color: filled ? C.blue : C.sky,
+        borderRadius: BorderRadius.circular(100),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(100),
+          onTap: onTap,
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: filled ? Colors.white : C.deepBlue),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

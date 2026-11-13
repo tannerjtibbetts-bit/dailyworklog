@@ -107,6 +107,13 @@ final class CrewDialog {
         group.setAdapter(adapter(c, groupNames));
         group.setSelection(at);
 
+        // The box scrolls: show its scroll bar all the time and fade the bottom edge, so it's clear there's more.
+        ScrollView scroll = new ScrollView(c);
+        scroll.setScrollbarFadingEnabled(false);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setVerticalFadingEdgeEnabled(true);
+        scroll.setFadingEdgeLength(Ui.dp(c, 32));
+
         // Level: tap one to pick it, tap it again to clear
         String[] level = {start.level};
         TextView appr = v.findViewById(R.id.levelApprentice), journ = v.findViewById(R.id.levelJourneyman);
@@ -126,6 +133,8 @@ final class CrewDialog {
         appr.setOnClickListener(x -> {
             level[0] = Models.Project.APPRENTICE.equals(level[0]) ? "" : Models.Project.APPRENTICE;
             showLevel.run();
+            // Bring the Term drop-down into view (it's further down the box).
+            if (showsTerm(level[0])) scroll.post(() -> scroll.smoothScrollTo(0, Math.max(0, termBox.getBottom() - scroll.getHeight() / 2)));
         });
         journ.setOnClickListener(x -> {
             level[0] = Models.Project.JOURNEYMAN.equals(level[0]) ? "" : Models.Project.JOURNEYMAN;
@@ -139,7 +148,6 @@ final class CrewDialog {
         options(c, store, v.findViewById(R.id.local), store.localOptions, local,
                 "Add a union local…", "Add a union local", "e.g. Local 128", "Edit union locals…", "Union locals");
 
-        ScrollView scroll = new ScrollView(c);
         scroll.addView(v);
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(c)
                 .setTitle(title).setView(scroll)

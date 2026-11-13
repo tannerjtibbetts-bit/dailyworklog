@@ -2353,6 +2353,10 @@
           "caption": "A crew member's details"
         },
         {
+          "type": "tip",
+          "text": "The details box scrolls: swipe up inside it to reach Term, Trade, Union local and the texts tick box (the scroll bar on the right shows there's more). Tapping \"Apprentice\" brings \"Term\" into view by itself."
+        },
+        {
           "type": "bullets",
           "items": [
             "\"Name\"",
