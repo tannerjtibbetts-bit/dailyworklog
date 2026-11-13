@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'forms.dart';
 import 'models.dart';
 
 class Store extends ChangeNotifier {
@@ -16,6 +17,12 @@ class Store extends ChangeNotifier {
   final Directory dir;
   final List<Project> projects = [];
   final List<Link> links = [];
+
+  /// Documents on the Links tab, report forms (Apprentice reports, Disciplinary action) and the reports
+  /// filled in from them. App-wide, like links.
+  final List<Doc> documents = [];
+  final List<ReportForm> reportForms = [];
+  final List<FilledReport> filledReports = [];
 
   /// Additional Contacts tab, shared by every project.
   final List<Contact> contacts = [];
@@ -159,6 +166,21 @@ class Store extends ChangeNotifier {
         if (p is Map) projects.add(Project.fromJson(Map<String, dynamic>.from(p)));
       }
     }
+    documents.clear();
+    reportForms.clear();
+    filledReports.clear();
+    void each(String key, void Function(Map<String, dynamic>) add) {
+      final l = o[key];
+      if (l is List) {
+        for (final x in l) {
+          if (x is Map) add(Map<String, dynamic>.from(x));
+        }
+      }
+    }
+
+    each('documents', (m) => documents.add(Doc.fromJson(m)));
+    each('reportForms', (m) => reportForms.add(ReportForm.fromJson(m)));
+    each('filledReports', (m) => filledReports.add(FilledReport.fromJson(m)));
     contacts.clear();
     final cs = o['contacts'];
     if (cs is List) {
@@ -191,6 +213,9 @@ class Store extends ChangeNotifier {
         'projects': [for (final p in projects) p.toJson()],
         'links': [for (final l in links) l.toJson()],
         'contacts': [for (final c in contacts) c.toJson()],
+        'documents': [for (final d in documents) d.toJson()],
+        'reportForms': [for (final f in reportForms) f.toJson()],
+        'filledReports': [for (final r in filledReports) r.toJson()],
       };
 
   /// Saves in the background and tells the screens to redraw.

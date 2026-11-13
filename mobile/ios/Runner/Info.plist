@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera is used to take photos of your work and of task lists.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone is used when you tap the mic to speak an answer on a report form.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition turns what you say into text when you speak an answer on a report form.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Your photos are used when you add pictures to a field, note or task list, and photos you take in the app are saved to a "Daily Work Log" album.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

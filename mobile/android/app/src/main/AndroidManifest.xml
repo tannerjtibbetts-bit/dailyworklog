@@ -2,6 +2,8 @@
     <!-- Assignment texts and Notify notes are sent straight from the phone -->
     <uses-permission android:name="android.permission.SEND_SMS"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Speaking answers on report forms -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- Not required: the app still installs on tablets without a SIM or camera -->
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
@@ -74,6 +76,9 @@
         <intent>
             <action android:name="android.intent.action.SEND"/>
             <data android:mimeType="*/*"/>
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 </manifest>

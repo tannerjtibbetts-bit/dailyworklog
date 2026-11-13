@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
+import '../data/forms.dart';
 import '../data/models.dart';
 import '../data/store.dart';
 import '../ui/common.dart';
@@ -64,7 +65,14 @@ bool updateCrewMember(Store store, Project p, String name, CrewDetails d) {
 
 void _setDetails(Project p, CrewDetails d) {
   p.roles[d.name] = d.role;
-  for (final (m, v) in [(p.levels, d.level), (p.trades, d.trade), (p.unionLocals, d.local)]) {
+  for (final (m, v) in [
+    (p.levels, d.level),
+    (p.trades, d.trade),
+    (p.unionLocals, d.local),
+    (p.employeeNumbers, d.employeeNo),
+    (p.bpNumbers, d.bp),
+    (p.disnNumbers, d.disn),
+  ]) {
     if (v.trim().isEmpty) {
       m.remove(d.name);
     } else {
@@ -82,6 +90,9 @@ CrewDetails crewDetailsOf(Project p, String name) => CrewDetails(
       level: p.levels[name] ?? '',
       trade: p.trades[name] ?? '',
       local: p.unionLocals[name] ?? '',
+      employeeNo: p.employeeNumbers[name] ?? '',
+      bp: p.bpNumbers[name] ?? '',
+      disn: p.disnNumbers[name] ?? '',
     );
 
 /// "Assign Users" sheet. Returns the people ticked, or null if cancelled.
@@ -197,6 +208,65 @@ class _AssignSheetState extends State<_AssignSheet> {
       );
       return;
     }
+    store.save();
+    _render();
+  }
+
+  // ----- pasting employee, BP and DISN numbers -----
+
+  Future<void> _pasteNumbers() async {
+    final box = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Paste crew numbers'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text(
+              'Copy the rows from your crew list (for example in Excel) and paste them here. Each row needs the '
+              "person's name and their numbers. The first row can be the headings.",
+              style: TextStyle(color: C.grey, fontSize: 15),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: box,
+              minLines: 6,
+              maxLines: 12,
+              decoration: const InputDecoration(
+                hintText: 'Name | Employee # | BP # | DISN #',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Add numbers')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final rows = CrewNumbers.parse(box.text);
+    final result = CrewNumbers.apply(p, rows);
+    store.save();
+    _render();
+    final n = result.updated.length;
+    final add = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        content: Text(
+          'Numbers added for $n ${n == 1 ? 'person' : 'people'}.'
+          '${result.missing.isEmpty ? '' : "\n\nNot on this project's crew: ${result.missing.map((r) => r.name).join(', ')}."}',
+        ),
+        actions: [
+          if (result.missing.isNotEmpty)
+            TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Add them to the crew')),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('OK')),
+        ],
+      ),
+    );
+    if (add != true) return;
+    CrewNumbers.addMissing(p, result.missing);
     store.save();
     _render();
   }
@@ -384,6 +454,8 @@ class _AssignSheetState extends State<_AssignSheet> {
                       phone,
                       if (manage && p.tradeLine(name).isNotEmpty)
                         Text(p.tradeLine(name), style: const TextStyle(color: C.grey, fontSize: 15)),
+                      if (manage && p.numbersLine(name).isNotEmpty)
+                        Text(p.numbersLine(name), style: const TextStyle(color: C.grey, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -458,6 +530,13 @@ class _AssignSheetState extends State<_AssignSheet> {
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           child: Text('+  Add group', style: TextStyle(color: C.blue, fontSize: 19)),
+        ),
+      ));
+      rows.add(InkWell(
+        onTap: _pasteNumbers,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          child: Text('Paste crew numbers', style: TextStyle(color: C.blue, fontSize: 19)),
         ),
       ));
     }

@@ -797,6 +797,16 @@ class Project {
   /// "Apprentice" or "Journeyman", trade and union local, by name.
   Map<String, String> levels = {}, trades = {}, unionLocals = {};
 
+  /// Employee number, BP # and DISN # by name (Manage Crew), used to fill in report forms.
+  Map<String, String> employeeNumbers = {}, bpNumbers = {}, disnNumbers = {};
+
+  /// "Employee # 30016159 · BP # 509056 · DISN # 410727", or ''.
+  String numbersLine(String name) => [
+        if ((employeeNumbers[name] ?? '').isNotEmpty) 'Employee # ${employeeNumbers[name]}',
+        if ((bpNumbers[name] ?? '').isNotEmpty) 'BP # ${bpNumbers[name]}',
+        if ((disnNumbers[name] ?? '').isNotEmpty) 'DISN # ${disnNumbers[name]}',
+      ].join(' · ');
+
   /// People who get a text when assigned to a field. Nobody does unless ticked.
   Set<String> assignTexts = {};
 
@@ -849,7 +859,7 @@ class Project {
     _replaceIn(crew, from, to);
     final ph = phones.remove(from);
     if (ph != null) phones[to] = ph;
-    for (final m in [roles, levels, trades, unionLocals]) {
+    for (final m in [roles, levels, trades, unionLocals, employeeNumbers, bpNumbers, disnNumbers]) {
       final v = m.remove(from);
       if (v != null) m[to] = v;
     }
@@ -1011,6 +1021,9 @@ class Project {
         'levels': levels,
         'trades': trades,
         'unionLocals': unionLocals,
+        'employeeNumbers': employeeNumbers,
+        'bpNumbers': bpNumbers,
+        'disnNumbers': disnNumbers,
         'assignTexts': assignTexts.toList(),
         'notes': [for (final n in notes) n.toJson()],
         'seaCans': [for (final m in seaCans) m.toJson()],
@@ -1034,6 +1047,9 @@ class Project {
     ..levels = (_stringMap(o['levels'])..removeWhere((k, v) => !levelOptions.contains(v)))
     ..trades = (_stringMap(o['trades'])..removeWhere((k, v) => v.trim().isEmpty))
     ..unionLocals = (_stringMap(o['unionLocals'])..removeWhere((k, v) => v.trim().isEmpty))
+    ..employeeNumbers = (_stringMap(o['employeeNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
+    ..bpNumbers = (_stringMap(o['bpNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
+    ..disnNumbers = (_stringMap(o['disnNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
     ..assignTexts = _strings(o['assignTexts']).toSet()
     ..notes = _objects(o['notes'], Note.fromJson)
     ..notices = _objects(o['notices'], Notice.fromJson)

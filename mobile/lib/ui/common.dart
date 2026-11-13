@@ -105,10 +105,11 @@ class CrewDetails {
   final String name, phone, role;
   final bool texts;
 
-  /// "Apprentice", "Journeyman" or ''; trade and union local, '' for none.
-  final String level, trade, local;
+  /// "Apprentice", "Journeyman" or ''; trade, union local, employee number, BP # and DISN #, '' for none.
+  final String level, trade, local, employeeNo, bp, disn;
 
-  const CrewDetails(this.name, this.phone, this.role, this.texts, {this.level = '', this.trade = '', this.local = ''});
+  const CrewDetails(this.name, this.phone, this.role, this.texts,
+      {this.level = '', this.trade = '', this.local = '', this.employeeNo = '', this.bp = '', this.disn = ''});
 }
 
 /// Name + optional phone number for a new crew member.
@@ -122,6 +123,9 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
   final store = Store.instance;
   final name = TextEditingController(text: start.name);
   final phone = TextEditingController(text: start.phone);
+  final employeeNo = TextEditingController(text: start.employeeNo);
+  final bp = TextEditingController(text: start.bp);
+  final disn = TextEditingController(text: start.disn);
   var group = project.findGroup(start.role) != null ? start.role : project.groups.first.id;
   var level = start.level, trade = start.trade, local = start.local;
   var textOn = start.texts;
@@ -186,6 +190,12 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'Phone number (optional)'),
               ),
+              TextField(
+                controller: employeeNo,
+                decoration: const InputDecoration(labelText: 'Employee # (optional)'),
+              ),
+              TextField(controller: bp, decoration: const InputDecoration(labelText: 'BP # (optional)')),
+              TextField(controller: disn, decoration: const InputDecoration(labelText: 'DISN # (optional)')),
               DropdownButtonFormField<String>(
                 initialValue: group,
                 isExpanded: true,
@@ -240,7 +250,12 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
               Navigator.pop(
                   c,
                   CrewDetails(Fmt.capitalize(n), phone.text.trim(), group, textOn,
-                      level: level, trade: trade, local: local));
+                      level: level,
+                      trade: trade,
+                      local: local,
+                      employeeNo: employeeNo.text.trim(),
+                      bp: bp.text.trim(),
+                      disn: disn.text.trim()));
             },
             child: Text(positive),
           ),

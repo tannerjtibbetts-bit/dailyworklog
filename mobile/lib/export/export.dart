@@ -97,6 +97,20 @@ class Export {
     ]);
   }
 
+  /// Builds a file (in the background) and offers Share or email / Save to phone. Used by report forms.
+  static Future<void> offer(BuildContext context, String message, String fileName, String mime,
+      Future<Uint8List> Function() make) async {
+    final f = await _build(context, message, fileName, "Couldn't build the file. Please try again.", make);
+    if (f == null || !context.mounted) return;
+    await menu(context, '${_name(f)} is ready', [
+      SheetItem(Icons.share, 'Share or email', () => _share(context, f, mime)),
+      SheetItem(Icons.download, 'Save to phone', () => _saveTo(context, f, mime)),
+    ]);
+  }
+
+  /// Opens the share sheet for a saved file (to open it in another app, send or save it).
+  static Future<void> shareFile(BuildContext context, File f, String mime) => _share(context, f, mime);
+
   /// Just the attendance sheet, as PDF or Excel.
   static Future<void> attendance(BuildContext context, Project project, {required bool excel}) async {
     final store = Store.instance;
