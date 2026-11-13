@@ -69,7 +69,7 @@ void main() {
     expect(a.matches('crane'), isFalse);
   });
 
-  testWidgets('Additional Contacts: add, show, edit', (tester) async {
+  testWidgets('Contacts: add, show, edit', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);

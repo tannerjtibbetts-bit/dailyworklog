@@ -24,7 +24,7 @@ class Store extends ChangeNotifier {
   final List<ReportForm> reportForms = [];
   final List<FilledReport> filledReports = [];
 
-  /// Additional Contacts tab, shared by every project.
+  /// Contacts tab, shared by every project.
   final List<Contact> contacts = [];
   String userName = '';
 

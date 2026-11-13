@@ -26,7 +26,7 @@ public final class Store {
 
     public final List<Models.Project> projects = new ArrayList<>();
     public final List<Models.Link> links = new ArrayList<>();
-    /** Additional Contacts tab (app-wide: the same list in every project). */
+    /** Contacts tab (app-wide: the same list in every project). */
     public final List<Models.Contact> contacts = new ArrayList<>();
     /** Documents on the Links tab, report forms read from photos or files, and the reports filled in. App-wide. */
     public final List<Models.Document> documents = new ArrayList<>();

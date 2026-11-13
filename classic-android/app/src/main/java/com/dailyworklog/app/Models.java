@@ -824,7 +824,7 @@ public final class Models {
         }
     }
 
-    /** Additional Contacts tab: someone at the company who isn't on the crew. App-wide, like links. */
+    /** Contacts tab: someone at the company who isn't on the crew. App-wide, like links. */
     public static class Contact {
         public String id = newId();
         public String name = "", company = "", title = "", phone = "", email = "", link = "", notes = "";

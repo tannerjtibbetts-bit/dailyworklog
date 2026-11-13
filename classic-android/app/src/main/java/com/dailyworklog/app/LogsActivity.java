@@ -175,7 +175,7 @@ public class LogsActivity extends AppCompatActivity {
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
     static final String[] TAB_IDS = {"notify", "links", "contacts", "overtime", "attendance", "notes", "seacans"};
-    static final String[] TAB_NAMES = {"Notify", "Links", "Additional Contacts", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
+    static final String[] TAB_NAMES = {"Notify", "Links", "Contacts", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
     private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_CONTACTS, MODE_OVERTIME, MODE_ATTENDANCE, MODE_NOTES, MODE_SEACANS};
 
     /** Pills per row: up to 6 tabs in rows of three, 7 as 4 + 3, 8 as 4 + 4, 9 or more in rows of three. */
@@ -197,7 +197,12 @@ public class LogsActivity extends AppCompatActivity {
     private void layoutTabs() {
         LinearLayout[] tabRows = {findViewById(R.id.tabRow1), findViewById(R.id.tabRow2), findViewById(R.id.tabRow3)};
         TextView[] pills = {pillNotify, pillLinks, pillContacts, pillOvertime, pillAttendance, pillNotes, pillSeaCans};
-        for (LinearLayout r : tabRows) r.removeAllViews();
+        for (LinearLayout r : tabRows) {
+            r.removeAllViews();
+            // Line the bubbles up by their edges, not by their text: tabs whose text shrinks to fit would
+            // otherwise sit lower and look cut off.
+            r.setBaselineAligned(false);
+        }
         List<TextView> shown = new ArrayList<>();
         shown.add(pillLogs);
         for (int i = 0; i < TAB_IDS.length; i++) {
@@ -211,7 +216,7 @@ public class LogsActivity extends AppCompatActivity {
             LinearLayout row = tabRows[Math.min(r, tabRows.length - 1)];
             for (int k = 0; k < sizes[r] && next < shown.size(); k++) {
                 TextView pill = shown.get(next++);
-                boolean wide = pill == pillSeaCans || pill == pillContacts;
+                boolean wide = pill == pillSeaCans;
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 46), wide ? 1.6f : 1f);
                 if (row.getChildCount() > 0) lp.setMarginStart(Ui.dp(this, 4));
                 row.addView(pill, lp);

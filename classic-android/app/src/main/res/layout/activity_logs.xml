@@ -64,6 +64,7 @@
         <!-- Tabs in rows (see LogsActivity.tabRowSizes; tabs you hide are left out); they split the width and shrink their text if the screen is narrow -->
         <LinearLayout
             android:id="@+id/tabRow1"
+            android:baselineAligned="false"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
@@ -73,7 +74,7 @@
 
             <TextView
                 android:id="@+id/pillLogs"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="46dp"
                 android:layout_weight="1"
                 app:autoSizeMaxTextSize="14sp"
@@ -88,7 +89,7 @@
 
             <TextView
                 android:id="@+id/pillNotify"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="46dp"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
@@ -104,7 +105,7 @@
 
             <TextView
                 android:id="@+id/pillLinks"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="46dp"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
@@ -121,6 +122,7 @@
 
         <LinearLayout
             android:id="@+id/tabRow2"
+            android:baselineAligned="false"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
@@ -180,7 +182,7 @@
                 android:id="@+id/pillContacts"
                 android:layout_width="0dp"
                 android:layout_height="46dp"
-                android:layout_weight="1.6"
+                android:layout_weight="1"
                 android:layout_marginStart="4dp"
                 app:autoSizeMaxTextSize="14sp"
                 app:autoSizeMinTextSize="10sp"
@@ -189,7 +191,7 @@
                 android:maxLines="1"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:text="Additional Contacts"
+                android:text="Contacts"
                 android:textSize="14sp" />
 
             <TextView
@@ -211,6 +213,7 @@
 
         <LinearLayout
             android:id="@+id/tabRow3"
+            android:baselineAligned="false"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"

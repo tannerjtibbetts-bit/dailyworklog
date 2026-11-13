@@ -657,7 +657,7 @@
       "id": "project-screen",
       "title": "Inside a project: the tabs",
       "group": "Projects & checklists",
-      "summary": "A project has eight tabs: Checklists, Notify, Links, Additional Contacts, Overtime, Attendance, Notes and Sea Can Movements.",
+      "summary": "A project has eight tabs: Checklists, Notify, Links, Contacts, Overtime, Attendance, Notes and Sea Can Movements.",
       "keywords": [
         "tabs",
         "pills",
@@ -689,7 +689,7 @@
             "\"Checklists\": your daily logs, newest first.",
             "\"Notify\": send a crew member a note or photo by text.",
             "\"Links\": saved web links and forms. They show in every project.",
-            "\"Additional Contacts\": company contacts who aren't on your crew. They show in every project.",
+            "\"Contacts\": company contacts who aren't on your crew. They show in every project.",
             "\"Overtime\": the weekend overtime sign-up sheet.",
             "\"Attendance\": who is here today, and why not if they aren't.",
             "\"Notes\": your own notes and photos.",
@@ -698,7 +698,7 @@
         },
         {
           "type": "text",
-          "text": "Tap a tab to switch. On Checklists, Notify, Links, Additional Contacts and Notes there is a search box. On Checklists it searches every day of the project, including sea can numbers."
+          "text": "Tap a tab to switch. On Checklists, Notify, Links, Contacts and Notes there is a search box. On Checklists it searches every day of the project, including sea can numbers."
         },
         {
           "type": "tip",
@@ -3035,12 +3035,12 @@
     },
     {
       "id": "additional-contacts",
-      "title": "Additional Contacts: people who aren't on your crew",
+      "title": "Contacts: people who aren't on your crew",
       "group": "Tabs",
       "summary": "Keep company contacts handy and call, text, email or open their link with one tap. They show in every project.",
       "keywords": [
         "contacts",
-        "additional contacts",
+        "contacts",
         "company contacts",
         "phone book",
         "call",
@@ -3054,17 +3054,17 @@
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Additional Contacts\" tab is for people you deal with who aren't on your crew: safety, dispatch, the office, suppliers. The same contacts show in every project."
+          "text": "The \"Contacts\" tab is for people you deal with who aren't on your crew: safety, dispatch, the office, suppliers. The same contacts show in every project."
         },
         {
           "type": "image",
           "file": "contacts.png",
-          "caption": "The Additional Contacts tab"
+          "caption": "The Contacts tab"
         },
         {
           "type": "steps",
           "items": [
-            "Open a project and tap \"Additional Contacts\".",
+            "Open a project and tap \"Contacts\".",
             "Tap the big \"+\".",
             "Fill in \"Name\". The rest is optional: \"Company\", \"Job title\", \"Phone number\", \"Email\", \"Web link (optional)\" and \"Notes\".",
             "Tap \"Save\"."

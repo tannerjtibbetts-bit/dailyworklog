@@ -36,7 +36,7 @@ const _tabLabels = {
   ProjectTab.checklists: 'Checklists',
   ProjectTab.notify: 'Notify',
   ProjectTab.links: 'Links',
-  ProjectTab.contacts: 'Additional Contacts',
+  ProjectTab.contacts: 'Contacts',
   ProjectTab.overtime: 'Overtime',
   ProjectTab.attendance: 'Attendance',
   ProjectTab.notes: 'Notes',
@@ -1222,7 +1222,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
               children: [
                 for (var i = 0; i < rows[r].length; i++)
                   Expanded(
-                    flex: rows[r][i] == ProjectTab.seaCans || rows[r][i] == ProjectTab.contacts ? 16 : 10,
+                    flex: rows[r][i] == ProjectTab.seaCans ? 16 : 10,
                     child: _pill(rows[r][i], first: i == 0),
                   ),
               ],

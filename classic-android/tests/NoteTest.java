@@ -329,7 +329,7 @@ class ManualTest { public static void main(String[] a) throws Exception {
 class HiddenTabsTest { public static void main(String[] a) throws Exception {
   NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
   NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,contacts,overtime,attendance,notes,seacans")
-      && LogsActivity.TAB_NAMES[4].equals("Attendance") && LogsActivity.TAB_NAMES[2].equals("Additional Contacts"), "contacts after links, attendance after overtime");
+      && LogsActivity.TAB_NAMES[4].equals("Attendance") && LogsActivity.TAB_NAMES[2].equals("Contacts"), "contacts after links, attendance after overtime");
   NoteTest.check(LogsActivity.firstRowCount(7)==4 && LogsActivity.firstRowCount(6)==3 && LogsActivity.firstRowCount(2)==2, "pill rows");
   System.out.println("TABS PASS"); } }
 class DoneTextTest { public static void main(String[] a) throws Exception {

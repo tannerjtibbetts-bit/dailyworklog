@@ -22,7 +22,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The Additional Contacts tab: contact cards, their Call / Text / Email / Open link buttons, and the edit box. */
+/** The Contacts tab: contact cards, their Call / Text / Email / Open link buttons, and the edit box. */
 final class ContactsUi {
     private ContactsUi() {}
 
