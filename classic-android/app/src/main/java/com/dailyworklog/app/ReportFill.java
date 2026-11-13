@@ -37,6 +37,15 @@ final class ReportFill {
     private static final String[] NAME_HAS = {"employee name", "apprentice name", "apprentice's name", "worker name",
             "worker's name", "name of employee", "name of apprentice", "name of worker"};
     static final Pattern TRADE = words("trade|craft");
+    private static final Pattern POSITION_OF = words("position|occupation");
+
+    /** The person's job: their trade, plus "Apprentice" for an apprentice ("Millwright Apprentice"). */
+    static String job(Models.Project p, String person) {
+        List<String> parts = new ArrayList<>();
+        if (!p.tradeOf(person).isEmpty()) parts.add(p.tradeOf(person));
+        if (Models.Project.APPRENTICE.equals(p.levelOf(person))) parts.add("Apprentice");
+        return String.join(" ", parts);
+    }
     static final Pattern UNION = words("union|local");
     private static final Pattern LEVEL = words("level|classification");
     private static final Pattern PROJECT = words("project|job name|job site");
@@ -71,6 +80,7 @@ final class ReportFill {
         if (DISN.matcher(l).find()) return p == null ? "" : p.disnOf(person);
         if (NAME_IS.contains(l)) return person;
         for (String w : NAME_HAS) if (l.contains(w)) return person;
+        if (has(POSITION_OF, l) || l.contains("job title")) return p == null ? "" : job(p, person);
         if (has(TRADE, l)) return p == null ? "" : p.tradeOf(person);
         if (has(UNION, l)) return p == null ? "" : p.localOf(person);
         if (has(LEVEL, l)) return p == null ? "" : p.levelOf(person);

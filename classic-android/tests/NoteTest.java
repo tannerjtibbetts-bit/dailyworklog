@@ -1547,3 +1547,38 @@ class TermTest {
     x.term = ""; x.saveTo(p, "Alan");
     NoteTest.check(!p.terms.containsKey("Alan"), "None removes it");
     System.out.println("TERM PASS"); } }
+class SafeguardsTest {
+  static FormReader.Line l(String t, double x0, double y0, double x1, double y1) { return new FormReader.Line(t, 0, x0, y0, x1, y1); }
+  static FormLines.Segment seg(double x0, double x1, double y) { return new FormLines.Segment(0, x0, x1, y); }
+  public static void main(String[] a) throws Exception {
+    FormReader.Result r = FormReader.readLines(java.util.Arrays.asList(
+        l("Employee name:", 0.10, 0.100, 0.25, 0.110),
+        l("Date:", 0.60, 0.100, 0.66, 0.110),  // a second label on the same line as the name's blank
+        l("Details of the incident:", 0.10, 0.200, 0.40, 0.210),
+        l("Supervisor signature", 0.15, 0.300, 0.40, 0.310),  // under the line at 0.296
+        l("Position:", 0.10, 0.400, 0.20, 0.410)),
+      java.util.Arrays.asList(seg(0.26, 0.90, 0.111), seg(0.10, 0.90, 0.225), seg(0.10, 0.90, 0.240), seg(0.10, 0.90, 0.255),
+        seg(0.10, 0.45, 0.296), seg(0.21, 0.60, 0.411)));
+    java.util.Map<String, Models.FormQuestion> q = new java.util.HashMap<>();
+    for (Models.FormQuestion x : r.questions) q.put(x.label, x);
+    Models.Place name = q.get("Employee name").place, inc = q.get("Details of the incident").place;
+    FormLinesTest.near(name.x, 0.266, 0.001, "name starts on its line");
+    NoteTest.check(name.x + name.w < 0.60, "name stops before \"Date:\" (" + (name.x + name.w) + ")");
+    NoteTest.check(inc.rows.size() == 2, "incident uses its 3 ruled lines, not the signature line");
+    FormLinesTest.near(inc.rowFit(), 0.015 * 0.62, 0.0005, "rowFit");
+    NoteTest.check(new Models.Place(0, 0.1, 0.1).rowFit() < 0, "no rows: no rowFit");
+    // A job title from Manage Crew
+    Models.ReportForm form = new Models.ReportForm(); form.questions = r.questions;
+    Models.Project p = new Models.Project(); p.crew.add("Al"); p.trades.put("Al", "Millwright"); p.levels.put("Al", "Apprentice");
+    Store s = new Store(); s.userName = "Me";
+    Models.FilledReport rep = new Models.FilledReport(); rep.person = "Al";
+    ReportFill.autoFill(s, p, form, rep, java.util.Collections.emptyList(), 0);
+    RichTest.eq(rep.answer(q.get("Position").id), "Millwright Apprentice", "Position");
+    RichTest.eq(rep.answer(q.get("Employee name").id), "Al", "Employee name");
+    p.trades.remove("Al");
+    RichTest.eq(ReportFill.suggest(s, p, form, rep, new Models.FormQuestion("z", "Job title", "text"), java.util.Collections.emptyList(), 0), "Apprentice", "job title: just Apprentice");
+    p.levels.remove("Al");
+    RichTest.eq(ReportFill.suggest(s, p, form, rep, new Models.FormQuestion("z", "Occupation", "text"), java.util.Collections.emptyList(), 0), "", "neither: empty");
+    s.workPosition = "Foreman";
+    RichTest.eq(ReportFill.suggest(s, p, form, rep, new Models.FormQuestion("z", "Position of supervisor", "text"), java.util.Collections.emptyList(), 0), "Foreman", "me rule still wins");
+    System.out.println("SAFEGUARDS PASS"); } }

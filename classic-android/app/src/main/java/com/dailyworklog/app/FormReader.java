@@ -282,6 +282,17 @@ final class FormReader {
             if (!underline) fill.add(g);
         }
         java.util.Set<FormLines.Segment> used = new java.util.HashSet<>();
+        // Signature lines are left empty: a line with "Signature ..." under it, or after it on the same line.
+        for (FormLines.Segment g : fill) {
+            for (Line t : lines) {
+                if (!t.hasBox || t.page != g.page || t.text == null || !t.text.toLowerCase(Locale.ROOT).contains("signature")) continue;
+                double th = t.bottom - t.top;
+                boolean above = Math.min(g.x1, t.right) - Math.max(g.x0, t.left) > 0.3 * Math.min(g.length(), t.right - t.left)
+                        && t.top - g.y >= -0.004 && t.top - g.y <= 1.5 * th;
+                boolean after = g.x0 >= t.right - 0.01 && g.x0 - t.right < 0.1 && Math.abs(g.y - t.bottom) <= th;
+                if (above || after) used.add(g);
+            }
+        }
         double ratingRight = -1;
         for (int i = 0; i < kept.size(); i++) {
             Line l = lines.get(kept.get(i).line);
@@ -307,7 +318,7 @@ final class FormReader {
             double parenRight = paren >= 0 && lines.get(paren).hasBox ? lines.get(paren).right : l.right;
             Models.Place onFill = onLines(l, q.kind, labelEnd, paren >= 0, parenRight, fill, used);
             if (onFill != null) {
-                q.place = onFill;
+                q.place = clear(onFill, l, lines);
                 continue;
             }
             double x, y;
@@ -329,7 +340,7 @@ final class FormReader {
                     x = labelEnd + 0.012;
                     y = l.bottom;
             }
-            q.place = new Models.Place(l.page, clamp(x), clamp(y));
+            q.place = clear(new Models.Place(l.page, clamp(x), clamp(y)), l, lines);
         }
         if (!heights.isEmpty()) {
             java.util.Collections.sort(heights);
@@ -353,10 +364,15 @@ final class FormReader {
             below.sort((a, c) -> Double.compare(a.y, c.y));
             List<FormLines.Segment> rows = new ArrayList<>();
             rows.add(below.get(0));
+            double spacing = -1;
             for (int i = 1; i < below.size(); i++) {
                 FormLines.Segment g = below.get(i), last = rows.get(rows.size() - 1);
-                if (g.y - last.y > 3 * h) break;
-                if (g.y - last.y < 0.4 * h) continue;  // the same line found twice
+                double gap = g.y - last.y;
+                if (gap < 0.4 * h) continue;  // the same line found twice
+                if (gap > 3 * h) break;
+                // Ruled lines are evenly spaced: a bigger gap means a different part of the form.
+                if (spacing >= 0 && gap > 1.8 * spacing) break;
+                if (spacing < 0) spacing = gap;
                 rows.add(g);
             }
             used.addAll(rows);
@@ -393,6 +409,25 @@ final class FormReader {
         if (best == null) return null;
         used.add(best);
         return new Models.Place(b.page, best.x0 + pad, best.y - lift, best.length() - 2 * pad, null);
+    }
+
+    /**
+     * Keeps an answer off printed words: its width stops before any text on the page in the band it's written in
+     * (from a little above its first line to its last line), other than its own label.
+     */
+    static Models.Place clear(Models.Place p, Line own, List<Line> lines) {
+        double h = own.bottom - own.top;
+        double top = p.y - 1.1 * h, bottom = (p.rows.isEmpty() ? p.y : p.rows.get(p.rows.size() - 1)) + 0.2 * h;
+        double end = p.x + p.width();
+        for (Line t : lines) {
+            if (!t.hasBox || t.page != p.page || t == own) continue;
+            if (t.bottom <= top || t.top >= bottom) continue;
+            if (t.left <= p.x + 0.005 || t.left >= end) continue;
+            end = t.left - 0.008;
+        }
+        double w = end - p.x;
+        if (w >= p.width() - 1e-9) return p;
+        return new Models.Place(p.page, p.x, p.y, Math.max(0.03, w), p.rows);
     }
 
     private static double clamp(double v) {

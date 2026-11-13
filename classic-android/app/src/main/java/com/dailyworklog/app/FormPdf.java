@@ -117,7 +117,9 @@ final class FormPdf {
                     java.util.List<Double> ys = new ArrayList<>();
                     ys.add(pl.y);
                     ys.addAll(pl.rows);
-                    Fit.Rows fit = Fit.rows(a, width, ys.size(), base, at1);
+                    // No taller than the gap between the ruled lines.
+                    double start = pl.rowFit() > 0 ? Math.min(base, pl.rowFit() * ph) : base;
+                    Fit.Rows fit = Fit.rows(a, width, ys.size(), start, at1);
                     ink.setTextSize((float) fit.size);
                     double gap = ys.size() > 1 ? ys.get(ys.size() - 1) - ys.get(ys.size() - 2) : 1.7 * fit.size / ph;
                     for (int i = 0; i < fit.lines.size(); i++) {

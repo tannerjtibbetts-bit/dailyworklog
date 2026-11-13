@@ -614,6 +614,14 @@ public final class Models {
             return w > 0 ? w : Math.max(0.04, Math.min(1.0, 0.96 - x));
         }
 
+        /** With following lines: the tallest text that fits between them (fraction of the page height); else -1. */
+        public double rowFit() {
+            if (rows.isEmpty()) return -1;
+            double gap = rows.get(0) - y;
+            for (int i = 1; i < rows.size(); i++) gap = Math.min(gap, rows.get(i) - rows.get(i - 1));
+            return gap * 0.62;
+        }
+
         /** Moved by (dx, dy); following lines move with it. */
         public Place moved(double dx, double dy) {
             List<Double> r = new ArrayList<>();

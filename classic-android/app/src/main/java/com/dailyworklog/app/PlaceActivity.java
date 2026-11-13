@@ -151,7 +151,8 @@ public class PlaceActivity extends FormScreen {
             java.util.function.ToDoubleFunction<String> at1 = FormPdf.measureAt1(new android.text.TextPaint(chip.getPaint()));
             double px;
             if (Models.FormQuestion.LONG.equals(q.kind)) {
-                Fit.Rows fit = Fit.rows(t, width, 1 + q.place.rows.size(), base, at1);
+                double start = q.place.rowFit() > 0 ? Math.min(base, q.place.rowFit() * h) : base;
+                Fit.Rows fit = Fit.rows(t, width, 1 + q.place.rows.size(), start, at1);
                 px = fit.size;
                 t = fit.lines.isEmpty() ? t : fit.lines.get(0) + (fit.lines.size() > 1 ? " \u2026" : "");
             } else {
