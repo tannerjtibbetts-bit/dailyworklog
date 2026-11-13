@@ -41,10 +41,6 @@ public class LogsActivity extends AppCompatActivity {
     private Models.Project project;
     private static final int MODE_LOGS = 0, MODE_TEMPLATES = 1, MODE_LINKS = 2, MODE_NOTIFY = 3, MODE_OVERTIME = 4, MODE_NOTES = 5, MODE_SEACANS = 6, MODE_ATTENDANCE = 7, MODE_CONTACTS = 8;
     private static final int TYPE_CARD = 0, TYPE_LINK = 1, TYPE_NOTICE = 2, TYPE_NOTE = 3, TYPE_CONTACT = 4, TYPE_REPORT_CARDS = 5, TYPE_HEADING = 6, TYPE_DOC = 7;
-    /** Links tab: a photo of a document being taken, and the picker for a document file. */
-    private androidx.activity.result.ActivityResultLauncher<android.net.Uri> docPhoto;
-    private androidx.activity.result.ActivityResultLauncher<String[]> docFile;
-    private String pendingDocPhoto;
     private int mode = MODE_LOGS;
     private String query = "";
     private final List<Object> rows = new ArrayList<>();
@@ -77,36 +73,6 @@ public class LogsActivity extends AppCompatActivity {
             return;
         }
         exporter = new ExportHelper(this);
-        if (savedInstanceState != null) pendingDocPhoto = savedInstanceState.getString("pendingDocPhoto");
-        docPhoto = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.TakePicture(), ok -> {
-            String name = pendingDocPhoto;
-            pendingDocPhoto = null;
-            if (name == null) return;
-            java.io.File f = store.photoFile(name);
-            if (!Boolean.TRUE.equals(ok) || !f.exists() || f.length() == 0) {
-                //noinspection ResultOfMethodCallIgnored
-                f.delete();
-                return;
-            }
-            PhotoUtil.BG.execute(() -> {
-                PhotoUtil.normalize(f);
-                runOnUiThread(() -> LinksExtras.nameAndSave(this, name, "", this::rebuild));
-            });
-        });
-        docFile = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(), uri -> {
-            if (uri == null) return;
-            String original = Docs.displayName(this, uri);
-            PhotoUtil.BG.execute(() -> {
-                String name = Docs.copyIn(this, store, uri, original);
-                runOnUiThread(() -> {
-                    if (name == null) {
-                        Toast.makeText(this, "Couldn't copy that file", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    LinksExtras.nameAndSave(this, name, Docs.withoutExtension(original), this::rebuild);
-                });
-            });
-        });
 
         title = findViewById(R.id.title);
         location = findViewById(R.id.location);
@@ -133,7 +99,7 @@ public class LogsActivity extends AppCompatActivity {
         findViewById(R.id.fab).setOnClickListener(v -> {
             if (mode == MODE_NOTIFY) startActivity(new Intent(this, NotifyActivity.class).putExtra("project", project.id));
             else if (mode == MODE_NOTES) openNote(null);
-            else if (mode == MODE_LINKS) addToLinks();
+            else if (mode == MODE_LINKS) editLink(null);
             else if (mode == MODE_CONTACTS) ContactsUi.edit(this, null, this::rebuild);
             else pickDate(null);
         });
@@ -170,7 +136,6 @@ public class LogsActivity extends AppCompatActivity {
     protected void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putInt("mode", mode);
-        out.putString("pendingDocPhoto", pendingDocPhoto);
     }
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
@@ -303,11 +268,6 @@ public class LogsActivity extends AppCompatActivity {
             for (Models.Link l : store.links) {
                 if (query.isEmpty() || l.title.toLowerCase(Locale.ROOT).contains(query)
                         || l.url.toLowerCase(Locale.ROOT).contains(query)) rows.add(l);
-            }
-            List<Models.Document> docs = LinksExtras.documents(store, query);
-            if (!docs.isEmpty()) {
-                rows.add(new LinksExtras.Heading("Documents"));
-                rows.addAll(docs);
             }
         } else if (mode == MODE_CONTACTS) {
             rows.addAll(Models.Contact.list(store.contacts, query));
@@ -583,24 +543,6 @@ public class LogsActivity extends AppCompatActivity {
         } catch (ActivityNotFoundException e) {
             Toast.makeText(this, "No app on this phone can open that link", Toast.LENGTH_LONG).show();
         }
-    }
-
-    /** The Links tab's +: a web link, a photo of a document, or a file. */
-    private void addToLinks() {
-        List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_link, "Add web link", () -> editLink(null)));
-        items.add(new Ui.SheetItem(R.drawable.ic_camera, "Take a photo of a document", () -> {
-            pendingDocPhoto = Store.newDocFile("jpg");
-            try {
-                docPhoto.launch(androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".files",
-                        store.photoFile(pendingDocPhoto)));
-            } catch (ActivityNotFoundException e) {
-                pendingDocPhoto = null;
-                Toast.makeText(this, "No camera app on this phone", Toast.LENGTH_LONG).show();
-            }
-        }));
-        items.add(new Ui.SheetItem(R.drawable.ic_folder, "Upload a file", () -> docFile.launch(new String[]{"*/*"})));
-        Ui.menu(this, null, items);
     }
 
     private void editLink(Models.Link existing) {

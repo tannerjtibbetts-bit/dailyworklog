@@ -49,14 +49,17 @@ final class LinksExtras {
 
     /** The two big cards side by side. */
     static View reportCards(Activity a, String projectId) {
+        // One full-width "Documents" card (the report-form screens are no longer reached from here).
         LinearLayout row = new LinearLayout(a);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setBaselineAligned(false);
         row.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        row.addView(bigCard(a, R.drawable.ic_school, "Apprentice reports", projectId, Models.ReportForm.APPRENTICE));
-        View gap = new View(a);
-        row.addView(gap, new LinearLayout.LayoutParams(Ui.dp(a, 12), 1));
-        row.addView(bigCard(a, R.drawable.ic_gavel, "Disciplinary action", projectId, Models.ReportForm.DISCIPLINE));
+        LinearLayout card = (LinearLayout) bigCard(a, R.drawable.ic_folder, "Documents", projectId, null);
+        card.setMinimumHeight(0);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.getChildAt(1).setPadding(Ui.dp(a, 16), 0, 0, 0);
+        row.addView(card);
         return row;
     }
 
@@ -81,8 +84,9 @@ final class LinksExtras {
         t.setTypeface(null, Typeface.BOLD);
         t.setPadding(0, Ui.dp(a, 10), 0, 0);
         card.addView(t);
-        card.setOnClickListener(v -> a.startActivity(new Intent(a, ReportsActivity.class)
-                .putExtra("project", projectId).putExtra("group", group)));
+        card.setOnClickListener(v -> a.startActivity(group == null
+                ? new Intent(a, DocumentsActivity.class).putExtra("project", projectId)
+                : new Intent(a, ReportsActivity.class).putExtra("project", projectId).putExtra("group", group)));
         card.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         return card;
     }
@@ -182,7 +186,8 @@ final class LinksExtras {
     /** Names a new document and saves it (the file is already in the photos folder). */
     static void nameAndSave(Activity a, String file, String suggested, Runnable changed) {
         Store store = Store.get(a);
-        Ui.prompt(a, "Name this document", "e.g. Lifting plan", suggested, "Save", n -> {
+        // Cancelling deletes the copied file.
+        Ui.prompt(a, "Name this document", "e.g. Lifting plan", suggested, "Save", s -> !s.isEmpty(), "Required", n -> {
             Models.Document d = new Models.Document();
             d.title = n;
             d.file = file;
@@ -190,6 +195,6 @@ final class LinksExtras {
             store.documents.add(d);
             store.save();
             changed.run();
-        });
+        }, () -> Docs.deleteFiles(store, java.util.Collections.singletonList(file)));
     }
 }

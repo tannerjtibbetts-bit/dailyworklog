@@ -81,6 +81,12 @@ final class Ui {
     /** A one-line prompt that refuses (showing error) anything valid says no to. The text is trimmed. */
     static void prompt(Context c, String title, String hint, String prefill, String positive,
                        java.util.function.Predicate<String> valid, String error, TextCallback cb) {
+        prompt(c, title, hint, prefill, positive, valid, error, cb, null);
+    }
+
+    /** Like prompt; onCancel (if given) runs when it's closed without saving. */
+    static void prompt(Context c, String title, String hint, String prefill, String positive,
+                       java.util.function.Predicate<String> valid, String error, TextCallback cb, Runnable onCancel) {
         EditText et = new EditText(c);
         et.setHint(hint);
         et.setText(prefill == null ? "" : prefill);
@@ -95,8 +101,11 @@ final class Ui {
                 .setTitle(title)
                 .setView(box)
                 .setPositiveButton(positive, null)
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Cancel", (x, w) -> {
+                    if (onCancel != null) onCancel.run();
+                })
                 .create();
+        if (onCancel != null) d.setOnCancelListener(x -> onCancel.run());
         d.setOnShowListener(x -> {
             View ok = d.getButton(AlertDialog.BUTTON_POSITIVE);
             ok.setOnClickListener(v -> {

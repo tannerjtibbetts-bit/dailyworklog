@@ -100,7 +100,7 @@ void main() {
     expect(find.textContaining('Nobody on this project'), findsOneWidget);
   });
 
-  testWidgets('Links tab shows the two report buttons', (tester) async {
+  testWidgets('Links tab: one Documents button opens the documents', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
@@ -110,12 +110,19 @@ void main() {
       ..kind = Doc.pdf);
     await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.links)));
     await tester.pump();
-    expect(find.text('Apprentice reports'), findsOneWidget);
-    expect(find.text('Disciplinary action'), findsOneWidget);
-    expect(find.text('Lifting plan'), findsOneWidget);
-    await tester.tap(find.text('Disciplinary action'));
+    expect(find.text('Apprentice reports'), findsNothing);
+    expect(find.text('Disciplinary action'), findsNothing);
+    expect(find.text('Lifting plan'), findsNothing);
+    await tester.tap(find.text('Documents'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('No forms yet'), findsOneWidget);
+    expect(find.text('Lifting plan'), findsOneWidget);
+    expect(find.text('Search documents'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pump();
+    expect(find.text('Lifting plan'), findsNothing);
+    await tester.enterText(find.byType(TextField), 'lift');
+    await tester.pump();
+    expect(find.text('Lifting plan'), findsOneWidget);
   });
 
   testWidgets('Paste crew numbers in Manage Crew', (tester) async {

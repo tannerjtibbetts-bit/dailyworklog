@@ -5,15 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/fmt.dart';
-import '../data/forms.dart';
 import '../data/models.dart';
 import '../data/project_search.dart';
 import '../data/rich.dart';
 import '../data/store.dart';
 import '../export/export.dart';
-import '../services/form_files.dart';
 import '../services/form_prefill.dart';
-import '../services/photos.dart';
 import '../services/sms.dart';
 import '../ui/common.dart';
 import '../ui/rich_text.dart';
@@ -25,7 +22,7 @@ import 'note_screen.dart';
 import 'notify_screen.dart';
 import 'attendance_pane.dart';
 import 'contacts_pane.dart';
-import 'reports_screen.dart';
+import 'documents_screen.dart';
 import 'overtime_pane.dart';
 import 'seacan_pane.dart';
 import 'projects_screen.dart' show AddPill;
@@ -781,145 +778,36 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ),
   );
 
-  // ----- documents and report forms on the Links tab -----
+  // ----- the Documents button on the Links tab -----
 
-  Widget _listHeading(String s) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
-    child: Text(
-      s.toUpperCase(),
-      style: const TextStyle(color: C.grey, fontSize: 13, letterSpacing: 0.8, fontWeight: FontWeight.bold),
-    ),
-  );
-
-  /// Apprentice reports and Disciplinary action, side by side.
-  Widget _reportCards() {
-    Widget card(String group, IconData icon) => Expanded(
-      child: Material(
-        color: C.deepBlue,
+  /// Opens Documents: photos of paper documents and uploaded files.
+  Widget _documentsCard() => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Material(
+      color: C.deepBlue,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => _push(ReportsScreen(projectId: widget.projectId, group: group)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            child: Column(children: [
-              Icon(icon, color: Colors.white, size: 30),
-              const SizedBox(height: 6),
-              Text(
-                ReportForm.groupTitle(group),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ]),
-          ),
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute<void>(builder: (_) => DocumentsScreen(projectId: widget.projectId)))
+            .then((_) {
+              if (mounted) setState(() {});
+            }),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Column(children: [
+            Icon(Icons.folder_outlined, color: Colors.white, size: 30),
+            SizedBox(height: 6),
+            Text(
+              'Documents',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ]),
         ),
       ),
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(children: [
-        card(ReportForm.apprentice, Icons.school_outlined),
-        const SizedBox(width: 10),
-        card(ReportForm.discipline, Icons.gavel),
-      ]),
-    );
-  }
-
-  /// The big + on Links: a web link, a photo of a document, or a file.
-  Future<void> _addToLinks() async {
-    var choice = 0;
-    await menu(context, null, [
-      SheetItem(Icons.link, 'Add web link', () => choice = 1),
-      SheetItem(Icons.photo_camera_outlined, 'Take a photo of a document', () => choice = 2),
-      SheetItem(Icons.upload_file, 'Upload a file', () => choice = 3),
-    ]);
-    if (!mounted) return;
-    if (choice == 1) {
-      await _editLink(null);
-      return;
-    }
-    String? file;
-    var suggested = '';
-    if (choice == 2) {
-      file = await Photos.take(context);
-    } else if (choice == 3) {
-      final picked = await FormFiles.pickFile(context);
-      file = picked?.$1;
-      suggested = picked?.$2 ?? '';
-    }
-    if (file == null || !mounted) return;
-    final title = await prompt(context, 'Name this document', 'e.g. Lifting plan', suggested, 'Save');
-    if (title == null) {
-      FormFiles.deleteFiles([file]);
-      return;
-    }
-    store.documents.add(
-      Doc()
-        ..title = title
-        ..file = file
-        ..kind = Doc.kindOf(file),
-    );
-    store.save();
-    if (mounted) setState(() {});
-  }
-
-  Widget _docRow(Doc d) => _card(
-    onTap: () => openDocument(context, d),
-    onLongPress: () => _docMenu(d),
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 80),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-        child: Row(children: [
-          _iconBox(switch (d.kind) {
-            Doc.photo => Icons.image_outlined,
-            Doc.pdf => Icons.picture_as_pdf_outlined,
-            Doc.docx => Icons.description_outlined,
-            Doc.xlsx => Icons.grid_on,
-            _ => Icons.insert_drive_file_outlined,
-          }),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(d.title, style: const TextStyle(color: C.navy, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 3),
-              Text(
-                '${Doc.kindLabel(d.kind)} · ${FormFill.date(DateTime.fromMillisecondsSinceEpoch(d.addedAt))}',
-                style: const TextStyle(color: C.grey, fontSize: 15),
-              ),
-            ]),
-          ),
-          IconButton(
-            tooltip: 'More',
-            icon: const Icon(Icons.more_vert, color: C.grey, size: 28),
-            onPressed: () => _docMenu(d),
-          ),
-        ]),
-      ),
     ),
   );
-
-  void _docMenu(Doc d) {
-    menu(context, d.title, [
-      SheetItem(Icons.open_in_new, 'Open', () => openDocument(context, d)),
-      SheetItem(Icons.drive_file_rename_outline, 'Rename', () async {
-        final t = await prompt(context, 'Rename document', 'Document name', d.title, 'Save');
-        if (t == null) return;
-        d.title = t;
-        store.save();
-        if (mounted) setState(() {});
-      }),
-      SheetItem(Icons.share_outlined, 'Share', () => shareDocument(context, d)),
-      SheetItem(Icons.delete_outline, 'Delete document', () {
-        confirm(context, 'Delete this document?', '${d.title} will be removed from every project.', 'Delete', () {
-          FormFiles.deleteFiles([d.file]);
-          store.documents.remove(d);
-          store.save();
-          if (mounted) setState(() {});
-        });
-      }, danger: true),
-    ]);
-  }
 
   Widget _contactRow(Contact c) => _card(
     onTap: () => editContact(context, c).then((_) {
@@ -1100,16 +988,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
             if (query.isEmpty || l.title.toLowerCase().contains(query) || l.url.toLowerCase().contains(query))
               _linkRow(l),
         ];
-        final docs = [
-          for (final d in List.of(store.documents)..sort((a, b) => b.addedAt.compareTo(a.addedAt)))
-            if (query.isEmpty || d.title.toLowerCase().contains(query)) _docRow(d),
-        ];
         return [
-          if (query.isEmpty) _reportCards(),
+          if (query.isEmpty) _documentsCard(),
           ...links,
-          if (docs.isNotEmpty) _listHeading('Documents'),
-          ...docs,
-          if (links.isEmpty && docs.isEmpty)
+          if (links.isEmpty)
             Padding(
               padding: const EdgeInsets.all(24),
               child: Text(_emptyText(), textAlign: TextAlign.center, style: const TextStyle(color: C.grey, fontSize: 18)),
@@ -1166,7 +1048,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       case ProjectTab.notes:
         _openNote(null);
       case ProjectTab.links:
-        _addToLinks();
+        _editLink(null);
       case ProjectTab.contacts:
         editContact(context, null).then((_) {
           if (mounted) setState(() {});

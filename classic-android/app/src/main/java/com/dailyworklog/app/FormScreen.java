@@ -21,6 +21,7 @@ abstract class FormScreen extends AppCompatActivity {
     protected Store store;
     protected LinearLayout body;
     protected ScrollView scroll;
+    protected LinearLayout root;
     private TextView titleView, subView;
 
     @Override
@@ -28,7 +29,7 @@ abstract class FormScreen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         store = Store.get(this);
-        LinearLayout root = new LinearLayout(this);
+        root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(getColor(R.color.bg));
 
