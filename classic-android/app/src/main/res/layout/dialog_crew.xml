@@ -24,6 +24,33 @@
         android:inputType="phone"
         android:singleLine="true" />
 
+    <EditText
+        android:id="@+id/employeeNo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="Employee # (optional)"
+        android:inputType="textCapCharacters"
+        android:singleLine="true" />
+
+    <EditText
+        android:id="@+id/bpNo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="BP # (optional)"
+        android:inputType="text"
+        android:singleLine="true" />
+
+    <EditText
+        android:id="@+id/disnNo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="DISN # (optional)"
+        android:inputType="text"
+        android:singleLine="true" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

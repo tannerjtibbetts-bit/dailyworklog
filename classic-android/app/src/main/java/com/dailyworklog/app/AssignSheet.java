@@ -150,6 +150,16 @@ final class AssignSheet {
                             render[0].run();
                         }));
                 rows.addView(addGroup);
+                if (q.isEmpty()) {
+                    TextView paste = new TextView(c);
+                    paste.setText("Paste crew numbers");
+                    paste.setTextColor(c.getColor(R.color.blue));
+                    paste.setTextSize(19);
+                    paste.setPadding(Ui.dp(c, 24), Ui.dp(c, 6), Ui.dp(c, 24), Ui.dp(c, 18));
+                    paste.setBackgroundResource(android.R.drawable.list_selector_background);
+                    paste.setOnClickListener(x -> pasteNumbers(c, store, project, render[0]));
+                    rows.addView(paste);
+                }
             }
             if (!exact) {
                 TextView add = new TextView(c);
@@ -302,8 +312,8 @@ final class AssignSheet {
             phone.setText((number.isEmpty() ? "No phone number" : number)
                     + (project.assignTexts.contains(name) ? "  \u00B7  texted when assigned" : ""));
             phone.setTextColor(c.getColor(R.color.grey));
-            String details = project.personLine(name);
-            if (!details.isEmpty()) {
+            for (String details : new String[]{project.personLine(name), project.numbersLine(name)}) {
+                if (details.isEmpty()) continue;
                 TextView more = new TextView(c);
                 more.setText(details);
                 more.setTextColor(c.getColor(R.color.grey));
@@ -343,6 +353,48 @@ final class AssignSheet {
             return true;
         });
         return r;
+    }
+
+    /** Paste rows copied from a crew list; numbers go on the matching people. */
+    private static void pasteNumbers(Context c, Store store, Models.Project project, Runnable render) {
+        LinearLayout box = new LinearLayout(c);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(Ui.dp(c, 22), Ui.dp(c, 4), Ui.dp(c, 22), 0);
+        TextView help = new TextView(c);
+        help.setText("Copy the rows from your crew list (for example in Excel) and paste them here. Each row needs the "
+                + "person's name and their numbers. The first row can be the headings.");
+        help.setTextColor(c.getColor(R.color.grey));
+        help.setTextSize(15);
+        box.addView(help);
+        EditText et = new EditText(c);
+        et.setHint("Name | Employee # | BP # | DISN #");
+        et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        et.setSingleLine(false);
+        et.setMinLines(6);
+        et.setMaxLines(12);
+        et.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        et.setTextSize(14);
+        box.addView(et);
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(c)
+                .setTitle("Paste crew numbers").setView(box)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Add numbers", (x, w) -> {
+                    List<CrewNumbers.Row> rowsIn = CrewNumbers.parse(et.getText().toString());
+                    CrewNumbers.Applied done = CrewNumbers.apply(project, rowsIn);
+                    store.save();
+                    render.run();
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder b = new com.google.android.material.dialog.MaterialAlertDialogBuilder(c)
+                            .setMessage(CrewNumbers.summary(done)).setPositiveButton("OK", null);
+                    if (!done.missing.isEmpty()) {
+                        b.setNeutralButton("Add them to the crew", (y, z) -> {
+                            CrewNumbers.addMissing(project, done.missing);
+                            store.save();
+                            render.run();
+                        });
+                    }
+                    b.show();
+                })
+                .show();
     }
 
     private static void editPerson(Context c, Store store, Models.Project project, String name, Runnable render) {

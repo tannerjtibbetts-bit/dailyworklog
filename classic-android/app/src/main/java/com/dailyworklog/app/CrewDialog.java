@@ -30,7 +30,7 @@ final class CrewDialog {
 
     /** What the box holds. */
     static final class Person {
-        String name = "", phone = "", group = "", level = "", trade = "", local = "";
+        String name = "", phone = "", employeeNo = "", bp = "", disn = "", group = "", level = "", trade = "", local = "";
         boolean texts;
 
         /** Someone already on the project. */
@@ -38,6 +38,9 @@ final class CrewDialog {
             Person x = new Person();
             x.name = name;
             x.phone = p.phoneOf(name);
+            x.employeeNo = p.employeeNumberOf(name);
+            x.bp = p.bpOf(name);
+            x.disn = p.disnOf(name);
             x.group = p.roleOf(name);
             x.level = p.levelOf(name);
             x.trade = p.tradeOf(name);
@@ -49,6 +52,9 @@ final class CrewDialog {
         /** Stores group, level, trade, union local, phone and texting under name (blank ones are removed). */
         void saveTo(Models.Project p, String as) {
             Models.Project.putOrRemove(p.phones, as, phone);
+            Models.Project.putOrRemove(p.employeeNumbers, as, employeeNo);
+            Models.Project.putOrRemove(p.bpNumbers, as, bp);
+            Models.Project.putOrRemove(p.disnNumbers, as, disn);
             p.roles.put(as, group.isEmpty() ? p.groups.get(0).id : group);
             Models.Project.putOrRemove(p.levels, as, level);
             Models.Project.putOrRemove(p.trades, as, trade);
@@ -80,6 +86,11 @@ final class CrewDialog {
         name.setText(start.name);
         name.setSelection(name.getText().length());
         phone.setText(start.phone);
+        EditText employeeNo = v.findViewById(R.id.employeeNo);
+        employeeNo.setText(start.employeeNo);
+        EditText bpNo = v.findViewById(R.id.bpNo), disnNo = v.findViewById(R.id.disnNo);
+        bpNo.setText(start.bp);
+        disnNo.setText(start.disn);
         ((CheckBox) v.findViewById(R.id.texts)).setChecked(start.texts);
 
         // Group
@@ -133,6 +144,9 @@ final class CrewDialog {
             Person out = new Person();
             out.name = Fmt.capitalize(n);
             out.phone = phone.getText().toString().trim();
+            out.employeeNo = employeeNo.getText().toString().trim();
+            out.bp = bpNo.getText().toString().trim();
+            out.disn = disnNo.getText().toString().trim();
             int g = group.getSelectedItemPosition();
             out.group = project.groups.get(g >= 0 && g < project.groups.size() ? g : 0).id;
             out.level = level[0];

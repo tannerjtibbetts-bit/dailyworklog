@@ -146,6 +146,11 @@ final class ExportHelper {
         });
     }
 
+    /** Any PDF (e.g. a filled-in report form), then Share / Open / Save to phone. */
+    void exportPdf(String message, String fileName, Writer writer) {
+        buildFile(message, fileName, writer, f -> offer(f, PDF, savePdf));
+    }
+
     private void offer(File f, String mime, ActivityResultLauncher<String> saver) {
         List<Ui.SheetItem> items = new ArrayList<>();
         items.add(new Ui.SheetItem(R.drawable.ic_share, "Share or email", () -> share(f, mime)));

@@ -243,6 +243,11 @@ final class Ui {
 
     /** Full-screen photo with who took it and when. Tap anywhere to close. */
     static void showPhoto(Context c, Models.Photo p, File f) {
+        showPhoto(c, p.addedBy + ", " + Fmt.stamp(p.addedAt), f);
+    }
+
+    /** Full-screen picture with a caption at the bottom. Tap anywhere to close. */
+    static void showPhoto(Context c, String caption, File f) {
         Dialog d = new Dialog(c, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         FrameLayout fl = new FrameLayout(c);
         fl.setBackgroundColor(Color.BLACK);
@@ -253,7 +258,7 @@ final class Ui {
         TextView cap = new TextView(c);
         cap.setTextColor(Color.WHITE);
         cap.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        cap.setText(p.addedBy + ", " + Fmt.stamp(p.addedAt));
+        cap.setText(caption);
         cap.setPadding(dp(c, 20), dp(c, 16), dp(c, 20), dp(c, 56));
         cap.setBackgroundColor(0x99000000);
         fl.addView(cap, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,

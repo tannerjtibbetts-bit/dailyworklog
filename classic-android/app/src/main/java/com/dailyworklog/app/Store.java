@@ -28,6 +28,10 @@ public final class Store {
     public final List<Models.Link> links = new ArrayList<>();
     /** Additional Contacts tab (app-wide: the same list in every project). */
     public final List<Models.Contact> contacts = new ArrayList<>();
+    /** Documents on the Links tab, report forms read from photos or files, and the reports filled in. App-wide. */
+    public final List<Models.Document> documents = new ArrayList<>();
+    public final List<Models.ReportForm> reportForms = new ArrayList<>();
+    public final List<Models.FilledReport> filledReports = new ArrayList<>();
     public String userName = "";
     /** Number the crew should call or text you on; added under your name in texts. */
     public String contactPhone = "";
@@ -75,6 +79,21 @@ public final class Store {
         load();
     }
 
+    public Models.ReportForm form(String id) {
+        for (Models.ReportForm f : reportForms) if (f.id.equals(id)) return f;
+        return null;
+    }
+
+    public Models.FilledReport filled(String id) {
+        for (Models.FilledReport r : filledReports) if (r.id.equals(id)) return r;
+        return null;
+    }
+
+    /** A new file name in the photos folder for a document or form page ("doc-<uuid>.<ext>"). */
+    static String newDocFile(String ext) {
+        return "doc-" + java.util.UUID.randomUUID() + "." + ext;
+    }
+
     File dataFile() {
         return dataFile;
     }
@@ -93,6 +112,9 @@ public final class Store {
         projects.clear();
         links.clear();
         contacts.clear();
+        documents.clear();
+        reportForms.clear();
+        filledReports.clear();
         hiddenTabs.clear();
         formDetails.answers.clear();
         myColours.clear();
@@ -273,6 +295,21 @@ public final class Store {
             JSONObject c = cs.optJSONObject(i);
             if (c != null) contacts.add(Models.Contact.fromJson(c));
         }
+        JSONArray ds = o.optJSONArray("documents");
+        for (int i = 0; ds != null && i < ds.length(); i++) {
+            JSONObject x = ds.optJSONObject(i);
+            if (x != null) documents.add(Models.Document.fromJson(x));
+        }
+        JSONArray rf = o.optJSONArray("reportForms");
+        for (int i = 0; rf != null && i < rf.length(); i++) {
+            JSONObject x = rf.optJSONObject(i);
+            if (x != null) reportForms.add(Models.ReportForm.fromJson(x));
+        }
+        JSONArray fr = o.optJSONArray("filledReports");
+        for (int i = 0; fr != null && i < fr.length(); i++) {
+            JSONObject x = fr.optJSONObject(i);
+            if (x != null) filledReports.add(Models.FilledReport.fromJson(x));
+        }
         JSONArray ls = o.optJSONArray("links");
         if (ls != null) {
             for (int i = 0; i < ls.length(); i++) {
@@ -313,6 +350,15 @@ public final class Store {
         JSONArray cs = new JSONArray();
         for (Models.Contact c : contacts) cs.put(c.toJson());
         o.put("contacts", cs);
+        JSONArray ds = new JSONArray();
+        for (Models.Document d : documents) ds.put(d.toJson());
+        o.put("documents", ds);
+        JSONArray rf = new JSONArray();
+        for (Models.ReportForm f : reportForms) rf.put(f.toJson());
+        o.put("reportForms", rf);
+        JSONArray fr = new JSONArray();
+        for (Models.FilledReport r : filledReports) fr.put(r.toJson());
+        o.put("filledReports", fr);
         return o;
     }
 

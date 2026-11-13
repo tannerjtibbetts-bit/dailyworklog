@@ -1132,3 +1132,222 @@ class OtCommentTest {
     NoteTest.check(d.contains(">Comment</w:t>") && d.contains(">First aid course Sat</w:t>") && d.contains("<w:gridCol w:w=\"2000\"/>"), "docx: Comment column");
     NoteTest.check(d.contains("<w:color w:val=\"1B2533\"/><w:sz w:val=\"20\"/><w:szCs w:val=\"20\"/></w:rPr><w:t xml:space=\"preserve\">Training</w:t>"), "docx: Training plain");
     System.out.println("OT COMMENT PASS"); } }
+class FormsTest {
+  static String qs(FormReader.Result r) {
+    java.util.List<String> o = new java.util.ArrayList<>();
+    for (Models.FormQuestion q : r.questions) o.add(q.label + "(" + q.kind + ")");
+    return String.join(" | ", o);
+  }
+  static final String SAMPLE = "entice reviews / Save as / Print / Save to OneDrive / DATE: / NAME: / EMPLOYEE # / EMPLOYER / TERM: / "
+      + "PERIOD COVERED FROM: / TO: / A. WORK DONE IN THE ABOVE PERIOD: / B. 1. Improvement shown in above period / "
+      + "2. Understanding of work / 3. Progress in learning this phase of work / 4. Work quality / "
+      + "5. Interest shown in this period / 6. Attendance / 7. Punctuality / 8. Co-operation / 9. Safety Attitude / "
+      + "10. Mechanical skills / Point System / Excellent 4.0 / Average Plus 3.0 / Average 2.0 / Average Minus 1.0 / "
+      + "Poor 0.0 / Overall average of above: / (total #1 - #10 and divide by 10) / "
+      + "C. Your overall comment on the apprentice: / Signature Of Supervisor / Signature Of Steward / "
+      + "Signature Of Apprenticeship Chairman / Signature Of Apprentice / cc: Apprentice @@ Personnel @@ File / "
+      + "FW: Apprentice Reviews / (No subject)";
+  static java.util.List<String> sampleLines() {
+    java.util.List<String> out = new java.util.ArrayList<>();
+    for (String l : SAMPLE.split(" / ")) out.add(l.replace(" @@ ", " / "));
+    return out;
+  }
+  static Models.ReportForm sampleForm() {
+    FormReader.Result r = FormReader.read(sampleLines());
+    Models.ReportForm f = new Models.ReportForm(); f.name = "Apprentice review"; f.questions = r.questions; f.signatures = r.signatures;
+    return f;
+  }
+  public static void main(String[] a) throws Exception {
+    // The sample form
+    FormReader.Result r = FormReader.read(sampleLines());
+    String ratings = "Improvement shown in above period(rating) | Understanding of work(rating) | Progress in learning this phase of work(rating) | "
+        + "Work quality(rating) | Interest shown in this period(rating) | Attendance(rating) | Punctuality(rating) | Co-operation(rating) | "
+        + "Safety Attitude(rating) | Mechanical skills(rating)";
+    RichTest.eq(qs(r), "Date(text) | Name(text) | Employee #(text) | Employer(text) | Term(text) | Period covered from(text) | "
+        + "Period covered to(text) | Work done in the above period(long) | " + ratings + " | Overall average(average) | "
+        + "Your overall comment on the apprentice(long)", "sample questions");
+    RichTest.eq(r.signatures, java.util.Arrays.asList("Signature Of Supervisor", "Signature Of Steward", "Signature Of Apprenticeship Chairman",
+        "Signature Of Apprentice"), "sample signatures");
+    RichTest.eq(r.questions.get(8).choices.toString(), "[Excellent (4.0), Average Plus (3.0), Average (2.0), Average Minus (1.0), Poor (0.0)]", "rating choices");
+    NoteTest.check(r.questions.get(0).id.equals("q1") && r.questions.get(19).id.equals("q20") && r.questions.size() == 20, "ids q1..q20");
+    for (Models.FormQuestion q : r.questions) if (!q.kind.equals("rating")) NoteTest.check(q.choices.isEmpty(), "no choices on " + q.label);
+    // Other line shapes
+    RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("NAME: ____ DATE: ____"))), "Name(text) | Date(text)", "two blanks on a line");
+    RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("Employer ________"))), "Employer(text)", "label then blank");
+    RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("cc: Apprentice / Personnel / File", "FW: Apprentice Reviews", "Supervisor:"))), "Supervisor(text)", "cc / FW lines aren't questions");
+    RichTest.eq(qs(FormReader.read(java.util.Arrays.asList("Reason for discipline:", "Describe what happened ......", "Was the employee warned before?",
+        "1. Attitude", "Signature of employee ______ Signature of supervisor ______"))),
+        "Reason for discipline(long) | Describe what happened(long) | Was the employee warned before?(text) | Attitude(text)", "discipline form, no scale");
+    RichTest.eq(FormReader.read(java.util.Arrays.asList("Signature of employee ______ Signature of supervisor ______")).signatures,
+        java.util.Arrays.asList("Signature of employee", "Signature of supervisor"), "two signatures on a line");
+    NoteTest.check(FormReader.read(java.util.Arrays.asList("x", "(No subject)", "Rating Scale:", "")).questions.isEmpty(), "skipped lines");
+    RichTest.eq(FormReader.defaultSignatures("discipline"), java.util.Arrays.asList("Supervisor signature", "Employee signature", "Witness signature"), "default discipline signatures");
+    // Word and Excel text
+    java.io.File dir = java.nio.file.Files.createTempDirectory("forms").toFile();
+    java.io.File docx = new java.io.File(dir, "f.docx");
+    try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(docx))) {
+      z.putNextEntry(new java.util.zip.ZipEntry("word/document.xml"));
+      z.write(("<?xml version=\"1.0\"?><w:document xmlns:w=\"x\"><w:body>"
+          + "<w:p><w:pPr><w:tabs><w:tab w:val=\"left\" w:pos=\"720\"/></w:tabs></w:pPr><w:r><w:t>NAME:</w:t></w:r><w:r><w:tab/><w:t xml:space=\"preserve\">____ </w:t></w:r></w:p>"
+          + "<w:p/><w:p><w:r><w:t>Tom &amp; Jerry</w:t><w:br/><w:t>Line two</w:t></w:r></w:p>"
+          + "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>EMPLOYER</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>TERM:</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+          + "</w:body></w:document>").getBytes("UTF-8"));
+      z.closeEntry();
+    }
+    RichTest.eq(FormReader.docxLines(docx), java.util.Arrays.asList("NAME:    ____ ", "Tom & Jerry", "Line two", "EMPLOYER", "TERM:"), "docx lines");
+    java.io.File xlsx = new java.io.File(dir, "f.xlsx");
+    try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(xlsx))) {
+      z.putNextEntry(new java.util.zip.ZipEntry("xl/sharedStrings.xml"));
+      z.write("<sst><si><t>DATE:</t></si><si><r><t>Name</t></r><r><t xml:space=\"preserve\">: </t></r></si></sst>".getBytes("UTF-8"));
+      z.closeEntry();
+      z.putNextEntry(new java.util.zip.ZipEntry("xl/worksheets/sheet1.xml"));
+      z.write(("<worksheet><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\"><v>5</v></c><c r=\"C1\" t=\"s\"><v>1</v></c></row>"
+          + "<row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t>Excellent 4.0</t></is></c><c r=\"B2\" s=\"1\"/></row></sheetData></worksheet>").getBytes("UTF-8"));
+      z.closeEntry();
+    }
+    RichTest.eq(FormReader.xlsxLines(xlsx), java.util.Arrays.asList("DATE:", "Name:", "Excellent 4.0"), "xlsx lines");
+    boolean threw = false; try { FormReader.docxLines(xlsx); } catch (java.io.IOException e) { threw = true; }
+    NoteTest.check(threw, "not a Word file");
+    System.out.println("FORMS PASS"); } }
+class AutoFillTest {
+  static Models.FormQuestion q(Models.ReportForm f, String label, String kind) {
+    Models.FormQuestion x = new Models.FormQuestion(f.newQuestionId(), label, kind); f.questions.add(x); return x;
+  }
+  public static void main(String[] a) throws Exception {
+    Store s = new Store();
+    s.userName = "Tanner"; s.workPosition = "Foreman"; s.userEmail = "tanner@example.com"; s.contactPhone = "5195550123"; s.workLocation = "Main plant";
+    Models.Project p = new Models.Project(); p.name = "Warehouse expansion"; p.crew.add("Al"); p.crew.add("Bo"); p.crew.add("cy");
+    p.levels.put("Al", "Apprentice"); p.levels.put("cy", "Apprentice"); p.trades.put("Al", "Millwright"); p.unionLocals.put("Al", "Local 1687");
+    p.employeeNumbers.put("Al", "E-204"); p.phones.put("Al", "2265550199"); p.roles.put("Al", "tech");
+    Models.ReportForm f = new Models.ReportForm(); f.id = "form1"; f.name = "Review";
+    String[][] cases = {
+      {"Supervisor name", "Tanner"}, {"Evaluated by", "Tanner"}, {"Foreman phone", "519-555-0123"}, {"Supervisor email", "tanner@example.com"},
+      {"Supervisor position", "Foreman"}, {"Date", ReportFill.day(1_763_000_000_000L)}, {"Review date", ReportFill.day(1_763_000_000_000L)},
+      {"Employee #", "E-204"}, {"Badge", "E-204"}, {"Name", "Al"}, {"Apprentice's name", "Al"}, {"Trade", "Millwright"},
+      {"Union local", "Local 1687"}, {"Level", "Apprentice"}, {"Phone number", "226-555-0199"}, {"Project", "Warehouse expansion"},
+      {"Work location", "Main plant"}, {"Crew", "Techs"}, {"Comments", ""}, {"Employer", ""}};
+    Models.FilledReport r = new Models.FilledReport(); r.formId = f.id; r.person = "Al"; r.project = p.name;
+    for (String[] c : cases) {
+      Models.FormQuestion x = q(f, c[0], "text");
+      RichTest.eq(ReportFill.suggest(s, p, f, r, x, java.util.Collections.emptyList(), 1_763_000_000_000L), c[1], "auto-fill " + c[0]);
+    }
+    RichTest.eq(ReportFill.day(1_763_000_000_000L), "Nov 13, 2025", "date format");
+    p.location = "Building 2";
+    RichTest.eq(ReportFill.suggest(s, p, f, r, f.questions.get(16), java.util.Collections.emptyList(), 0), "Building 2", "location: project's first");
+    Models.FormQuestion rating = q(f, "Name", "rating");
+    NoteTest.check(ReportFill.suggest(s, p, f, r, rating, java.util.Collections.emptyList(), 0).isEmpty(), "only text questions");
+    // autoFill never overwrites
+    Models.FormQuestion nameQ = f.questions.get(9);
+    r.answers.put(nameQ.id, "Albert");
+    ReportFill.autoFill(s, p, f, r, java.util.Collections.emptyList(), 1_763_000_000_000L);
+    NoteTest.check(r.answer(nameQ.id).equals("Albert") && r.answer(f.questions.get(0).id).equals("Tanner"), "autoFill fills empties only");
+    // Carry over Employer / Term
+    Models.ReportForm g = new Models.ReportForm(); g.id = "g";
+    Models.FormQuestion emp = q(g, "Employer", "text"), term = q(g, "TERM", "text");
+    Models.FilledReport old1 = new Models.FilledReport(); old1.formId = "g"; old1.person = "Bo"; old1.answers.put(emp.id, "Acme"); old1.answers.put(term.id, "3"); old1.updatedAt = 10;
+    Models.FilledReport old2 = new Models.FilledReport(); old2.formId = "g"; old2.person = "Al"; old2.answers.put(term.id, "2"); old2.updatedAt = 5;
+    Models.FilledReport old3 = new Models.FilledReport(); old3.formId = "g"; old3.person = "Al"; old3.answers.put(term.id, "4"); old3.updatedAt = 20;
+    Models.FilledReport other = new Models.FilledReport(); other.formId = "zz"; other.person = "Al"; other.answers.put(emp.id, "Wrong form");
+    java.util.List<Models.FilledReport> earlier = java.util.Arrays.asList(old1, old2, old3, other);
+    Models.FilledReport nr = new Models.FilledReport(); nr.formId = "g"; nr.person = "Al";
+    Models.FormQuestion term2 = new Models.FormQuestion("x", "term", "text");
+    RichTest.eq(ReportFill.suggest(s, p, g, nr, emp, earlier, 0), "Acme", "employer from anyone when Al has none");
+    RichTest.eq(ReportFill.suggest(s, p, g, nr, term, earlier, 0), "4", "term: Al's latest");
+    Models.FilledReport cyr = new Models.FilledReport(); cyr.formId = "g"; cyr.person = "cy";
+    RichTest.eq(ReportFill.suggest(s, p, g, cyr, term, earlier, 0), "", "term only from the same person");
+    // Saving back to the person
+    Models.FilledReport br = new Models.FilledReport(); br.person = "Bo";
+    ReportFill.setAnswer(p, new Models.FormQuestion("a", "Employee no.", "text"), br, " B-7 ", 5);
+    ReportFill.setAnswer(p, new Models.FormQuestion("b", "Trade", "text"), br, "Teamster", 5);
+    ReportFill.setAnswer(p, new Models.FormQuestion("c", "Local", "text"), br, "Local 128", 5);
+    ReportFill.setAnswer(p, new Models.FormQuestion("d", "Trade", "text"), r, "Welder", 5);  // Al has one already
+    NoteTest.check(p.employeeNumberOf("Bo").equals("B-7") && p.tradeOf("Bo").equals("Teamster") && p.localOf("Bo").equals("Local 128")
+        && p.tradeOf("Al").equals("Millwright") && br.updatedAt == 5 && br.answer("a").equals(" B-7 "), "saved back only when empty");
+    // Average
+    Models.ReportForm sf = FormsTest.sampleForm();
+    Models.FilledReport ar = new Models.FilledReport();
+    RichTest.eq(ReportFill.average(sf, ar), "", "no ratings: no average");
+    ar.answers.put("q9", "Excellent"); ar.answers.put("q10", "Average"); ar.answers.put("q11", "average minus"); ar.answers.put("q12", "nonsense");
+    RichTest.eq(ReportFill.average(sf, ar), "2.3", "average of 4, 2, 1");
+    NoteTest.check(ReportFill.missing(sf, ar).size() == 20 - 1 - 4, "missing skips answered and the average");
+    // People
+    RichTest.eq(ReportFill.people(p, "apprentice"), java.util.Arrays.asList("Al", "cy"), "apprentices A-Z");
+    RichTest.eq(ReportFill.people(p, "discipline"), java.util.Arrays.asList("Al", "Bo", "cy"), "everyone A-Z");
+    // JSON round trips
+    Models.Document d = new Models.Document(); d.title = "Lifting plan"; d.file = "doc-1.pdf"; d.kind = Models.Document.kindOf("Plan.PDF");
+    s.documents.add(d); sf.files.add("doc-2.png"); s.reportForms.add(sf);
+    Models.FilledReport fr = new Models.FilledReport(); fr.formId = sf.id; fr.formName = sf.name; fr.person = "Al"; fr.project = p.name; fr.answers.put("q1", "Nov 13, 2026");
+    s.filledReports.add(fr); s.projects.add(p);
+    Store t = new Store(); t.fromJson(new org.json.JSONObject(s.toJson().toString()));
+    NoteTest.check(t.documents.get(0).title.equals("Lifting plan") && t.documents.get(0).kind.equals("pdf") && t.documents.get(0).file.equals("doc-1.pdf"), "documents round trip");
+    Models.ReportForm tf = t.reportForms.get(0);
+    NoteTest.check(tf.questions.size() == 20 && tf.question("q9").choices.size() == 5 && tf.question("q9").choices.get(0).value.equals("4.0")
+        && tf.signatures.size() == 4 && tf.files.equals(sf.files) && tf.name.equals("Apprentice review"), "forms round trip");
+    NoteTest.check(t.filledReports.get(0).answer("q1").equals("Nov 13, 2026") && t.filled(fr.id).person.equals("Al") && t.form(sf.id) != null, "filled reports round trip");
+    NoteTest.check(t.projects.get(0).employeeNumberOf("Al").equals("E-204"), "employee numbers round trip");
+    org.json.JSONObject old = s.toJson(); old.remove("documents"); old.remove("reportForms"); old.remove("filledReports");
+    Store o = new Store(); o.fromJson(old);
+    NoteTest.check(o.documents.isEmpty() && o.reportForms.isEmpty() && o.filledReports.isEmpty(), "old file: none");
+    p.renamePerson("Al", "Alan");
+    NoteTest.check(p.employeeNumberOf("Alan").equals("E-204") && p.employeeNumberOf("Al").isEmpty(), "rename moves employee #");
+    RichTest.eq(Models.Document.kindOf("x.jpeg") + Models.Document.kindOf("a.docx") + Models.Document.kindOf("b.XLSX") + Models.Document.kindOf("c.txt"), "photodocxxlsxother", "kinds from names");
+    RichTest.eq(ReportFill.pdfName(fr, "Apprentice review").replaceAll("\\d{4}-\\d{2}-\\d{2}", "D"), "Apprentice review - Al D.pdf", "pdf name");
+    System.out.println("AUTOFILL PASS"); } }
+class CrewNumbersTest {
+  public static void main(String[] a) throws Exception {
+    // Tab-separated, as pasted from Excel, with an empty column between DISN # and Position
+    java.util.List<CrewNumbers.Row> r = CrewNumbers.parse("Aecon PRNNR #\tBP #\tDISN #\t\tPosition\tName\n"
+        + "30016159\t509056\t410727\tTrainer\tMW\tCallum Clarke\n\n30016160\t509057\t\t\tMW\tJo  Smith\r\n");
+    RichTest.eq(r.toString(), "[Callum Clarke|30016159|509056|410727, Jo Smith|30016160|509057|]", "tab headings");
+    r = CrewNumbers.parse("Name | Employee # | BP # | DISN #\nCallum Clarke | 30016159 | 509056 | 410727\n | 1 | 2 | 3");
+    RichTest.eq(r.toString(), "[Callum Clarke|30016159|509056|410727]", "| headings, nameless row skipped");
+    r = CrewNumbers.parse("Callum Clarke, 30016159, 509056, 410727\nMW  Bo Dee  411-22\nZed 7");
+    RichTest.eq(r.toString(), "[Callum Clarke|30016159|509056|410727, Bo Dee|411-22||]", "no headings (\"Zed 7\" is one cell with a digit: no name)");
+    // Apply
+    Models.Project p = new Models.Project(); p.crew.add("callum clarke"); p.crew.add("Jo O'Neil-Smith"); p.employeeNumbers.put("callum clarke", "old");
+    p.bpNumbers.put("callum clarke", "keep");
+    java.util.List<CrewNumbers.Row> rows = java.util.Arrays.asList(new CrewNumbers.Row("Callum  Clarke", "30016159", "", "410727"),
+        new CrewNumbers.Row("jo  oneil.smith", "5", "6", "7"), new CrewNumbers.Row("Ann Lee", "9", "", ""));
+    CrewNumbers.Applied done = CrewNumbers.apply(p, rows);
+    NoteTest.check(done.updated.equals(java.util.Arrays.asList("callum clarke", "Jo O'Neil-Smith")) && done.missing.size() == 1
+        && p.employeeNumberOf("callum clarke").equals("30016159") && p.bpOf("callum clarke").equals("keep") && p.disnOf("callum clarke").equals("410727")
+        && p.disnOf("Jo O'Neil-Smith").equals("7"), "apply: matched ignoring case, spaces, punctuation; empty keeps");
+    RichTest.eq(CrewNumbers.summary(done), "Numbers added for 2 people.\n\nNot on this project's crew: Ann Lee.", "summary");
+    CrewNumbers.Applied one = new CrewNumbers.Applied(); one.updated.add("x");
+    RichTest.eq(CrewNumbers.summary(one), "Numbers added for 1 person.", "summary singular");
+    CrewNumbers.addMissing(p, done.missing);
+    NoteTest.check(p.crew.contains("Ann Lee") && p.employeeNumberOf("Ann Lee").equals("9") && p.roleOf("Ann Lee").equals(p.groups.get(0).id), "add the missing to the crew");
+    RichTest.eq(p.numbersLine("callum clarke"), "Employee # 30016159 · BP # keep · DISN # 410727", "numbers line");
+    // JSON and rename
+    Models.Project q = Models.Project.fromJson(p.toJson());
+    NoteTest.check(q.bpOf("callum clarke").equals("keep") && q.disnOf("Jo O'Neil-Smith").equals("7"), "BP / DISN round trip");
+    org.json.JSONObject j = p.toJson(); j.getJSONObject("bpNumbers").put("Zed", "  ");
+    NoteTest.check(!Models.Project.fromJson(j).bpNumbers.containsKey("Zed"), "blank dropped on load");
+    p.renamePerson("callum clarke", "Callum Clarke");
+    NoteTest.check(p.bpOf("Callum Clarke").equals("keep") && p.disnOf("Callum Clarke").equals("410727") && p.bpOf("callum clarke").isEmpty(), "rename moves BP / DISN");
+    // Auto-fill and saving back
+    Store s = new Store();
+    Models.ReportForm f = new Models.ReportForm();
+    Models.FilledReport fr = new Models.FilledReport(); fr.person = "Callum Clarke";
+    RichTest.eq(ReportFill.suggest(s, p, f, fr, new Models.FormQuestion("a", "BP #", "text"), java.util.Collections.emptyList(), 0), "keep", "BP # auto-fill");
+    RichTest.eq(ReportFill.suggest(s, p, f, fr, new Models.FormQuestion("b", "DISN", "text"), java.util.Collections.emptyList(), 0), "410727", "DISN auto-fill");
+    RichTest.eq(ReportFill.suggest(s, p, f, fr, new Models.FormQuestion("c", "Aecon PRNNR #", "text"), java.util.Collections.emptyList(), 0), "30016159", "PRNNR is the employee number");
+    Models.FilledReport ann = new Models.FilledReport(); ann.person = "Ann Lee";
+    ReportFill.setAnswer(p, new Models.FormQuestion("a", "BP #", "text"), ann, "B1", 1);
+    ReportFill.setAnswer(p, new Models.FormQuestion("b", "DISN #", "text"), ann, "D1", 1);
+    NoteTest.check(p.bpOf("Ann Lee").equals("B1") && p.disnOf("Ann Lee").equals("D1"), "BP / DISN saved back");
+    System.out.println("CREWNUMBERS PASS"); } }
+class FormPdfTest {
+  public static void main(String[] a) throws Exception {
+    Models.ReportForm f = FormsTest.sampleForm();
+    Models.FilledReport r = new Models.FilledReport(); r.person = "Al"; r.project = "Warehouse"; r.formName = f.name;
+    r.answers.put("q1", "Nov 13, 2026"); r.answers.put("q9", "Excellent"); r.answers.put("q20", "Good progress this term.");
+    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    try {
+      FormPdf.write(f, r, 0L, out);
+      NoteTest.check(out.size() > 0, "PDF built");
+    } catch (UnsatisfiedLinkError | RuntimeException e) {
+      // android.graphics.pdf.PdfDocument needs the phone's native code; on the JVM it can't run.
+      System.out.println("skipped: PdfDocument isn't available on the JVM (" + e.getClass().getSimpleName() + ")");
+    }
+    System.out.println("FORMPDF PASS"); } }

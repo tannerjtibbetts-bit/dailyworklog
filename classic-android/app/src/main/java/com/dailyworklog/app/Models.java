@@ -508,6 +508,220 @@ public final class Models {
         }
     }
 
+    /** A document saved on the Links tab: a photo, PDF, Word or Excel file in the photos folder. App-wide. */
+    public static class Document {
+        public static final String PHOTO = "photo", PDF = "pdf", DOCX = "docx", XLSX = "xlsx", OTHER = "other";
+        public String id = newId();
+        public String title = "", file = "", kind = OTHER;
+        public long addedAt = System.currentTimeMillis();
+
+        /** The kind from a file name's extension. */
+        public static String kindOf(String fileName) {
+            String n = fileName == null ? "" : fileName.toLowerCase(java.util.Locale.ROOT);
+            int dot = n.lastIndexOf('.');
+            String ext = dot < 0 ? "" : n.substring(dot + 1);
+            switch (ext) {
+                case "jpg": case "jpeg": case "png": case "heic": return PHOTO;
+                case "pdf": return PDF;
+                case "docx": return DOCX;
+                case "xlsx": return XLSX;
+                default: return OTHER;
+            }
+        }
+
+        /** "Photo", "PDF", "Word", "Excel" or "File". */
+        public static String kindLabel(String kind) {
+            return PHOTO.equals(kind) ? "Photo" : PDF.equals(kind) ? "PDF" : DOCX.equals(kind) ? "Word"
+                    : XLSX.equals(kind) ? "Excel" : "File";
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("id", id);
+            o.put("title", title);
+            o.put("file", file);
+            o.put("kind", kind);
+            o.put("addedAt", addedAt);
+            return o;
+        }
+
+        static Document fromJson(JSONObject o) {
+            Document d = new Document();
+            d.id = o.optString("id", newId());
+            d.title = o.optString("title", "");
+            d.file = o.optString("file", "");
+            d.kind = o.optString("kind", OTHER);
+            d.addedAt = o.optLong("addedAt", 0L);
+            return d;
+        }
+    }
+
+    /** One choice on a rating scale, e.g. "Excellent" worth "4.0" (value "" when the scale had no numbers). */
+    public static class Choice {
+        public String label = "", value = "";
+
+        public Choice() {}
+
+        public Choice(String label, String value) {
+            this.label = label;
+            this.value = value;
+        }
+
+        /** "Excellent (4.0)", or just the label. */
+        public String display() {
+            return value.isEmpty() ? label : label + " (" + value + ")";
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Choice && ((Choice) o).label.equals(label) && ((Choice) o).value.equals(value);
+        }
+
+        @Override
+        public int hashCode() {
+            return label.hashCode() * 31 + value.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return display();
+        }
+    }
+
+    /** A question on a report form. */
+    public static class FormQuestion {
+        public static final String TEXT = "text", LONG = "long", RATING = "rating", AVERAGE = "average";
+        public String id = "", label = "", kind = TEXT;
+        public List<Choice> choices = new ArrayList<>();
+
+        public FormQuestion() {}
+
+        public FormQuestion(String id, String label, String kind) {
+            this.id = id;
+            this.label = label;
+            this.kind = kind;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("id", id);
+            o.put("label", label);
+            o.put("kind", kind);
+            JSONArray c = new JSONArray();
+            for (Choice x : choices) c.put(new JSONObject().put("label", x.label).put("value", x.value));
+            o.put("choices", c);
+            return o;
+        }
+
+        static FormQuestion fromJson(JSONObject o) {
+            FormQuestion q = new FormQuestion(o.optString("id", ""), o.optString("label", ""), o.optString("kind", TEXT));
+            JSONArray c = o.optJSONArray("choices");
+            for (int i = 0; c != null && i < c.length(); i++) {
+                JSONObject x = c.optJSONObject(i);
+                if (x != null) q.choices.add(new Choice(x.optString("label", ""), x.optString("value", "")));
+            }
+            return q;
+        }
+    }
+
+    /** A blank form read into questions: an apprentice review or a disciplinary form. App-wide. */
+    public static class ReportForm {
+        public static final String APPRENTICE = "apprentice", DISCIPLINE = "discipline";
+        public String id = newId();
+        public String group = APPRENTICE, name = "", kind = Document.PHOTO;
+        /** Its source file and page images, in the photos folder, in page order. */
+        public List<String> files = new ArrayList<>();
+        public List<FormQuestion> questions = new ArrayList<>();
+        public List<String> signatures = new ArrayList<>();
+        public long createdAt = System.currentTimeMillis();
+
+        public FormQuestion question(String id) {
+            for (FormQuestion q : questions) if (q.id.equals(id)) return q;
+            return null;
+        }
+
+        /** A question id not used yet ("q1", "q2", ...). */
+        public String newQuestionId() {
+            int n = questions.size() + 1;
+            while (question("q" + n) != null) n++;
+            return "q" + n;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("id", id);
+            o.put("group", group);
+            o.put("name", name);
+            o.put("files", toArray(files));
+            o.put("kind", kind);
+            JSONArray qs = new JSONArray();
+            for (FormQuestion q : questions) qs.put(q.toJson());
+            o.put("questions", qs);
+            o.put("signatures", toArray(signatures));
+            o.put("createdAt", createdAt);
+            return o;
+        }
+
+        static ReportForm fromJson(JSONObject o) {
+            ReportForm f = new ReportForm();
+            f.id = o.optString("id", newId());
+            f.group = o.optString("group", APPRENTICE);
+            f.name = o.optString("name", "");
+            f.files = fromArray(o.optJSONArray("files"));
+            f.kind = o.optString("kind", Document.PHOTO);
+            JSONArray qs = o.optJSONArray("questions");
+            for (int i = 0; qs != null && i < qs.length(); i++) {
+                JSONObject q = qs.optJSONObject(i);
+                if (q != null) f.questions.add(FormQuestion.fromJson(q));
+            }
+            f.signatures = fromArray(o.optJSONArray("signatures"));
+            f.createdAt = o.optLong("createdAt", 0L);
+            return f;
+        }
+    }
+
+    /** A form filled in for one person. */
+    public static class FilledReport {
+        public String id = newId();
+        public String formId = "", formName = "", group = ReportForm.APPRENTICE, person = "", project = "";
+        /** Answers by question id. A rating's answer is the label of the choice picked. */
+        public Map<String, String> answers = new LinkedHashMap<>();
+        public long createdAt = System.currentTimeMillis(), updatedAt = createdAt;
+
+        public String answer(String questionId) {
+            String v = answers.get(questionId);
+            return v == null ? "" : v;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("id", id);
+            o.put("formId", formId);
+            o.put("formName", formName);
+            o.put("group", group);
+            o.put("person", person);
+            o.put("project", project);
+            o.put("answers", mapJson(answers));
+            o.put("createdAt", createdAt);
+            o.put("updatedAt", updatedAt);
+            return o;
+        }
+
+        static FilledReport fromJson(JSONObject o) {
+            FilledReport r = new FilledReport();
+            r.id = o.optString("id", newId());
+            r.formId = o.optString("formId", "");
+            r.formName = o.optString("formName", "");
+            r.group = o.optString("group", ReportForm.APPRENTICE);
+            r.person = o.optString("person", "");
+            r.project = o.optString("project", "");
+            readMap(o.optJSONObject("answers"), r.answers);
+            r.createdAt = o.optLong("createdAt", 0L);
+            r.updatedAt = o.optLong("updatedAt", r.createdAt);
+            return r;
+        }
+    }
+
     /** Additional Contacts tab: someone at the company who isn't on the crew. App-wide, like links. */
     public static class Contact {
         public String id = newId();
@@ -987,6 +1201,10 @@ public final class Models {
         /** Trade and union local by name (free text, picked from the app-wide lists). */
         public Map<String, String> trades = new LinkedHashMap<>();
         public Map<String, String> unionLocals = new LinkedHashMap<>();
+        /** Employee number by name ("Employee #" in the person box). */
+        public Map<String, String> employeeNumbers = new LinkedHashMap<>();
+        /** BP # and DISN # by name. */
+        public Map<String, String> bpNumbers = new LinkedHashMap<>(), disnNumbers = new LinkedHashMap<>();
         /** People who get a text when assigned to a field. Nobody does unless ticked. */
         public Set<String> assignTexts = new LinkedHashSet<>();
         /** Sea Can Movements tab, one line per sea can. */
@@ -1073,6 +1291,30 @@ public final class Models {
             return v == null ? "" : v;
         }
 
+        public String bpOf(String name) {
+            String v = bpNumbers.get(name);
+            return v == null ? "" : v;
+        }
+
+        public String disnOf(String name) {
+            String v = disnNumbers.get(name);
+            return v == null ? "" : v;
+        }
+
+        /** "Employee # 30016159 · BP # 509056 · DISN # 410727" (the numbers that are set). */
+        public String numbersLine(String name) {
+            List<String> parts = new ArrayList<>();
+            if (!employeeNumberOf(name).isEmpty()) parts.add("Employee # " + employeeNumberOf(name));
+            if (!bpOf(name).isEmpty()) parts.add("BP # " + bpOf(name));
+            if (!disnOf(name).isEmpty()) parts.add("DISN # " + disnOf(name));
+            return String.join(" \u00B7 ", parts);
+        }
+
+        public String employeeNumberOf(String name) {
+            String v = employeeNumbers.get(name);
+            return v == null ? "" : v;
+        }
+
         public String localOf(String name) {
             String v = unionLocals.get(name);
             return v == null ? "" : v;
@@ -1099,7 +1341,7 @@ public final class Models {
             if (ph != null) phones.put(to, ph);
             String r = roles.remove(from);
             if (r != null) roles.put(to, r);
-            for (Map<String, String> m : java.util.Arrays.asList(levels, trades, unionLocals)) {
+            for (Map<String, String> m : java.util.Arrays.asList(levels, trades, unionLocals, employeeNumbers, bpNumbers, disnNumbers)) {
                 String v = m.remove(from);
                 if (v != null) m.put(to, v);
             }
@@ -1249,6 +1491,9 @@ public final class Models {
             o.put("levels", mapJson(levels));
             o.put("trades", mapJson(trades));
             o.put("unionLocals", mapJson(unionLocals));
+            o.put("employeeNumbers", mapJson(employeeNumbers));
+            o.put("bpNumbers", mapJson(bpNumbers));
+            o.put("disnNumbers", mapJson(disnNumbers));
             o.put("assignTexts", toArray(new ArrayList<>(assignTexts)));
             JSONArray nt = new JSONArray();
             for (Note x : notes) nt.put(x.toJson());
@@ -1318,6 +1563,9 @@ public final class Models {
             p.levels.values().removeIf(v -> !LEVELS.contains(v));
             readMap(o.optJSONObject("trades"), p.trades);
             readMap(o.optJSONObject("unionLocals"), p.unionLocals);
+            readMap(o.optJSONObject("employeeNumbers"), p.employeeNumbers);
+            readMap(o.optJSONObject("bpNumbers"), p.bpNumbers);
+            readMap(o.optJSONObject("disnNumbers"), p.disnNumbers);
             p.assignTexts.addAll(fromArray(o.optJSONArray("assignTexts")));
             JSONArray nt = o.optJSONArray("notes");
             if (nt != null) {
