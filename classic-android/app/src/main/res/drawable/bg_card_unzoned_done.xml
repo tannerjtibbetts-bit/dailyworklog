@@ -1,0 +1,6 @@
+<!-- Completed unzoned field: same tint, green border all the way around -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/unzoned_bg" />
+    <stroke android:width="2.5dp" android:color="@color/green" />
+    <corners android:radius="22dp" />
+</shape>

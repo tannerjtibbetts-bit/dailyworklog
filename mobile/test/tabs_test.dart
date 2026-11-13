@@ -1,0 +1,117 @@
+import 'dart:io';
+
+import 'package:dailyworklog/data/models.dart';
+import 'package:dailyworklog/data/store.dart';
+import 'package:dailyworklog/screens/project_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('Checklists always shows; hidden tabs are left out in order', () {
+    expect(visibleTabs({}), ProjectTab.values);
+    expect(visibleTabs({'links', 'seacans'}),
+        [ProjectTab.checklists, ProjectTab.notify, ProjectTab.contacts, ProjectTab.overtime, ProjectTab.attendance,
+          ProjectTab.notes]);
+    expect(tabIds[ProjectTab.attendance], 'attendance');
+    // Eight: four and four. Seven: four on top, three below. Six or fewer: rows of three.
+    expect(tabRows(ProjectTab.values).map((r) => r.length), [4, 4]);
+    expect(tabRows(visibleTabs({'links'})).map((r) => r.length), [4, 3]);
+    expect(tabRows(visibleTabs({'links', 'contacts'})).map((r) => r.length), [3, 3]);
+    expect(tabRows([...ProjectTab.values, ProjectTab.notes]).map((r) => r.length), [3, 3, 3]);
+    expect(tabIds[ProjectTab.contacts], 'contacts');
+    expect(visibleTabs(tabIds.values.toSet()), [ProjectTab.checklists]);
+  });
+
+  testWidgets('hiding tabs with Show or hide tabs', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final dir = Directory.systemTemp.createTempSync('tabs');
+    late Store store;
+    await tester.runAsync(() async => store = await Store.open(dir));
+    final p = Project()..name = 'B44';
+    store.projects.add(p);
+    await tester.pumpWidget(MaterialApp(home: ProjectScreen(projectId: p.id, initialTab: ProjectTab.seaCans)));
+    await tester.pump();
+    expect(find.text('Sea Can Movements'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Project options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show or hide tabs'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Links'));
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Sea Can Movements'));
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(store.hiddenTabs, {'links', 'seacans'});
+    expect(find.text('Links'), findsNothing);
+    expect(find.text('Sea Can Movements'), findsNothing);
+    // The Sea Can tab was open, so it went back to Checklists.
+    expect(find.text('Search all days: fields, notes, sea cans'), findsOneWidget);
+    expect(find.text('Notify'), findsOneWidget);
+  });
+
+  test('contacts: saved, sorted, searched', () {
+    final a = Contact()
+      ..name = 'zed Safety'
+      ..company = 'Acme'
+      ..title = 'Safety coordinator'
+      ..email = 'z@acme.com';
+    final b = Contact()..name = 'Amy Crane'..phone = '519-555-0100'..notes = 'Crane bookings';
+    final c = Contact.fromJson(a.toJson());
+    expect([c.name, c.company, c.title, c.email], ['zed Safety', 'Acme', 'Safety coordinator', 'z@acme.com']);
+    expect(c.titleLine(), 'Safety coordinator · Acme');
+    expect(Contact.sorted([a, b]).map((x) => x.name), ['Amy Crane', 'zed Safety']);
+    expect(b.matches('BOOKING'), isTrue);
+    expect(a.matches('acme'), isTrue);
+    expect(a.matches('crane'), isFalse);
+  });
+
+  testWidgets('Contacts: add, show, edit', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final dir = Directory.systemTemp.createTempSync('tabs');
+    late Store store;
+    await tester.runAsync(() async => store = await Store.open(dir));
+    store.hiddenTabs.clear();
+    store.contacts.clear();
+    final p = Project()..name = 'Job';
+    store.projects.add(p);
+    await tester.pumpWidget(MaterialApp(home: ProjectScreen(projectId: p.id, initialTab: ProjectTab.contacts)));
+    await tester.pump();
+    expect(find.textContaining('No contacts yet'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Enter a name'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Pat Safety');
+    await tester.enterText(find.widgetWithText(TextField, 'Company'), 'Acme');
+    await tester.enterText(find.widgetWithText(TextField, 'Phone number'), '519-555-0100');
+    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'pat@');
+    await tester.enterText(find.widgetWithText(TextField, 'Web link (optional)'), 'acme.com/safety');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Enter a valid email address'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'pat@acme.com');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(store.contacts.single.link, 'https://acme.com/safety');
+    expect(find.text('Pat Safety'), findsOneWidget);
+    expect(find.byTooltip('Call'), findsOneWidget);
+    expect(find.byTooltip('Text'), findsOneWidget);
+    expect(find.byTooltip('Email'), findsOneWidget);
+    expect(find.byTooltip('Open link'), findsOneWidget);
+    await tester.longPress(find.text('Pat Safety'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete contact'), findsOneWidget);
+    await tester.tap(find.text('Delete contact'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(store.contacts, isEmpty);
+  });
+}

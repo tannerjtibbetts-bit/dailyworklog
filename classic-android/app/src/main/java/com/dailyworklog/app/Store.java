@@ -1,0 +1,420 @@
+package com.dailyworklog.app;
+
+import android.content.Context;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Keeps all data in memory and writes it to one JSON file on a background thread,
+ * so saving never stutters the UI. Photos live in files/photos/.
+ */
+public final class Store {
+    private static Store instance;
+
+    public final List<Models.Project> projects = new ArrayList<>();
+    public final List<Models.Link> links = new ArrayList<>();
+    /** Contacts tab (app-wide: the same list in every project). */
+    public final List<Models.Contact> contacts = new ArrayList<>();
+    /** Documents on the Links tab, report forms read from photos or files, and the reports filled in. App-wide. */
+    public final List<Models.Document> documents = new ArrayList<>();
+    public final List<Models.ReportForm> reportForms = new ArrayList<>();
+    public final List<Models.FilledReport> filledReports = new ArrayList<>();
+    public String userName = "";
+    /** Number the crew should call or text you on; added under your name in texts. */
+    public String contactPhone = "";
+    /** Profile: your email, work position and work location (all optional; prefill the Observation form). */
+    public String userEmail = "", workPosition = "", workLocation = "";
+    /** Who load securement photos are emailed to, as typed (commas between several). App-wide. */
+    public String loadEmailTo = "";
+    /** The Gmail address the app sends from. The app password is kept apart (see mailPassword). */
+    public String mailFrom = "";
+    /** Your profile: the task colours on the zone sheet that are your trade's (dark blue by default). */
+    public final java.util.Set<String> myColours = new java.util.LinkedHashSet<>(java.util.Collections.singletonList(ZoneSheet.BLUE));
+    /** Drop-down choices for each person's trade and union local (app-wide; people can add and remove them). */
+    public final List<String> tradeOptions = new ArrayList<>(DEFAULT_TRADES), localOptions = new ArrayList<>();
+    static final List<String> DEFAULT_TRADES = java.util.Collections.unmodifiableList(java.util.Arrays.asList(
+            "Boilermaker", "Millwright", "Teamster", "Electrician", "Labourer", "Pipefitter"));
+    /** Your usual answers for the Observation & Coaching form (Formstack links). */
+    public final FormPrefill.Details formDetails = new FormPrefill.Details();
+    /** Project tabs this person has hidden ("notify", "links", "overtime", "attendance", "notes", "seacans"). */
+    public final java.util.Set<String> hiddenTabs = new java.util.LinkedHashSet<>();
+
+    private final Context app;
+    private final File dataFile;
+    private final File photoDir;
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
+
+    public static synchronized Store get(Context c) {
+        if (instance == null) instance = new Store(c.getApplicationContext());
+        return instance;
+    }
+
+    /** A store with no file behind it, for tests of the JSON. */
+    Store() {
+        app = null;
+        dataFile = null;
+        photoDir = null;
+    }
+
+    /** A store kept in a folder of its own (worklog.json and photos/), for tests. */
+    Store(File dir) {
+        app = null;
+        dataFile = new File(dir, "worklog.json");
+        photoDir = new File(dir, "photos");
+        //noinspection ResultOfMethodCallIgnored
+        photoDir.mkdirs();
+        load();
+    }
+
+    public Models.ReportForm form(String id) {
+        for (Models.ReportForm f : reportForms) if (f.id.equals(id)) return f;
+        return null;
+    }
+
+    /** The form a report uses: the live one when it still exists, else the copy the report kept. */
+    public Models.ReportForm formFor(Models.FilledReport r) {
+        Models.ReportForm live = form(r.formId);
+        return live != null ? live : r.form;
+    }
+
+    /** True if a filled report's copy of a form still uses this file. */
+    public boolean fileInUse(String name) {
+        for (Models.FilledReport r : filledReports) if (r.form != null && r.form.files.contains(name)) return true;
+        for (Models.ReportForm f : reportForms) if (f.files.contains(name)) return true;
+        return false;
+    }
+
+    /** Removes a form; its files go too unless a report's copy (or another form) still uses them. */
+    public void removeForm(Models.ReportForm f) {
+        // Reports started before reports kept a copy of their form get one now.
+        for (Models.FilledReport r : filledReports) if (r.form == null && r.formId.equals(f.id)) r.form = f.copy();
+        reportForms.remove(f);
+        for (String n : f.files) {
+            if (!fileInUse(n)) {
+                //noinspection ResultOfMethodCallIgnored
+                photoFile(n).delete();
+            }
+        }
+    }
+
+    public Models.FilledReport filled(String id) {
+        for (Models.FilledReport r : filledReports) if (r.id.equals(id)) return r;
+        return null;
+    }
+
+    /** A new file name in the photos folder for a document or form page ("doc-<uuid>.<ext>"). */
+    static String newDocFile(String ext) {
+        return "doc-" + java.util.UUID.randomUUID() + "." + ext;
+    }
+
+    File dataFile() {
+        return dataFile;
+    }
+
+    /** Waits until everything saved so far is written to the file. */
+    void flush() {
+        try {
+            io.submit(() -> {}).get();
+        } catch (Exception ignored) {
+            // nothing to wait for
+        }
+    }
+
+    /** Replaces everything with a backup's worklog.json (lists emptied first, settings back to their defaults). */
+    void replaceWith(JSONObject o) {
+        projects.clear();
+        links.clear();
+        contacts.clear();
+        documents.clear();
+        reportForms.clear();
+        filledReports.clear();
+        hiddenTabs.clear();
+        formDetails.answers.clear();
+        myColours.clear();
+        myColours.add(ZoneSheet.BLUE);
+        tradeOptions.clear();
+        tradeOptions.addAll(DEFAULT_TRADES);
+        localOptions.clear();
+        fromJson(o);
+    }
+
+    private Store(Context c) {
+        app = c;
+        dataFile = new File(c.getFilesDir(), "worklog.json");
+        photoDir = new File(c.getFilesDir(), "photos");
+        //noinspection ResultOfMethodCallIgnored
+        photoDir.mkdirs();
+        load();
+    }
+
+    /** Name stamped on completions and photos. */
+    public String me() {
+        return userName.isEmpty() ? "Me" : userName;
+    }
+
+    public File photoFile(String name) {
+        return new File(photoDir, name);
+    }
+
+    public File photoDir() {
+        return photoDir;
+    }
+
+    public Models.Project project(String id) {
+        if (id == null) return null;
+        for (Models.Project p : projects) if (p.id.equals(id)) return p;
+        return null;
+    }
+
+    public void deletePhoto(Models.Photo p) {
+        File f = photoFile(p.file);
+        ImageLoader.evict(f);
+        //noinspection ResultOfMethodCallIgnored
+        f.delete();
+    }
+
+    public void deletePhotos(Models.Task t) {
+        for (Models.Photo p : t.photos) deletePhoto(p);
+        for (Models.Photo p : t.securedPhotos) deletePhoto(p);
+    }
+
+    public void deletePhotos(Models.DailyLog l) {
+        for (Models.Task t : l.tasks) deletePhotos(t);
+    }
+
+    public void deletePhotos(Models.Project p) {
+        for (Models.DailyLog l : p.logs) deletePhotos(l);
+        for (Models.Notice n : p.notices) deletePhotos(n);
+        for (Models.Note n : p.notes) deletePhotos(n);
+    }
+
+    public void deletePhotos(Models.Note n) {
+        for (Models.Photo p : n.photos) deletePhoto(p);
+    }
+
+    public void deletePhotos(Models.Notice n) {
+        for (Models.Photo p : n.photos) deletePhoto(p);
+    }
+
+    // ----- email sending: the Gmail app password, encrypted with a key kept in the phone's key store -----
+
+    private static final String MAIL_KEY = "dwl_mail";
+
+    public String mailPassword() {
+        String w = app.getSharedPreferences("mail", Context.MODE_PRIVATE).getString("appPassword", "");
+        if (w.isEmpty()) return "";
+        try {
+            byte[] all = java.util.Base64.getDecoder().decode(w);
+            javax.crypto.Cipher ci = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+            ci.init(javax.crypto.Cipher.DECRYPT_MODE, mailKey(), new javax.crypto.spec.GCMParameterSpec(128, all, 0, 12));
+            return new String(ci.doFinal(all, 12, all.length - 12), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Spaces are dropped: Google shows the app password in groups of four. */
+    public boolean setMailPassword(String password) {
+        String p = password.replaceAll("\\s", "");
+        try {
+            String w = "";
+            if (!p.isEmpty()) {
+                javax.crypto.Cipher ci = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+                ci.init(javax.crypto.Cipher.ENCRYPT_MODE, mailKey());
+                byte[] iv = ci.getIV();
+                byte[] ct = ci.doFinal(p.getBytes(StandardCharsets.UTF_8));
+                byte[] all = new byte[iv.length + ct.length];
+                System.arraycopy(iv, 0, all, 0, iv.length);
+                System.arraycopy(ct, 0, all, iv.length, ct.length);
+                w = java.util.Base64.getEncoder().encodeToString(all);
+            }
+            app.getSharedPreferences("mail", Context.MODE_PRIVATE).edit().putString("appPassword", w).apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean hasMailSetup() {
+        return !mailFrom.trim().isEmpty() && !mailPassword().isEmpty();
+    }
+
+    private static javax.crypto.SecretKey mailKey() throws Exception {
+        java.security.KeyStore ks = java.security.KeyStore.getInstance("AndroidKeyStore");
+        ks.load(null);
+        if (ks.containsAlias(MAIL_KEY)) return (javax.crypto.SecretKey) ks.getKey(MAIL_KEY, null);
+        javax.crypto.KeyGenerator g = javax.crypto.KeyGenerator.getInstance(
+                android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        g.init(new android.security.keystore.KeyGenParameterSpec.Builder(MAIL_KEY,
+                android.security.keystore.KeyProperties.PURPOSE_ENCRYPT | android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+                .build());
+        return g.generateKey();
+    }
+
+    private void load() {
+        if (!dataFile.exists()) return;
+        try {
+            fromJson(new JSONObject(read(dataFile)));
+        } catch (Exception e) {
+            // Keep a copy of an unreadable file instead of overwriting it.
+            //noinspection ResultOfMethodCallIgnored
+            dataFile.renameTo(new File(dataFile.getParentFile(),
+                    "worklog-unreadable-" + System.currentTimeMillis() + ".json"));
+        }
+    }
+
+    /** Fills this store from worklog.json's contents. */
+    void fromJson(JSONObject o) {
+        userName = o.optString("userName", "");
+        contactPhone = o.optString("contactPhone", "");
+        userEmail = o.optString("userEmail", "");
+        workPosition = o.optString("workPosition", "");
+        workLocation = o.optString("workLocation", "");
+        loadEmailTo = o.optString("loadEmailTo", "");
+        mailFrom = o.optString("mailFrom", "");
+        JSONArray mc = o.optJSONArray("myColours");
+        if (mc != null) {
+            myColours.clear();
+            for (int i = 0; i < mc.length(); i++) myColours.add(mc.optString(i));
+        }
+        JSONArray to = o.optJSONArray("tradeOptions");
+        if (to != null) {  // present but empty: the person removed them all
+            tradeOptions.clear();
+            tradeOptions.addAll(Models.fromArray(to));
+        }
+        localOptions.clear();
+        localOptions.addAll(Models.fromArray(o.optJSONArray("localOptions")));
+        JSONArray ht = o.optJSONArray("hiddenTabs");
+        for (int i = 0; ht != null && i < ht.length(); i++) hiddenTabs.add(ht.optString(i));
+        JSONObject fd = o.optJSONObject("formDetails");
+        if (fd != null) {
+            java.util.Iterator<String> keys = fd.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                formDetails.answers.put(k, fd.optString(k, ""));
+            }
+        }
+        JSONArray a = o.optJSONArray("projects");
+        if (a != null) {
+            for (int i = 0; i < a.length(); i++) {
+                JSONObject p = a.optJSONObject(i);
+                if (p != null) projects.add(Models.Project.fromJson(p));
+            }
+        }
+        JSONArray cs = o.optJSONArray("contacts");
+        for (int i = 0; cs != null && i < cs.length(); i++) {
+            JSONObject c = cs.optJSONObject(i);
+            if (c != null) contacts.add(Models.Contact.fromJson(c));
+        }
+        JSONArray ds = o.optJSONArray("documents");
+        for (int i = 0; ds != null && i < ds.length(); i++) {
+            JSONObject x = ds.optJSONObject(i);
+            if (x != null) documents.add(Models.Document.fromJson(x));
+        }
+        JSONArray rf = o.optJSONArray("reportForms");
+        for (int i = 0; rf != null && i < rf.length(); i++) {
+            JSONObject x = rf.optJSONObject(i);
+            if (x != null) reportForms.add(Models.ReportForm.fromJson(x));
+        }
+        JSONArray fr = o.optJSONArray("filledReports");
+        for (int i = 0; fr != null && i < fr.length(); i++) {
+            JSONObject x = fr.optJSONObject(i);
+            if (x != null) filledReports.add(Models.FilledReport.fromJson(x));
+        }
+        JSONArray ls = o.optJSONArray("links");
+        if (ls != null) {
+            for (int i = 0; i < ls.length(); i++) {
+                JSONObject l = ls.optJSONObject(i);
+                if (l != null) links.add(Models.Link.fromJson(l));
+            }
+        }
+    }
+
+    /** Everything as worklog.json's contents. */
+    JSONObject toJson() throws JSONException {
+        JSONObject o = new JSONObject();
+        o.put("version", 2);
+        o.put("userName", userName);
+        o.put("contactPhone", contactPhone);
+        o.put("userEmail", userEmail);
+        o.put("workPosition", workPosition);
+        o.put("workLocation", workLocation);
+        o.put("loadEmailTo", loadEmailTo);
+        o.put("mailFrom", mailFrom);
+        JSONArray mc = new JSONArray();
+        for (String c : myColours) mc.put(c);
+        o.put("myColours", mc);
+        JSONArray ht = new JSONArray();
+        for (String t : hiddenTabs) ht.put(t);
+        o.put("hiddenTabs", ht);
+        o.put("tradeOptions", Models.toArray(tradeOptions));
+        o.put("localOptions", Models.toArray(localOptions));
+        JSONObject fd = new JSONObject();
+        for (java.util.Map.Entry<String, String> e : formDetails.answers.entrySet()) fd.put(e.getKey(), e.getValue());
+        o.put("formDetails", fd);
+        JSONArray a = new JSONArray();
+        for (Models.Project p : projects) a.put(p.toJson());
+        o.put("projects", a);
+        JSONArray ls = new JSONArray();
+        for (Models.Link l : links) ls.put(l.toJson());
+        o.put("links", ls);
+        JSONArray cs = new JSONArray();
+        for (Models.Contact c : contacts) cs.put(c.toJson());
+        o.put("contacts", cs);
+        JSONArray ds = new JSONArray();
+        for (Models.Document d : documents) ds.put(d.toJson());
+        o.put("documents", ds);
+        JSONArray rf = new JSONArray();
+        for (Models.ReportForm f : reportForms) rf.put(f.toJson());
+        o.put("reportForms", rf);
+        JSONArray fr = new JSONArray();
+        for (Models.FilledReport r : filledReports) fr.put(r.toJson());
+        o.put("filledReports", fr);
+        return o;
+    }
+
+    private static String read(File f) throws IOException {
+        try (FileInputStream in = new FileInputStream(f)) {
+            ByteArrayOutputStream b = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+            return b.toString("UTF-8");
+        }
+    }
+
+    public void save() {
+        final String json;
+        try {
+            json = toJson().toString();
+        } catch (JSONException e) {
+            return;
+        }
+        io.execute(() -> {
+            File tmp = new File(dataFile.getPath() + ".tmp");
+            try (FileOutputStream out = new FileOutputStream(tmp)) {
+                out.write(json.getBytes(StandardCharsets.UTF_8));
+                out.getFD().sync();
+            } catch (IOException e) {
+                return;
+            }
+            //noinspection ResultOfMethodCallIgnored
+            tmp.renameTo(dataFile);
+        });
+    }
+}
