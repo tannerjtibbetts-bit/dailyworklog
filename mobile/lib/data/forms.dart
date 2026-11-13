@@ -881,11 +881,53 @@ class CrewNumbers {
   static String key(String name) =>
       name.toLowerCase().replaceAll(RegExp(r"[.'\-]"), '').replaceAll(RegExp(r'\s+'), ' ').trim();
 
+  /// The crew member a listed name means: the same name (ignoring case, spaces and . ' -); else the only one with
+  /// the same last name whose first name starts the other's ("Dan" / "Daniel"); else the only one at most 2 letters
+  /// off ("Colby" / "Colbe", names of 6+ letters). Null when none or more than one fit.
+  static String? match(List<String> crew, String name) {
+    final k = key(name);
+    for (final c in crew) {
+      if (key(c) == k) return c;
+    }
+    final w = k.split(' ');
+    if (w.length >= 2) {
+      final fits = [
+        for (final c in crew)
+          if (key(c).split(' ').length >= 2 &&
+              key(c).split(' ').last == w.last &&
+              (key(c).split(' ').first.startsWith(w.first) || w.first.startsWith(key(c).split(' ').first)))
+            c,
+      ];
+      if (fits.length == 1) return fits.single;
+    }
+    if (k.length >= 6) {
+      final close = [
+        for (final c in crew)
+          if (key(c).length >= 6 && distance(key(c), k) <= 2) c,
+      ];
+      if (close.length == 1) return close.single;
+    }
+    return null;
+  }
+
+  /// Letters to change, add or remove to turn [a] into [b].
+  static int distance(String a, String b) {
+    var prev = List<int>.generate(b.length + 1, (j) => j);
+    for (var i = 1; i <= a.length; i++) {
+      final cur = List<int>.filled(b.length + 1, 0)..[0] = i;
+      for (var j = 1; j <= b.length; j++) {
+        cur[j] = math.min(math.min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
   static CrewNumbersResult apply(Project p, List<CrewNumberRow> rows) {
     final updated = <String>[];
     final missing = <CrewNumberRow>[];
     for (final r in rows) {
-      final who = p.crew.where((n) => key(n) == key(r.name)).firstOrNull;
+      final who = match(p.crew, r.name);
       if (who == null) {
         missing.add(r);
         continue;
@@ -900,7 +942,7 @@ class CrewNumbers {
   static void addMissing(Project p, List<CrewNumberRow> rows) {
     for (final r in rows) {
       final name = r.name.trim();
-      if (name.isEmpty || p.crew.any((n) => key(n) == key(name))) continue;
+      if (name.isEmpty || match(p.crew, name) != null) continue;
       p.crew.add(name);
       _set(p, name, r);
     }

@@ -2385,7 +2385,7 @@
             "In your crew list (for example in Excel), select the rows with the headings, including the names and the numbers, and copy them.",
             "In Manage crew, tap \"Paste crew numbers\" at the bottom.",
             "Paste into the box and tap \"Add numbers\".",
-            "The app matches each row to a crew member by name and fills in their Employee #, BP # and DISN #. It tells you how many it updated.",
+            "The app matches each row to a crew member by name (short forms like \"Dan\" for \"Daniel\", and names a letter or two off, still match when only one person fits) and fills in their Employee #, BP # and DISN #. It tells you how many it updated.",
             "If some names aren't on this project's crew, it lists them. Tap \"Add them to the crew\" to add them, or check the spelling and try again."
           ]
         },

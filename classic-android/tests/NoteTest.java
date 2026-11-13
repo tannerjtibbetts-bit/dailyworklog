@@ -1585,6 +1585,22 @@ class SafeguardsTest {
 class RowsAndDatesTest {
   static FormReader.Line l(String t, double x0, double y0, double x1, double y1) { return new FormReader.Line(t, 0, x0, y0, x1, y1); }
   public static void main(String[] a) throws Exception {
+    // Crew names that are close (Dan/Daniel, Colby/Colbe) still get their numbers; only empty ones are filled.
+    java.util.List<String> crew = java.util.Arrays.asList("Daniel Walker", "Colby Davey", "Tyson Zimmer", "Sam Maint", "Sam Mainte");
+    NoteTest.check("Daniel Walker".equals(CrewNumbers.match(crew, "Dan Walker")), "short first name");
+    NoteTest.check("Colby Davey".equals(CrewNumbers.match(crew, "Colbe Davey")), "a letter off");
+    NoteTest.check("Tyson Zimmer".equals(CrewNumbers.match(crew, "TYSON  zimmer")), "same name");
+    NoteTest.check(CrewNumbers.match(crew, "Sam Maintt") == null, "two could fit: none");
+    NoteTest.check(CrewNumbers.match(crew, "Hope Ostachuck") == null, "not on the crew");
+    Models.Project cp = new Models.Project();
+    cp.crew.addAll(crew);
+    cp.bpNumbers.put("Tyson Zimmer", "999");
+    int n = CrewNumbers.fillEmpty(java.util.Collections.singletonList(cp), CrewNumbers.parse(
+        "Name | Employee # | BP # | DISN #\nDan Walker | 1 | 2 | 3\nColbe Davey | 4 | 5 | 6\nTyson Zimmer | 7 | 8 | 9"));
+    NoteTest.check(n == 3, "3 people got numbers: " + n);
+    NoteTest.check("999".equals(cp.bpNumbers.get("Tyson Zimmer")) && "7".equals(cp.employeeNumbers.get("Tyson Zimmer")), "typed number kept, empty ones filled");
+    NoteTest.check("5".equals(cp.bpNumbers.get("Colby Davey")), "Colby got Colbe's numbers");
+    NoteTest.check(CrewNumbers.fillEmpty(java.util.Collections.singletonList(cp), CrewNumbers.parse("Dan Walker | 1 | 2 | 3")) == 0, "nothing new the second time");
     // "To" printed in another column is joined to its "Period covered from" (reading, and saved forms).
     FormReader.Result cols = FormReader.read(java.util.Arrays.asList("DATE:", "EMPLOYEE #", "TERM:", "TO:", "NAME:", "EMPLOYER",
         "PERIOD COVERED FROM:", "A. WORK DONE IN THE ABOVE PERIOD:"));

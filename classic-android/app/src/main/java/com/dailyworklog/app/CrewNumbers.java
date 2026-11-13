@@ -127,12 +127,63 @@ final class CrewNumbers {
         return name.toLowerCase(Locale.ROOT).replaceAll("[.'’-]", "").replaceAll("\\s+", " ").trim();
     }
 
+    /**
+     * The crew member a listed name means: the same name (ignoring case, spaces and . ' -); else the only one with
+     * the same last name whose first name starts the other's ("Dan" / "Daniel"); else the only one at most 2 letters
+     * off ("Colby" / "Colbe", names of 6+ letters). Null when none or more than one fit.
+     */
+    static String match(List<String> crew, String name) {
+        String k = key(name);
+        for (String c : crew) if (key(c).equals(k)) return c;
+        String[] w = k.split(" ");
+        String found = null;
+        int n = 0;
+        if (w.length >= 2) {
+            for (String c : crew) {
+                String[] cw = key(c).split(" ");
+                if (cw.length < 2 || !cw[cw.length - 1].equals(w[w.length - 1])) continue;
+                if (cw[0].startsWith(w[0]) || w[0].startsWith(cw[0])) {
+                    found = c;
+                    n++;
+                }
+            }
+            if (n == 1) return found;
+        }
+        found = null;
+        n = 0;
+        if (k.length() >= 6) {
+            for (String c : crew) {
+                String ck = key(c);
+                if (ck.length() >= 6 && distance(ck, k) <= 2) {
+                    found = c;
+                    n++;
+                }
+            }
+        }
+        return n == 1 ? found : null;
+    }
+
+    /** Letters to change, add or remove to turn a into b. */
+    static int distance(String a, String b) {
+        int[] prev = new int[b.length() + 1], cur = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) prev[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            cur[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                cur[j] = Math.min(Math.min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + (a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1));
+            }
+            int[] t = prev;
+            prev = cur;
+            cur = t;
+        }
+        return prev[b.length()];
+    }
+
     /** Puts the numbers on the matching crew members (non-empty numbers overwrite). */
     static Applied apply(Models.Project p, List<Row> rows) {
         Applied a = new Applied();
         for (Row r : rows) {
-            String who = null;
-            for (String c : p.crew) if (key(c).equals(key(r.name))) who = c;
+            String who = match(p.crew, r.name);
             if (who == null) {
                 a.missing.add(r);
                 continue;
@@ -181,17 +232,32 @@ final class CrewNumbers {
         } catch (java.io.IOException e) {
             return -1; // none in this build
         }
-        android.content.SharedPreferences prefs = c.getSharedPreferences("crewNumbers", android.content.Context.MODE_PRIVATE);
-        String sig = Integer.toHexString(text.hashCode()) + ":" + text.length();
-        if (sig.equals(prefs.getString("applied", ""))) return -1;
-        List<Row> rows = parse(text);
+        // Every time the app opens: crew added since get their numbers too. Only EMPTY numbers are filled, so
+        // anything typed or changed in Manage Crew stays.
+        int filled = fillEmpty(store.projects, parse(text));
+        if (filled > 0) store.save();
+        return filled > 0 ? filled : -1;
+    }
+
+    /** Fills only empty Employee #, BP # and DISN # from the list; returns how many people got something. */
+    static int fillEmpty(List<Models.Project> projects, List<Row> rows) {
         java.util.Set<String> people = new java.util.HashSet<>();
-        for (Models.Project p : store.projects) {
-            for (String who : apply(p, rows).updated) people.add(key(who));
+        for (Models.Project p : projects) {
+            for (Row r : rows) {
+                String who = match(p.crew, r.name);
+                if (who == null) continue;
+                boolean any = false;
+                if (!r.employeeNo.isEmpty() && empty(p.employeeNumbers.get(who))) { p.employeeNumbers.put(who, r.employeeNo); any = true; }
+                if (!r.bp.isEmpty() && empty(p.bpNumbers.get(who))) { p.bpNumbers.put(who, r.bp); any = true; }
+                if (!r.disn.isEmpty() && empty(p.disnNumbers.get(who))) { p.disnNumbers.put(who, r.disn); any = true; }
+                if (any) people.add(key(who));
+            }
         }
-        store.save();
-        prefs.edit().putString("applied", sig).apply();
         return people.size();
+    }
+
+    private static boolean empty(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     private static byte[] readAll(java.io.InputStream in) throws java.io.IOException {

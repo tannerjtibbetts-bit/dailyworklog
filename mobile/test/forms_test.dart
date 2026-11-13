@@ -482,4 +482,17 @@ void main() {
         ['q2:Name/text', 'q3:Period covered from/date', 'q1:Period covered to/date']);
     expect(FormFill.rangeEnd(saved, saved.questions[1])!.id, 'q1');
   });
+
+  test('crew names that are close still get their numbers', () {
+    final crew = ['Daniel Walker', 'Colby Davey', 'Tyson Zimmer', 'Sam Maint', 'Sam Mainte'];
+    expect(CrewNumbers.match(crew, 'Dan Walker'), 'Daniel Walker');
+    expect(CrewNumbers.match(crew, 'Colbe Davey'), 'Colby Davey');
+    expect(CrewNumbers.match(crew, 'TYSON  zimmer'), 'Tyson Zimmer');
+    expect(CrewNumbers.match(crew, 'Sam Maintt'), isNull); // two could fit
+    expect(CrewNumbers.match(crew, 'Hope Ostachuck'), isNull);
+    final p = Project()..crew = List.of(crew);
+    final r = CrewNumbers.apply(p, CrewNumbers.parse('Dan Walker | 1 | 2 | 3\nColbe Davey | 4 | 5 | 6'));
+    expect(r.updated, ['Daniel Walker', 'Colby Davey']);
+    expect(p.bpNumbers['Colby Davey'], '5');
+  });
 }
