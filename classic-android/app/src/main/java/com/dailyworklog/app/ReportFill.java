@@ -42,7 +42,8 @@ final class ReportFill {
     private static final Pattern PROJECT = words("project|job name|job site");
     private static final Pattern LOCATION = words("location|area");
     private static final Pattern GROUP = words("group|crew");
-    private static final Pattern CARRY = words("employer|company|term|department|shift");
+    private static final Pattern TERM = words("term");
+    private static final Pattern CARRY = words("employer|company|department|shift");
     private static final Pattern ANY_PERSON = words("employer|company");
 
     private static boolean has(Pattern p, String l) {
@@ -77,6 +78,7 @@ final class ReportFill {
         if (has(PROJECT, l)) return p == null ? "" : p.name;
         if (has(LOCATION, l)) return p != null && !p.location.isEmpty() ? p.location : store.workLocation;
         if (has(GROUP, l)) return p == null ? "" : p.groupName(p.roleOf(person));
+        if (has(TERM, l)) return p == null ? "" : p.termOf(person);  // empty when they have none (no carry-over)
         if (has(CARRY, l)) {
             String same = carried(form, r, q, earlier, true);
             if (!same.isEmpty() || !has(ANY_PERSON, l)) return same;

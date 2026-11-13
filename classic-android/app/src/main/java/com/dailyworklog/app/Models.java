@@ -1299,6 +1299,15 @@ public final class Models {
         public Map<String, String> employeeNumbers = new LinkedHashMap<>();
         /** BP # and DISN # by name. */
         public Map<String, String> bpNumbers = new LinkedHashMap<>(), disnNumbers = new LinkedHashMap<>();
+        /** An apprentice's term ("1st term" to "4th term"), by name. */
+        public Map<String, String> terms = new LinkedHashMap<>();
+        public static final List<String> TERMS = java.util.Collections.unmodifiableList(
+                java.util.Arrays.asList("1st term", "2nd term", "3rd term", "4th term"));
+
+        public String termOf(String name) {
+            String v = terms.get(name);
+            return v == null ? "" : v;
+        }
         /** People who get a text when assigned to a field. Nobody does unless ticked. */
         public Set<String> assignTexts = new LinkedHashSet<>();
         /** Sea Can Movements tab, one line per sea can. */
@@ -1423,7 +1432,7 @@ public final class Models {
         /** "Millwright · Journeyman · Local 1687" (what's set of trade, level, union local). */
         public String personLine(String name) {
             List<String> parts = new ArrayList<>();
-            for (String v : new String[]{tradeOf(name), levelOf(name), localOf(name)}) if (!v.isEmpty()) parts.add(v);
+            for (String v : new String[]{tradeOf(name), levelOf(name), termOf(name), localOf(name)}) if (!v.isEmpty()) parts.add(v);
             return String.join(" \u00B7 ", parts);
         }
 
@@ -1435,7 +1444,7 @@ public final class Models {
             if (ph != null) phones.put(to, ph);
             String r = roles.remove(from);
             if (r != null) roles.put(to, r);
-            for (Map<String, String> m : java.util.Arrays.asList(levels, trades, unionLocals, employeeNumbers, bpNumbers, disnNumbers)) {
+            for (Map<String, String> m : java.util.Arrays.asList(levels, trades, unionLocals, employeeNumbers, bpNumbers, disnNumbers, terms)) {
                 String v = m.remove(from);
                 if (v != null) m.put(to, v);
             }
@@ -1588,6 +1597,7 @@ public final class Models {
             o.put("employeeNumbers", mapJson(employeeNumbers));
             o.put("bpNumbers", mapJson(bpNumbers));
             o.put("disnNumbers", mapJson(disnNumbers));
+            o.put("terms", mapJson(terms));
             o.put("assignTexts", toArray(new ArrayList<>(assignTexts)));
             JSONArray nt = new JSONArray();
             for (Note x : notes) nt.put(x.toJson());
@@ -1660,6 +1670,8 @@ public final class Models {
             readMap(o.optJSONObject("employeeNumbers"), p.employeeNumbers);
             readMap(o.optJSONObject("bpNumbers"), p.bpNumbers);
             readMap(o.optJSONObject("disnNumbers"), p.disnNumbers);
+            readMap(o.optJSONObject("terms"), p.terms);
+            p.terms.values().removeIf(v -> !TERMS.contains(v));
             p.assignTexts.addAll(fromArray(o.optJSONArray("assignTexts")));
             JSONArray nt = o.optJSONArray("notes");
             if (nt != null) {

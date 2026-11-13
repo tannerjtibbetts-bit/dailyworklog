@@ -30,7 +30,7 @@ final class CrewDialog {
 
     /** What the box holds. */
     static final class Person {
-        String name = "", phone = "", employeeNo = "", bp = "", disn = "", group = "", level = "", trade = "", local = "";
+        String name = "", phone = "", employeeNo = "", bp = "", disn = "", term = "", group = "", level = "", trade = "", local = "";
         boolean texts;
 
         /** Someone already on the project. */
@@ -41,6 +41,7 @@ final class CrewDialog {
             x.employeeNo = p.employeeNumberOf(name);
             x.bp = p.bpOf(name);
             x.disn = p.disnOf(name);
+            x.term = p.termOf(name);
             x.group = p.roleOf(name);
             x.level = p.levelOf(name);
             x.trade = p.tradeOf(name);
@@ -55,6 +56,8 @@ final class CrewDialog {
             Models.Project.putOrRemove(p.employeeNumbers, as, employeeNo);
             Models.Project.putOrRemove(p.bpNumbers, as, bp);
             Models.Project.putOrRemove(p.disnNumbers, as, disn);
+            // A term only goes with Apprentice.
+            Models.Project.putOrRemove(p.terms, as, showsTerm(level) && Models.Project.TERMS.contains(term) ? term : "");
             p.roles.put(as, group.isEmpty() ? p.groups.get(0).id : group);
             Models.Project.putOrRemove(p.levels, as, level);
             Models.Project.putOrRemove(p.trades, as, trade);
@@ -107,9 +110,18 @@ final class CrewDialog {
         // Level: tap one to pick it, tap it again to clear
         String[] level = {start.level};
         TextView appr = v.findViewById(R.id.levelApprentice), journ = v.findViewById(R.id.levelJourneyman);
+        // Term: only while Level is Apprentice.
+        android.widget.Spinner term = v.findViewById(R.id.term);
+        List<String> terms = new ArrayList<>();
+        terms.add("None");
+        terms.addAll(Models.Project.TERMS);
+        term.setAdapter(adapter(c, terms));
+        term.setSelection(Math.max(0, terms.indexOf(start.term)));
+        View termBox = v.findViewById(R.id.termBox);
         Runnable showLevel = () -> {
             chip(c, appr, Models.Project.APPRENTICE.equals(level[0]));
             chip(c, journ, Models.Project.JOURNEYMAN.equals(level[0]));
+            termBox.setVisibility(showsTerm(level[0]) ? View.VISIBLE : View.GONE);
         };
         appr.setOnClickListener(x -> {
             level[0] = Models.Project.APPRENTICE.equals(level[0]) ? "" : Models.Project.APPRENTICE;
@@ -150,6 +162,8 @@ final class CrewDialog {
             int g = group.getSelectedItemPosition();
             out.group = project.groups.get(g >= 0 && g < project.groups.size() ? g : 0).id;
             out.level = level[0];
+            int t = term.getSelectedItemPosition();
+            out.term = showsTerm(level[0]) && t > 0 ? terms.get(t) : "";
             out.trade = trade[0];
             out.local = local[0];
             out.texts = ((CheckBox) v.findViewById(R.id.texts)).isChecked();
@@ -160,6 +174,11 @@ final class CrewDialog {
         }
         d.show();
         if (onRemove == null) name.requestFocus();
+    }
+
+    /** The Term drop-down shows only for an apprentice. */
+    static boolean showsTerm(String level) {
+        return Models.Project.APPRENTICE.equals(level);
     }
 
     private static ArrayAdapter<String> adapter(Context c, List<String> items) {

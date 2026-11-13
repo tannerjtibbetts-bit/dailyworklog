@@ -1252,9 +1252,17 @@ class AutoFillTest {
     Models.FilledReport nr = new Models.FilledReport(); nr.formId = "g"; nr.person = "Al";
     Models.FormQuestion term2 = new Models.FormQuestion("x", "term", "text");
     RichTest.eq(ReportFill.suggest(s, p, g, nr, emp, earlier, 0), "Acme", "employer from anyone when Al has none");
-    RichTest.eq(ReportFill.suggest(s, p, g, nr, term, earlier, 0), "4", "term: Al's latest");
+    RichTest.eq(ReportFill.suggest(s, p, g, nr, term, earlier, 0), "", "term: no carry-over (Al has no term)");
+    p.terms.put("Al", "2nd term");
+    RichTest.eq(ReportFill.suggest(s, p, g, nr, term, earlier, 0), "2nd term", "term: the person's term");
+    Models.FormQuestion dept = new Models.FormQuestion("dp", "Department", "text"); g.questions.add(dept);
+    old3.answers.put(dept.id, "Maintenance");
+    RichTest.eq(ReportFill.suggest(s, p, g, nr, dept, earlier, 0), "Maintenance", "department still carries over");
     Models.FilledReport cyr = new Models.FilledReport(); cyr.formId = "g"; cyr.person = "cy";
-    RichTest.eq(ReportFill.suggest(s, p, g, cyr, term, earlier, 0), "", "term only from the same person");
+    RichTest.eq(ReportFill.suggest(s, p, g, cyr, term, earlier, 0), "", "term empty when none");
+    Models.FilledReport tb = new Models.FilledReport(); tb.person = "cy";
+    ReportFill.setAnswer(p, term, tb, "3rd term", 1);
+    NoteTest.check(p.termOf("cy").isEmpty(), "term not saved back from a typed answer");
     // Saving back to the person
     Models.FilledReport br = new Models.FilledReport(); br.person = "Bo";
     ReportFill.setAnswer(p, new Models.FormQuestion("a", "Employee no.", "text"), br, " B-7 ", 5);
@@ -1464,3 +1472,78 @@ class FormCopyTest {
     System.out.println("FORMCOPY PASS");
     System.exit(0);
   } }
+class FormLinesTest {
+  static void rect(int[] lum, int w, int x1, int y1, int x2, int y2) {
+    for (int y = y1; y <= y2; y++) for (int x = x1; x <= x2; x++) lum[y * w + x] = FormLines.luminance(0x141414);
+  }
+  static void near(double got, double want, double tol, String name) {
+    if (Math.abs(got - want) > tol) System.out.println("got " + got + " want " + want);
+    NoteTest.check(Math.abs(got - want) <= tol, name);
+  }
+  public static void main(String[] a) throws Exception {
+    // A white 1000 x 1400 page with: a line right of "NAME:", a heading's underline, 3 ruled lines, and letters.
+    int w = 1000, h = 1400;
+    int[] lum = new int[w * h];
+    java.util.Arrays.fill(lum, FormLines.luminance(0xFAFAFA));
+    rect(lum, w, 220, 300, 550, 301);  // NAME blank
+    rect(lum, w, 600, 420, 700, 421);  // underline under the heading words
+    for (int y : new int[]{520, 560, 600}) rect(lum, w, 150, y, 900, y + 1);  // comment lines
+    for (int x = 100; x < 400; x += 14) rect(lum, w, x, 700, x + 9, 716);  // "text": short dark blocks
+    java.util.List<FormLines.Segment> segs = FormLines.find(lum, w, h, 0);
+    NoteTest.check(segs.size() == 5, "5 segments " + segs);
+    near(segs.get(0).x0, 0.22, 0.005, "first x0"); near(segs.get(0).x1, 0.551, 0.005, "first x1"); near(segs.get(0).y * 1400, 300.5, 1.5, "first y");
+    java.util.List<FormReader.Line> lines = java.util.Arrays.asList(
+        new FormReader.Line("NAME:", 0, 100 / 1000.0, 280 / 1400.0, 160 / 1000.0, 298 / 1400.0),
+        new FormReader.Line("Point System", 0, 600 / 1000.0, 400 / 1400.0, 700 / 1000.0, 418 / 1400.0),
+        new FormReader.Line("C. Your overall comment on the apprentice:", 0, 100 / 1000.0, 480 / 1400.0, 480 / 1000.0, 498 / 1400.0));
+    FormReader.Result r = FormReader.readLines(lines, segs);
+    Models.Place name = null, comment = null;
+    for (Models.FormQuestion q : r.questions) {
+      if (q.label.equals("Name")) name = q.place;
+      if (q.kind.equals("long")) comment = q.place;
+    }
+    near(name.x, 0.226, 0.002, "Name starts where its line starts");
+    near(name.w, 0.551 - 0.22 - 0.012, 0.004, "Name width = the line's length");
+    near(comment.x, 0.156, 0.002, "comment x");
+    NoteTest.check(comment.rows.size() == 2, "comment carries on to the next two ruled lines");
+    near(comment.y, 520.5 / 1400 - 0.0045, 0.002, "comment y");
+    // Fitting: 10 units per character at size 1.
+    java.util.function.ToDoubleFunction<String> at1 = t -> t.length() * 10.0;
+    NoteTest.check(Fit.oneLine("Tyson Zimmer", 2000, 1, at1) == 1, "fits");
+    NoteTest.check(Fit.oneLine("Aecon Industrial Western", 120, 1, at1) == 0.5, "shrinks, not below half");
+    Fit.Rows fit = Fit.rows("one two three four five six seven eight nine ten", 200, 2, 1, at1);
+    NoteTest.check(fit.lines.size() <= 3 && fit.size < 1, "rows: smaller to fit");
+    RichTest.eq(Fit.wrap("a b c", 30, t -> t.length() * 10.0), java.util.Arrays.asList("a b", "c"), "wrap");
+    RichTest.eq(Fit.wrap("abcdefgh", 30, t -> t.length() * 10.0), java.util.Arrays.asList("abc", "def", "gh"), "long word split");
+    // Moving keeps the line length and moves the following lines too.
+    Models.Place moved = comment.moved(0.01, 0.02);
+    NoteTest.check(moved.w == comment.w && Math.abs(moved.rows.get(0) - (comment.rows.get(0) + 0.02)) < 1e-9, "moved");
+    Models.Place back = Models.Place.fromJson(comment.toJson());
+    NoteTest.check(back.rows.size() == 2 && Math.abs(back.w - comment.w) < 1e-9, "w / rows round trip");
+    org.json.JSONObject plain = new Models.Place(0, 0.5, 0.5).toJson();
+    NoteTest.check(!plain.has("w") && !plain.has("rows"), "w / rows omitted when none");
+    near(new Models.Place(0, 0.5, 0.5).width(), 0.46, 1e-9, "no line: to the page's edge");
+    // Without segments: the section 8 placement, w = 0
+    FormReader.Result none = FormReader.readLines(lines);
+    NoteTest.check(none.questions.get(0).place.w == 0 && none.questions.get(0).place.rows.isEmpty(), "no lines found: old placement");
+    System.out.println("FORMLINES PASS"); } }
+class TermTest {
+  public static void main(String[] a) throws Exception {
+    Models.Project p = new Models.Project(); p.crew.add("Al"); p.levels.put("Al", "Apprentice"); p.trades.put("Al", "Millwright");
+    p.unionLocals.put("Al", "Local 1687"); p.terms.put("Al", "2nd term");
+    RichTest.eq(p.personLine("Al"), "Millwright \u00B7 Apprentice \u00B7 2nd term \u00B7 Local 1687", "trade line with the term");
+    org.json.JSONObject j = p.toJson(); j.getJSONObject("terms").put("Bo", "5th term").put("Cy", " ");
+    Models.Project q = Models.Project.fromJson(j);
+    NoteTest.check(q.termOf("Al").equals("2nd term") && !q.terms.containsKey("Bo") && !q.terms.containsKey("Cy"), "terms round trip, others dropped");
+    p.renamePerson("Al", "Alan");
+    NoteTest.check(p.termOf("Alan").equals("2nd term") && p.termOf("Al").isEmpty(), "rename moves the term");
+    NoteTest.check(CrewDialog.showsTerm("Apprentice") && !CrewDialog.showsTerm("Journeyman") && !CrewDialog.showsTerm(""), "Term shows only for Apprentice");
+    CrewDialog.Person x = CrewDialog.Person.of(p, "Alan");
+    NoteTest.check(x.term.equals("2nd term"), "person box starts with the term");
+    x.level = "Journeyman"; x.saveTo(p, "Alan");
+    NoteTest.check(p.termOf("Alan").isEmpty(), "not Apprentice: term removed");
+    x.level = "Apprentice"; x.term = "4th term"; x.saveTo(p, "Alan");
+    NoteTest.check(p.termOf("Alan").equals("4th term"), "apprentice: term saved");
+    x.term = ""; x.saveTo(p, "Alan");
+    NoteTest.check(!p.terms.containsKey("Alan"), "None removes it");
+    System.out.println("TERM PASS"); } }
