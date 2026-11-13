@@ -804,8 +804,13 @@ void main() {
       )));
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
+      expect(find.text('Term'), findsNothing); // only for apprentices
+      await tester.tap(find.text('Apprentice'));
+      await tester.pump();
+      expect(find.text('Term'), findsOneWidget);
       await tester.tap(find.text('Journeyman'));
       await tester.pump();
+      expect(find.text('Term'), findsNothing);
       await tester.tap(find.text('Crew').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Techs').last);

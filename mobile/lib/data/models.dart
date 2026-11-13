@@ -764,6 +764,7 @@ class CrewGroup {
 class Project {
   static const crewRole = 'crew', techRole = 'tech', mgmtRole = 'mgmt';
   static const levelOptions = ['Apprentice', 'Journeyman'];
+  static const termOptions = ['1st term', '2nd term', '3rd term', '4th term'];
 
   static List<CrewGroup> defaultGroups() =>
       [CrewGroup(crewRole, 'Crew'), CrewGroup(techRole, 'Techs'), CrewGroup(mgmtRole, 'Supervision')];
@@ -796,6 +797,9 @@ class Project {
 
   /// "Apprentice" or "Journeyman", trade and union local, by name.
   Map<String, String> levels = {}, trades = {}, unionLocals = {};
+
+  /// An apprentice's term ("1st term" … "4th term"), by name.
+  Map<String, String> terms = {};
 
   /// Employee number, BP # and DISN # by name (Manage Crew), used to fill in report forms.
   Map<String, String> employeeNumbers = {}, bpNumbers = {}, disnNumbers = {};
@@ -850,8 +854,10 @@ class Project {
   }
 
   /// "Millwright · Journeyman · Local 1687", or ''.
-  String tradeLine(String name) =>
-      [trades[name], levels[name], unionLocals[name]].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+  String tradeLine(String name) => [trades[name], levels[name], terms[name], unionLocals[name]]
+      .whereType<String>()
+      .where((s) => s.isNotEmpty)
+      .join(' · ');
 
   /// Renames someone everywhere they appear: crew, checklists, fields, notes sent, overtime and attendance.
   void renamePerson(String from, String to) {
@@ -859,7 +865,7 @@ class Project {
     _replaceIn(crew, from, to);
     final ph = phones.remove(from);
     if (ph != null) phones[to] = ph;
-    for (final m in [roles, levels, trades, unionLocals, employeeNumbers, bpNumbers, disnNumbers]) {
+    for (final m in [roles, levels, trades, unionLocals, employeeNumbers, bpNumbers, disnNumbers, terms]) {
       final v = m.remove(from);
       if (v != null) m[to] = v;
     }
@@ -1021,6 +1027,7 @@ class Project {
         'levels': levels,
         'trades': trades,
         'unionLocals': unionLocals,
+        'terms': terms,
         'employeeNumbers': employeeNumbers,
         'bpNumbers': bpNumbers,
         'disnNumbers': disnNumbers,
@@ -1047,6 +1054,7 @@ class Project {
     ..levels = (_stringMap(o['levels'])..removeWhere((k, v) => !levelOptions.contains(v)))
     ..trades = (_stringMap(o['trades'])..removeWhere((k, v) => v.trim().isEmpty))
     ..unionLocals = (_stringMap(o['unionLocals'])..removeWhere((k, v) => v.trim().isEmpty))
+    ..terms = (_stringMap(o['terms'])..removeWhere((k, v) => !termOptions.contains(v)))
     ..employeeNumbers = (_stringMap(o['employeeNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
     ..bpNumbers = (_stringMap(o['bpNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
     ..disnNumbers = (_stringMap(o['disnNumbers'])..removeWhere((k, v) => v.trim().isEmpty))

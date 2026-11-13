@@ -72,6 +72,7 @@ void _setDetails(Project p, CrewDetails d) {
     (p.employeeNumbers, d.employeeNo),
     (p.bpNumbers, d.bp),
     (p.disnNumbers, d.disn),
+    (p.terms, d.term),
   ]) {
     if (v.trim().isEmpty) {
       m.remove(d.name);
@@ -93,6 +94,7 @@ CrewDetails crewDetailsOf(Project p, String name) => CrewDetails(
       employeeNo: p.employeeNumbers[name] ?? '',
       bp: p.bpNumbers[name] ?? '',
       disn: p.disnNumbers[name] ?? '',
+      term: p.terms[name] ?? '',
     );
 
 /// "Assign Users" sheet. Returns the people ticked, or null if cancelled.

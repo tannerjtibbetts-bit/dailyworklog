@@ -108,8 +108,17 @@ class CrewDetails {
   /// "Apprentice", "Journeyman" or ''; trade, union local, employee number, BP # and DISN #, '' for none.
   final String level, trade, local, employeeNo, bp, disn;
 
+  /// An apprentice's term ("1st term" … "4th term"), '' for none.
+  final String term;
+
   const CrewDetails(this.name, this.phone, this.role, this.texts,
-      {this.level = '', this.trade = '', this.local = '', this.employeeNo = '', this.bp = '', this.disn = ''});
+      {this.level = '',
+      this.trade = '',
+      this.local = '',
+      this.employeeNo = '',
+      this.bp = '',
+      this.disn = '',
+      this.term = ''});
 }
 
 /// Name + optional phone number for a new crew member.
@@ -127,7 +136,7 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
   final bp = TextEditingController(text: start.bp);
   final disn = TextEditingController(text: start.disn);
   var group = project.findGroup(start.role) != null ? start.role : project.groups.first.id;
-  var level = start.level, trade = start.trade, local = start.local;
+  var level = start.level, trade = start.trade, local = start.local, term = start.term;
   var textOn = start.texts;
   String? error;
   const add = '\u0000add', edit = '\u0000edit';
@@ -216,6 +225,17 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
                     onSelected: (_) => set(() => level = level == l ? '' : l),
                   ),
               ]),
+              if (level == 'Apprentice')
+                DropdownButtonFormField<String>(
+                  initialValue: Project.termOptions.contains(term) ? term : '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Term'),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('None')),
+                    for (final t in Project.termOptions) DropdownMenuItem(value: t, child: Text(t)),
+                  ],
+                  onChanged: (v) => set(() => term = v ?? ''),
+                ),
               pickList(c, set, 'Trade', trade, store.tradeOptions, 'Add a trade…', 'Edit trades…', 'Add a trade',
                   'e.g. Ironworker', 'Trades', (v) => trade = v),
               pickList(c, set, 'Union local', local, store.localOptions, 'Add a union local…', 'Edit union locals…',
@@ -255,7 +275,8 @@ Future<CrewDetails?> crewDialog(BuildContext context, Project project, String ti
                       local: local,
                       employeeNo: employeeNo.text.trim(),
                       bp: bp.text.trim(),
-                      disn: disn.text.trim()));
+                      disn: disn.text.trim(),
+                      term: level == 'Apprentice' ? term : ''));
             },
             child: Text(positive),
           ),

@@ -820,7 +820,7 @@ class FormFill {
     'name of apprentice',
     'name of worker',
   ];
-  static final _carry = RegExp(r'\b(employer|company|term|department|shift)\b');
+  static final _carry = RegExp(r'\b(employer|company|department|shift)\b');
 
   /// Which detail a question asks for: 'me.name', 'me.phone', 'me.email', 'me.position', 'date', 'employeeNo',
   /// 'name', 'trade', 'local', 'level', 'phone', 'project', 'location', 'group', 'carry', or null.
@@ -847,6 +847,7 @@ class FormFill {
     if (w('project') || l.contains('job name') || l.contains('job site')) return 'project';
     if (w('location|area')) return 'location';
     if (w('group|crew')) return 'group';
+    if (w('term')) return 'term';
     if (_carry.hasMatch(l)) return 'carry';
     return null;
   }
@@ -882,6 +883,7 @@ class FormFill {
         'trade' => p.trades[who] ?? '',
         'local' => p.unionLocals[who] ?? '',
         'level' => p.levels[who] ?? '',
+        'term' => p.terms[who] ?? '',
         'phone' => p.phoneOf(who),
         'project' => p.name,
         'location' => p.location.trim().isNotEmpty ? p.location : myLocation,

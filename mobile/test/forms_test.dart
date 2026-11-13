@@ -129,7 +129,8 @@ void main() {
       ..trades = {'Ann Rigger': 'Boilermaker'}
       ..levels = {'Ann Rigger': 'Apprentice'}
       ..unionLocals = {'Ann Rigger': 'Local 128'}
-      ..employeeNumbers = {'Ann Rigger': 'E-4471'};
+      ..employeeNumbers = {'Ann Rigger': 'E-4471'}
+      ..terms = {'Ann Rigger': '3rd term'};
     final earlier = FilledReport()
       ..formId = 'f1'
       ..person = 'Ann Rigger'
@@ -150,7 +151,16 @@ void main() {
     expect(a('Name'), 'Ann Rigger');
     expect(a('Employee #'), 'E-4471');
     expect(a('Employer'), 'Acme Mechanical');
-    expect(a('Term'), '2nd term');
+    // Term comes from Manage Crew (not the last report); with none set it stays blank.
+    expect(a('Term'), '3rd term');
+    final r2 = FilledReport()
+      ..formId = 'f1'
+      ..person = 'Ann Rigger';
+    p.terms.clear();
+    FormFill.autoFill(r2, form, p,
+        myName: '', myPhone: '', myEmail: '', myPosition: '', myLocation: '', today: DateTime(2026), earlier: [earlier]);
+    expect(r2.answer(form.questions.firstWhere((q) => q.label == 'Term').id), '');
+    expect(Project.fromJson((Project()..terms = {'Al': '2nd term', 'Bo': 'nonsense'}).toJson()).terms, {'Al': '2nd term'});
     expect(a('Supervisor name'), 'Tanner Tibbetts');
     expect(a('Trade'), 'Boilermaker');
     expect(a('Union local'), 'Local 128');
