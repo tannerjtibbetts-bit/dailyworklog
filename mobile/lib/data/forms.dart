@@ -95,11 +95,8 @@ class Place {
   /// or null with no following lines.
   double? get rowFit {
     if (rows.isEmpty) return null;
-    var gap = rows.first - y;
-    for (var i = 1; i < rows.length; i++) {
-      gap = math.min(gap, rows[i] - rows[i - 1]);
-    }
-    return gap * 0.62;
+    // The average gap (one line found a little off doesn't shrink everything).
+    return (rows.last - y) / rows.length * 0.66;
   }
 
   /// Moved by (dx, dy); following lines move with it.
@@ -133,7 +130,7 @@ class Place {
 
 /// One question on a report form.
 class ReportQuestion {
-  static const text = 'text', long = 'long', rating = 'rating', average = 'average';
+  static const text = 'text', long = 'long', rating = 'rating', average = 'average', date = 'date';
 
   String id;
   String label;
@@ -156,7 +153,7 @@ class ReportQuestion {
   static ReportQuestion fromJson(Map<String, dynamic> o) => ReportQuestion(
         (o['id'] ?? '').toString(),
         (o['label'] ?? '').toString(),
-        const [text, long, rating, average].contains(o['kind']) ? o['kind'] as String : text,
+        const [text, long, rating, average, date].contains(o['kind']) ? o['kind'] as String : text,
         [
           if (o['choices'] is List)
             for (final c in o['choices'] as List)
@@ -172,6 +169,7 @@ class ReportQuestion {
             ? 'Rating'
             : 'Rating (${choices.first.legend}${choices.length > 1 ? ' … ${choices.last.legend}' : ''})',
         average => 'Worked out: average of the ratings',
+        date => 'Date (picked on a calendar)',
         _ => 'Short answer',
       };
 }
@@ -357,7 +355,8 @@ class FormReader {
 
   /// Reads the lines into questions and signature lines; when the lines have boxes, also works out where
   /// each answer is written on the page.
-  static ReadForm readLines(List<FormLine> input, {List<Segment> segments = const []}) {
+  static ReadForm readLines(List<FormLine> rawInput, {List<Segment> segments = const []}) {
+    final input = joinRows(rawInput);
     final found = <_Found>[];
     final choices = <Choice>[];
     final signatures = <String>[];
@@ -489,6 +488,8 @@ class FormReader {
       } else if (kind != ReportQuestion.average && kind != ReportQuestion.long) {
         kind = ReportQuestion.text;
       }
+      // Dates are picked on a calendar: "Date", "Date of incident", and a "... from" / "... to" period.
+      if (kind == ReportQuestion.text && isDateLabel(f.label)) kind = ReportQuestion.date;
       if (kind == ReportQuestion.text && _longWords.hasMatch(f.label)) kind = ReportQuestion.long;
       kinds.add(kind);
     }
@@ -506,7 +507,8 @@ class FormReader {
         if (f.src.hasBox) f.src.height,
     ]..sort();
     final textSize =
-        heights.isEmpty ? 0.014 : (heights[heights.length ~/ 2] * 0.75).clamp(0.008, 0.03).toDouble();
+        // About the size of the form's own printed words.
+        heights.isEmpty ? 0.014 : (heights[heights.length ~/ 2] * 1.15).clamp(0.008, 0.03).toDouble();
 
     // The fill-in lines: not the underline of a heading (a line right under words that cover it).
     final lines = [
@@ -631,6 +633,55 @@ class FormReader {
     final w = end - p.x;
     if (w >= p.width - 1e-9) return p;
     return Place(p.page, p.x, p.y, math.max(0.03, w), p.rows);
+  }
+
+  /// "Date", "Date of incident", "Period covered from", "Period covered to" (but not "Update").
+  static bool isDateLabel(String label) {
+    final l = label.toLowerCase().trim();
+    return RegExp(r'\bdate\b').hasMatch(l) || l.endsWith(' from') || l.endsWith(' to');
+  }
+
+  static final _marker = RegExp(r'^(\d{1,2}|[A-H])[.)]$');
+  static final _number = RegExp(r'^\d+(\.\d+)?$');
+
+  /// The phone's text reader can read a column of item numbers ("1.", "2." …) or a column of points ("4.0",
+  /// "3.0" …) apart from the words beside them. Joins them back: a number marker to the words on its right, a bare
+  /// number to the words on its left, when they're on the same row.
+  static List<FormLine> joinRows(List<FormLine> input) {
+    final out = List<FormLine>.of(input);
+    final gone = <FormLine>{};
+    bool sameRow(FormLine a, FormLine b) {
+      final overlap = math.min(a.bottom, b.bottom) - math.max(a.top, b.top);
+      return a.page == b.page && overlap > 0.5 * math.min(a.height, b.height);
+    }
+
+    for (final m in input) {
+      if (!m.hasBox || gone.contains(m)) continue;
+      final t = m.text.trim();
+      final isMarker = _marker.hasMatch(t), isNumber = !isMarker && _number.hasMatch(t);
+      if (!isMarker && !isNumber) continue;
+      FormLine? best;
+      for (final o in out) {
+        if (identical(o, m) || !o.hasBox || gone.contains(o) || !sameRow(m, o)) continue;
+        if (_marker.hasMatch(o.text.trim()) || _number.hasMatch(o.text.trim())) continue;
+        final gap = isMarker ? o.left - m.right : m.left - o.right;
+        if (gap < -0.005 || gap > 0.25) continue;
+        final bestGap = best == null ? double.infinity : (isMarker ? best.left - m.right : m.left - best.right);
+        if (gap < bestGap) best = o;
+      }
+      if (best == null) continue;
+      final joined = FormLine(isMarker ? '$t ${best.text}' : '${best.text} $t',
+          page: m.page,
+          left: math.min(m.left, best.left),
+          top: math.min(m.top, best.top),
+          right: math.max(m.right, best.right),
+          bottom: math.max(m.bottom, best.bottom));
+      gone
+        ..add(m)
+        ..add(best);
+      out[out.indexOf(best)] = joined;
+    }
+    return out.where((l) => !gone.contains(l)).toList();
   }
 
   /// Trimmed, without trailing ":" or blanks; ALL CAPS becomes sentence case ("Employee #").
@@ -870,6 +921,7 @@ class FormFill {
   /// Which detail a question asks for: 'me.name', 'me.phone', 'me.email', 'me.position', 'date', 'employeeNo',
   /// 'name', 'trade', 'local', 'level', 'phone', 'project', 'location', 'group', 'carry', or null.
   static String? ruleFor(ReportQuestion q) {
+    if (q.kind == ReportQuestion.date) return _dates.contains(q.label.toLowerCase().trim()) ? 'date' : null;
     if (q.kind != ReportQuestion.text && q.kind != ReportQuestion.long) return null;
     final l = q.label.toLowerCase().trim();
     if (_me.hasMatch(l)) {
@@ -1041,6 +1093,23 @@ class FormFill {
         for (final q in form.questions)
           if (q.kind != ReportQuestion.average && r.answer(q.id).isEmpty) q,
       ];
+
+  /// For a "... from" date question, the "... to" right after it (one period, picked together), or null.
+  static ReportQuestion? rangeEnd(ReportForm form, ReportQuestion q) {
+    if (q.kind != ReportQuestion.date || !q.label.toLowerCase().endsWith(' from')) return null;
+    final i = form.questions.indexOf(q);
+    if (i < 0 || i + 1 >= form.questions.length) return null;
+    final next = form.questions[i + 1];
+    return next.kind == ReportQuestion.date && next.label.toLowerCase().endsWith(' to') ? next : null;
+  }
+
+  /// A date answer back as a date ("Nov 13, 2026"), or null.
+  static DateTime? parseDate(String s) {
+    final m = RegExp(r'^([A-Z][a-z]{2}) (\d{1,2}), (\d{4})$').firstMatch(s.trim());
+    if (m == null) return null;
+    final month = _months.indexOf(m.group(1)!);
+    return month < 0 ? null : DateTime(int.parse(m.group(3)!), month + 1, int.parse(m.group(2)!));
+  }
 }
 
 /// Fitting answers into the form's lines (the PDF and the Place the answers screen use the same steps).

@@ -512,9 +512,74 @@ Future<void> exportReportPdf(BuildContext context, ReportForm form, FilledReport
 }
 
 /// Asks each unanswered question one at a time. Answers save as they're given.
+/// A date box: shows the date, and tapping it opens a calendar (months can be switched). For a "... from" with
+/// its "... to" right after, it picks the start and end of the period together and fills both.
+class DateAnswer extends StatelessWidget {
+  final FilledReport report;
+  final ReportForm form;
+  final ReportQuestion q;
+  final VoidCallback onChanged;
+
+  const DateAnswer({super.key, required this.report, required this.form, required this.q, required this.onChanged});
+
+  Future<void> _pick(BuildContext context) async {
+    final end = FormFill.rangeEnd(form, q);
+    final now = DateTime.now();
+    final first = DateTime(now.year - 5), last = DateTime(now.year + 5, 12, 31);
+    if (end != null) {
+      final from = FormFill.parseDate(report.answer(q.id)), to = FormFill.parseDate(report.answer(end.id));
+      final range = await showDateRangePicker(
+        context: context,
+        firstDate: first,
+        lastDate: last,
+        initialDateRange: from != null && to != null && !to.isBefore(from) ? DateTimeRange(start: from, end: to) : null,
+        helpText: q.label.replaceFirst(RegExp(r'\s+from$', caseSensitive: false), ''),
+        saveText: 'Done',
+      );
+      if (range == null) return;
+      report.answers[q.id] = FormFill.date(range.start);
+      report.answers[end.id] = FormFill.date(range.end);
+    } else {
+      final d = await showDatePicker(
+        context: context,
+        firstDate: first,
+        lastDate: last,
+        initialDate: FormFill.parseDate(report.answer(q.id)) ?? now,
+        helpText: q.label,
+      );
+      if (d == null) return;
+      report.answers[q.id] = FormFill.date(d);
+    }
+    report.updatedAt = nowMs();
+    Store.instance.save();
+    onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final end = FormFill.rangeEnd(form, q);
+    final a = report.answer(q.id);
+    final text = end == null
+        ? (a.isEmpty ? 'Pick a date' : a)
+        : (a.isEmpty && report.answer(end.id).isEmpty ? 'Pick the start and end dates' : '$a  to  ${report.answer(end.id)}');
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.calendar_month),
+      label: Align(alignment: Alignment.centerLeft, child: Text(text, style: const TextStyle(fontSize: 17))),
+      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52), alignment: Alignment.centerLeft),
+      onPressed: () => _pick(context),
+    );
+  }
+}
+
 Future<void> askMissing(BuildContext context, FilledReport r, ReportForm form) async {
   final store = Store.instance;
-  final list = FormFill.missing(r, form);
+  // A period's "... to" is asked with its "... from" (one calendar for both).
+  final all = FormFill.missing(r, form);
+  final ends = {
+    for (final q in all)
+      if (FormFill.rangeEnd(form, q) != null) FormFill.rangeEnd(form, q)!.id,
+  };
+  final list = [for (final q in all) if (!ends.contains(q.id)) q];
   for (var i = 0; i < list.length; i++) {
     if (!context.mounted) return;
     final q = list[i];
@@ -534,7 +599,11 @@ Future<void> askMissing(BuildContext context, FilledReport r, ReportForm form) a
           title: Text('Question ${i + 1} of ${list.length}', style: const TextStyle(color: C.grey, fontSize: 15)),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text(q.label, style: const TextStyle(color: C.navy, fontSize: 19, fontWeight: FontWeight.bold)),
+              Text(
+                  FormFill.rangeEnd(form, q) != null
+                      ? q.label.replaceFirst(RegExp(r'\s+from$', caseSensitive: false), '')
+                      : q.label,
+                  style: const TextStyle(color: C.navy, fontSize: 19, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               if (q.kind == ReportQuestion.rating)
                 RadioGroup<String>(
@@ -553,6 +622,8 @@ Future<void> askMissing(BuildContext context, FilledReport r, ReportForm form) a
                       ),
                   ]),
                 )
+              else if (q.kind == ReportQuestion.date)
+                DateAnswer(report: r, form: form, q: q, onChanged: () => set(() {}))
               else
                 AnswerBox(controller: ctl, long: q.kind == ReportQuestion.long, autofocus: true, onChanged: keep),
             ]),
@@ -632,6 +703,14 @@ class _FillScreenState extends State<FillScreen> {
           ],
           onChanged: (v) => setState(() => _keep(q.id, v ?? '')),
         );
+      case ReportQuestion.date:
+        // The "... to" of a period is picked with its "... from".
+        final start = f.questions.indexOf(q) > 0 ? f.questions[f.questions.indexOf(q) - 1] : null;
+        final paired = start != null && FormFill.rangeEnd(f, start) == q;
+        answer = paired
+            ? Text(rr.answer(q.id).isEmpty ? 'Picked with "${start.label}"' : rr.answer(q.id),
+                style: TextStyle(fontSize: 17, color: rr.answer(q.id).isEmpty ? C.greyLight : C.navy))
+            : DateAnswer(report: rr, form: f, q: q, onChanged: () => setState(() {}));
       default:
         answer = AnswerBox(
           controller: _box(q),
@@ -761,6 +840,7 @@ class _FormCheckScreenState extends State<FormCheckScreen> {
                     [ReportQuestion.long, 'Long answer'],
                     [ReportQuestion.rating, 'Rating'],
                     [ReportQuestion.average, 'Average of ratings'],
+                    [ReportQuestion.date, 'Date (calendar)'],
                   ])
                     RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, value: k[0], title: Text(k[1])),
                 ]),

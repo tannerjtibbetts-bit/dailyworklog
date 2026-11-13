@@ -85,7 +85,7 @@ void main() {
       'Your overall comment on the apprentice',
     ]);
     expect(r.questions.map((q) => q.kind).toList(), [
-      ...List.filled(7, 'text'),
+      'date', 'text', 'text', 'text', 'text', 'date', 'date',
       'long',
       ...List.filled(10, 'rating'),
       'average',
@@ -297,7 +297,7 @@ void main() {
     expect(p('Overall average').y, closeTo(0.548 + 1.2 * 0.009, 0.002));
     // Two labels on one line: each answer goes after its own label.
     expect(p('Date').x, lessThan(p('Term').x));
-    expect(r.textSize, closeTo(0.0098, 0.0005));
+    expect(r.textSize, closeTo(0.013 * 1.15, 0.0005)); // about the size of the printed words
     // No boxes (Word): no places.
     expect(FormReader.read(['NAME:']).questions.single.place, isNull);
   });
@@ -400,7 +400,7 @@ void main() {
     expect(p('Employee name').x + p('Employee name').w, lessThan(0.60));
     // The incident uses its 3 ruled lines, not the signature line.
     expect(p('Details of the incident').rows.length, 2);
-    expect(p('Details of the incident').rowFit, closeTo((0.015) * 0.62, 0.0005));
+    expect(p('Details of the incident').rowFit, closeTo((0.015) * 0.66, 0.0005));
     // A job title is filled from Manage Crew.
     final form = formFrom(r);
     final proj = Project()
@@ -412,5 +412,44 @@ void main() {
         myName: 'Me', myPhone: '', myEmail: '', myPosition: '', myLocation: '', today: DateTime(2026), earlier: []);
     expect(rep.answer(form.questions.firstWhere((q) => q.label == 'Position').id), 'Millwright Apprentice');
     expect(rep.answer(form.questions.firstWhere((q) => q.label == 'Employee name').id), 'Al');
+  });
+
+  test('item numbers and points read as their own column are joined back to their words', () {
+    FormLine l(String t, double x0, double y0, double x1, double y1) =>
+        FormLine(t, left: x0, top: y0, right: x1, bottom: y1);
+    final r = FormReader.readLines([
+      // The numbers column, then the words column, as the phone may read them.
+      l('1.', 0.14, 0.400, 0.16, 0.410), l('2.', 0.14, 0.414, 0.16, 0.424), l('10.', 0.13, 0.428, 0.16, 0.438),
+      l('Improvement shown in above period', 0.19, 0.400, 0.49, 0.410),
+      l('Understanding of work', 0.19, 0.414, 0.37, 0.424),
+      l('Mechanical skills', 0.19, 0.428, 0.32, 0.438),
+      // The point system: words and points apart.
+      l('Excellent', 0.66, 0.40, 0.74, 0.41), l('4.0', 0.85, 0.40, 0.88, 0.41),
+      l('Average', 0.66, 0.414, 0.73, 0.424), l('2.0', 0.85, 0.414, 0.88, 0.424),
+      l('Poor', 0.66, 0.428, 0.70, 0.438), l('0.0', 0.85, 0.428, 0.88, 0.438),
+      l('Overall average of above:', 0.32, 0.45, 0.53, 0.46),
+    ]);
+    expect(r.questions.map((q) => '${q.label}/${q.kind}'), [
+      'Improvement shown in above period/rating',
+      'Understanding of work/rating',
+      'Mechanical skills/rating',
+      'Overall average/average',
+    ]);
+    expect(r.questions.first.choices.map((c) => c.legend), ['Excellent 4.0', 'Average 2.0', 'Poor 0.0']);
+  });
+
+  test('dates: the period is one pick (from and to), dates read back, only a plain Date is today', () {
+    final f = formFrom(FormReader.read(['DATE:', 'PERIOD COVERED FROM:', 'TO:', 'Date of incident:', 'Update:']));
+    expect(f.questions.map((q) => '${q.label}/${q.kind}'),
+        ['Date/date', 'Period covered from/date', 'Period covered to/date', 'Date of incident/date', 'Update/text']);
+    expect(FormFill.rangeEnd(f, f.questions[1])!.label, 'Period covered to');
+    expect(FormFill.rangeEnd(f, f.questions[0]), isNull);
+    expect(FormFill.parseDate('Nov 3, 2026'), DateTime(2026, 11, 3));
+    expect(FormFill.parseDate('soon'), isNull);
+    final r = FilledReport();
+    FormFill.autoFill(r, f, Project(),
+        myName: '', myPhone: '', myEmail: '', myPosition: '', myLocation: '', today: DateTime(2026, 11, 13), earlier: []);
+    expect(r.answers, {'q1': 'Nov 13, 2026'});
+    expect(FormFill.missing(r, f).map((q) => q.label), ['Period covered from', 'Period covered to', 'Date of incident', 'Update']);
   });
 }
