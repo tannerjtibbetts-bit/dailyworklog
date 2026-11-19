@@ -207,7 +207,13 @@ class ReportPdf {
     }
     _y += rowH;
     for (final r in rows) {
-      _ensure(rowH);
+      final c = r.comment.trim().replaceAll('\n', ' ');
+      final commentH = c.isEmpty ? 0.0 : _richWrap('Comment: $c', _charStyles('Comment: $c', const []), _small, w - 12).length * _small.lineH + 4;
+      // Keep the person and their comment together, so the shading covers both.
+      _ensure(math.min(rowH + commentH, _h - 2 * _m - 40));
+      // Confirmed Yes: pale green behind the person's row and comment; No: pale red.
+      final shade = Overtime.shade(r.confirmed);
+      if (shade != null) _fillRect(_m, _y, w, rowH + commentH, PdfColor.fromInt(shade));
       _hLine(_m, _m + w, _y);
       _drawString(_ellipsize(r.name, _body, nameW - 10), _body, _m + 6, _y + 13.5);
       final v = [r.fri, r.sat, r.sun, r.hours, r.confirmed];
@@ -221,7 +227,6 @@ class ReportPdf {
         _drawString(s, tp, _m + nameW + d * dayW + (dayW - _measure(s, tp)) / 2, _y + 13.5);
       }
       _y += rowH;
-      final c = r.comment.trim().replaceAll('\n', ' ');
       if (c.isNotEmpty) {
         _ensure(16);
         _richText('Comment: $c', const [], _small, _m + 6, w - 12, 4);

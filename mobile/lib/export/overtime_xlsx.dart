@@ -12,6 +12,13 @@ class OvertimeXlsx {
   /// Cell styles in styles.xml: 0 normal, 1 bold, 2 bold heading row (grey fill), 3 green bold, 4 red bold.
   static const _normal = 0, _bold = 1, _head = 2, _yes = 3, _no = 4;
 
+  /// The same on a pale green row (confirmed Yes: 5 normal, 6 green, 7 red) or pale red row (No: 8, 9, 10).
+  static int _shaded(int style, String confirmed) {
+    final base = confirmed == Overtime.yes ? 5 : confirmed == Overtime.no ? 8 : -1;
+    if (base < 0) return style;
+    return base + (style == _yes ? 1 : style == _no ? 2 : 0);
+  }
+
   static Uint8List write(Project p, String by, int at) {
     final ot = p.overtime;
     final rows = StringBuffer();
@@ -41,17 +48,20 @@ class OvertimeXlsx {
     for (final o in ot.filled()) {
       r++;
       rows.write('<row r="$r">');
-      cell('A', r, o.name, _normal);
-      cell('B', r, o.fri, _style(o.fri));
-      cell('C', r, o.sat, _style(o.sat));
-      cell('D', r, o.sun, _style(o.sun));
+      // Confirmed Yes: the person's whole row is pale green; No: pale red.
+      int sh(int style) => _shaded(style, o.confirmed);
+      cell('A', r, o.name, sh(_normal));
+      cell('B', r, o.fri, sh(_style(o.fri)));
+      cell('C', r, o.sat, sh(_style(o.sat)));
+      cell('D', r, o.sun, sh(_style(o.sun)));
       if (RegExp(r'^\d+$').hasMatch(o.hours)) {
-        rows.write('<c r="E$r"><v>${o.hours}</v></c>');
+        final s = sh(_normal);
+        rows.write('<c r="E$r"${s == _normal ? '' : ' s="$s"'}><v>${o.hours}</v></c>');
       } else {
-        cell('E', r, o.hours, _normal);
+        cell('E', r, o.hours, sh(_normal));
       }
-      cell('F', r, o.confirmed, _style(o.confirmed));
-      if (o.comment.trim().isNotEmpty) cell('G', r, o.comment.trim(), _normal);
+      cell('F', r, o.confirmed, sh(_style(o.confirmed)));
+      if (o.comment.trim().isNotEmpty || sh(_normal) != _normal) cell('G', r, o.comment.trim(), sh(_normal));
       rows.write('</row>');
     }
     r++;
@@ -126,16 +136,24 @@ class OvertimeXlsx {
               '<font><b/><sz val="11"/><name val="Calibri"/></font>'
               '<font><b/><sz val="11"/><color rgb="FF148A3A"/><name val="Calibri"/></font>'
               '<font><b/><sz val="11"/><color rgb="FFC9353A"/><name val="Calibri"/></font></fonts>'
-              '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
-              '<fill><patternFill patternType="solid"><fgColor rgb="FFE4E7EC"/><bgColor indexed="64"/></patternFill></fill></fills>'
+              '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFE4E7EC"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F6EA"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFFDECEC"/><bgColor indexed="64"/></patternFill></fill></fills>'
               '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
               '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-              '<cellXfs count="5">'
+              '<cellXfs count="11">'
               '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
               '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
               '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
               '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
               '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+              '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+              '<xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+              '<xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+              '<xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+              '<xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+              '<xf numFmtId="0" fontId="3" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
               '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
               '</styleSheet>',
         ),

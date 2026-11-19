@@ -139,7 +139,8 @@ class ReportDocx {
       _otRow(
         [r.name, _dash(r.fri), _dash(r.sat), _dash(r.sun), _dash(r.hours), _dash(r.confirmed), r.comment.trim()],
         false,
-        null,
+        // Confirmed Yes: pale green row; No: pale red.
+        Overtime.shade(r.confirmed)?.toRadixString(16).substring(2).toUpperCase(),
         true,
         widths: widths,
         leftLast: true,

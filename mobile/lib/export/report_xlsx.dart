@@ -17,6 +17,14 @@ class ReportXlsx {
   static const _normal = 0, _bold = 1, _title = 2, _meta = 3, _head = 4, _cell = 5, _green = 6, _red = 7;
   static const _section = 8, _num = 9, _area = 10, _cellHold = 11, _normalHold = 12;
 
+  /// An overtime cell's style on a pale green row (confirmed Yes) or pale red row (No). Styles 13-16 are
+  /// cell, green, red and number on pale green; 17-20 the same on pale red.
+  static int _shaded(int style, String confirmed) {
+    final base = confirmed == 'Yes' ? 13 : confirmed == 'No' ? 17 : -1;
+    if (base < 0) return style;
+    return base + switch (style) { _green => 1, _red => 2, _num => 3, _ => 0 };
+  }
+
   static Uint8List write(Project p, DailyLog log, String by, int at) {
     final b = _Sheet();
 
@@ -83,12 +91,16 @@ class ReportXlsx {
       b.row(['Weekend overtime'], _section);
       b.row(const ['Name', 'Fri', 'Sat', 'Sun', 'Hours', 'Confirmed', 'Comment'], _head);
       for (final r in ot.filled()) {
+        // Confirmed Yes: the person's row is pale green; No: pale red.
+        int sh(int style) => _shaded(style, r.confirmed);
         b.cells([
-          _c(r.name, _cell),
-          for (var d = 0; d < 3; d++) _c(r.day(d), _yesNo(r.day(d))),
-          RegExp(r'^\d+$').hasMatch(r.hours) ? _n(int.parse(r.hours)) : _c(r.hours, _num),
-          _c(r.confirmed, _yesNo(r.confirmed)),
-          _rich(r.comment.trim(), const [], _cell),
+          _c(r.name, sh(_cell)),
+          for (var d = 0; d < 3; d++) _c(r.day(d), sh(_yesNo(r.day(d)))),
+          RegExp(r'^\d+$').hasMatch(r.hours)
+              ? _Cell(r.hours, sh(_num), number: true)
+              : _c(r.hours, sh(_num)),
+          _c(r.confirmed, sh(_yesNo(r.confirmed))),
+          _rich(r.comment.trim(), const [], sh(_cell)),
         ]);
       }
       b.cells([
@@ -206,13 +218,15 @@ class ReportXlsx {
         '<font><b/><sz val="13"/><color rgb="FF14233A"/><name val="Calibri"/></font></fonts>';
     const styleSheet =
         '$head<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">$fonts'
-        '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+        '<fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
         '<fill><patternFill patternType="solid"><fgColor rgb="FF14233A"/><bgColor indexed="64"/></patternFill></fill>'
         '<fill><patternFill patternType="solid"><fgColor rgb="FFEEF2F7"/><bgColor indexed="64"/></patternFill></fill>'
-        '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF59D"/><bgColor indexed="64"/></patternFill></fill></fills>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF59D"/><bgColor indexed="64"/></patternFill></fill>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F6EA"/><bgColor indexed="64"/></patternFill></fill>'
+        '<fill><patternFill patternType="solid"><fgColor rgb="FFFDECEC"/><bgColor indexed="64"/></patternFill></fill></fills>'
         '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>$border</borders>'
         '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-        '<cellXfs count="13">'
+        '<cellXfs count="21">'
         '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1">$top</xf>' // 0 normal
         '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' // 1 bold
         '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' // 2 title
@@ -229,6 +243,14 @@ class ReportXlsx {
         '<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" '
         'applyAlignment="1">$top</xf>' // 11 cell with "on hold"
         '<xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFill="1" applyAlignment="1">$top</xf>' // 12 normal with "on hold"
+        '<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$top</xf>' // cell on pale green
+        '<xf numFmtId="0" fontId="5" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$mid</xf>' // green on pale green
+        '<xf numFmtId="0" fontId="6" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$mid</xf>' // red on pale green
+        '<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$mid</xf>' // number on pale green
+        '<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$top</xf>' // cell on pale red
+        '<xf numFmtId="0" fontId="5" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$mid</xf>' // green on pale red
+        '<xf numFmtId="0" fontId="6" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$mid</xf>' // red on pale red
+        '<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">$mid</xf>' // number on pale red
         '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
         '</styleSheet>';
 

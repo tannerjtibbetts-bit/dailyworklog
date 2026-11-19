@@ -574,6 +574,13 @@ class OtRow {
 class Overtime {
   static const yes = 'Yes', no = 'No', training = 'Training';
 
+  /// Pale shading for a person's row on reports (ARGB): green when confirmed Yes, red when No, else none.
+  static int? shade(String confirmed) => switch (confirmed) {
+    yes => 0xFFE3F6EA,
+    no => 0xFFFDECEC,
+    _ => null,
+  };
+
   /// ISO date of the Friday this sheet covers.
   String weekOf = '';
   bool include = false;

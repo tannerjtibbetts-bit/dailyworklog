@@ -2976,7 +2976,9 @@
         "green box",
         "red box",
         "confirmed colour",
-        "confirmed color"
+        "confirmed color",
+        "shaded",
+        "highlighted report"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -3050,7 +3052,7 @@
         },
         {
           "type": "text",
-          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the overtime table and notes to your daily reports too. Comments print under each person in the PDF, and in a \"Comment\" column in Word and Excel."
+          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the overtime table and notes to your daily reports too. Comments print under each person in the PDF, and in a \"Comment\" column in Word and Excel. On the PDF, Word and Excel, a person confirmed \"Yes\" has their whole row shaded pale green, and \"No\" pale red, so the crew can see at a glance who is coming."
         },
         {
           "type": "steps",
