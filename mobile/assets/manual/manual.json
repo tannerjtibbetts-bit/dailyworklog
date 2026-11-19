@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-11-13",
+  "updated": "2026-11-19",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -2972,7 +2972,11 @@
         "confirmed",
         "confirm",
         "training",
-        "comment"
+        "comment",
+        "green box",
+        "red box",
+        "confirmed colour",
+        "confirmed color"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -3002,6 +3006,10 @@
           "type": "image",
           "file": "overtime_comment.png",
           "caption": "Confirmed \"Training\" and a comment under each person"
+        },
+        {
+          "type": "tip",
+          "text": "Once a person is confirmed, a box lights up around their whole row (name, answers and comment): green for \"Yes\", red for \"No\". So you can tell who's coming without sliding the table sideways. \"Training\" and a blank Confirmed stay plain."
         },
         {
           "type": "tip",

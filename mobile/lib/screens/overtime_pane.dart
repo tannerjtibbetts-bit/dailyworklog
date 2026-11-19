@@ -325,8 +325,30 @@ class _OvertimePaneState extends State<OvertimePane> {
   );
 
   /// One table row: Name, Fri, Sat, Sun dropdowns and the Hours box.
-  Widget _line(OtRow r, List<String> names, {Key? key}) => KeyedSubtree(
+  /// Once a person is confirmed, a box around their whole row (name, answers and comment) lights up:
+  /// green for Yes, red for No. Training and blank stay plain.
+  static BoxDecoration? confirmedBox(String confirmed) => switch (confirmed) {
+    Overtime.yes => BoxDecoration(
+      color: const Color(0xFFE3F6EA),
+      border: Border.all(color: C.green, width: 2.5),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    Overtime.no => BoxDecoration(
+      color: const Color(0xFFFDECEC),
+      border: Border.all(color: C.red, width: 2.5),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    _ => BoxDecoration(
+      border: Border.all(color: Colors.transparent, width: 2.5),
+      borderRadius: BorderRadius.circular(14),
+    ),
+  };
+
+  Widget _line(OtRow r, List<String> names, {Key? key}) => Container(
     key: key,
+    margin: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
+    decoration: confirmedBox(r.confirmed),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -472,7 +494,7 @@ class _OvertimePaneState extends State<OvertimePane> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _row([
+                          Padding(padding: const EdgeInsets.symmetric(horizontal: 6.5), child: _row([
                             _label('Name'),
                             _label('Fri'),
                             _label('Sat'),
@@ -492,17 +514,17 @@ class _OvertimePaneState extends State<OvertimePane> {
                                 ),
                               ),
                             ),
-                          ]),
+                          ])),
                           for (final r in ot.rows) _line(r, names, key: ObjectKey(r)),
                           // Totals sit under the table; after adding rows the screen scrolls here.
                           KeyedSubtree(
                             key: _lastRow,
-                            child: _row([
+                            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6.5), child: _row([
                               _label('Yes total'),
                               for (var d = 0; d < 3; d++) _label('${ot.yesCount(d)}', color: C.green),
                               const SizedBox(),
                               _label('${ot.confirmedCount()}', color: C.green),
-                            ]),
+                            ])),
                           ),
                         ],
                       ),

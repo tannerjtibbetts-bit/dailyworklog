@@ -1,7 +1,9 @@
 package com.dailyworklog.app;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -97,6 +99,8 @@ final class OvertimePane {
         sideways.setFillViewport(true);  // as wide as the screen when that's wider
         sideways.addView(grid, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         card.addView(sideways);
+        // Same side gaps as the people's boxes, so the headings stay over their columns.
+        head.setPadding(Ui.dp(a, 6), head.getPaddingTop(), Ui.dp(a, 6), head.getPaddingBottom());
         grid.addView(head);
 
         List<String> names = new ArrayList<>();
@@ -131,6 +135,7 @@ final class OvertimePane {
         totalViews[3] = confTotal;
         totals.addView(confTotal, weight(a, 1f));
         totals.addView(new View(a), removeSize(a));
+        totals.setPadding(Ui.dp(a, 6), totals.getPaddingTop(), Ui.dp(a, 6), totals.getPaddingBottom());
         grid.addView(totals);
         refreshTotals.run();
 
@@ -226,6 +231,11 @@ final class OvertimePane {
                                      Models.Overtime.OtRow r, List<String> names, Runnable refreshTotals) {
         LinearLayout block = new LinearLayout(a);
         block.setOrientation(LinearLayout.VERTICAL);
+        block.setPadding(Ui.dp(a, 6), Ui.dp(a, 4), Ui.dp(a, 6), 0);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.bottomMargin = Ui.dp(a, 6);
+        block.setLayoutParams(blp);
+        block.setBackground(confirmedBox(a, r.confirmed));
         LinearLayout line = row(a);
         block.addView(line);
         line.addView(dropdown(a, names, r.name.isEmpty() ? PICK : r.name, (sp, v) -> {
@@ -260,6 +270,7 @@ final class OvertimePane {
             r.confirmed = BLANK.equals(v) ? "" : v;
             store.save();
             sp.setBackgroundResource(cellBg(r.confirmed));
+            block.setBackground(confirmedBox(a, r.confirmed));
             refreshTotals.run();
         }, true, false), weight(a, 1f));
         line.addView(removeButton(a, () -> r.name, () -> Models.Overtime.isBlank(r), () -> {
@@ -307,6 +318,27 @@ final class OvertimePane {
     }
 
     /** Box colour: Yes green, No and AWOL red, anything else the normal box. */
+    /**
+     * Once a person is confirmed, a box around their whole row (name, answers and comment) lights up:
+     * green for Yes, red for No. Training and blank stay plain (a clear border keeps the columns lined up).
+     */
+    static GradientDrawable confirmedBox(Activity a, String confirmed) {
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(Ui.dp(a, 14));
+        int stroke = Ui.dp(a, 2.5f);
+        if (Models.Overtime.YES.equals(confirmed)) {
+            g.setColor(0xFFE3F6EA);
+            g.setStroke(stroke, 0xFF1DB04B);
+        } else if (Models.Overtime.NO.equals(confirmed)) {
+            g.setColor(0xFFFDECEC);
+            g.setStroke(stroke, 0xFFE5484D);
+        } else {
+            g.setColor(Color.TRANSPARENT);
+            g.setStroke(stroke, Color.TRANSPARENT);
+        }
+        return g;
+    }
+
     static int cellBg(String v) {
         return Models.Overtime.YES.equals(v) ? R.drawable.bg_cell_yes
                 : isRed(v) ? R.drawable.bg_cell_no : R.drawable.bg_cell;
