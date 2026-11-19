@@ -423,7 +423,7 @@ class ReportXlsxTest {
   java.util.Map<String,String> m = parts(p, l);
   NoteTest.check(m.keySet().containsAll(java.util.Arrays.asList("[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/styles.xml", "xl/worksheets/sheet1.xml")), "zip parts");
   NoteTest.check(m.get("xl/workbook.xml").contains("name=\"Daily report\""), "sheet name");
-  NoteTest.check(m.get("xl/styles.xml").contains("cellXfs count=\"13\"") && m.get("xl/styles.xml").contains("FFFFF59D"), "13 styles (with on hold fill)");
+  NoteTest.check(m.get("xl/styles.xml").contains("cellXfs count=\"21\"") && m.get("xl/styles.xml").contains("FFFFF59D") && m.get("xl/styles.xml").contains("fills count=\"7\""), "21 styles (with on hold and row shading fills)");
   String s = m.get("xl/worksheets/sheet1.xml");
   System.out.println(s.substring(0, Math.min(1800, s.length())));
   NoteTest.check(s.contains("<row r=\"1\" ht=\"24\" customHeight=\"1\"><c r=\"A1\" t=\"inlineStr\" s=\"2\">" + t("Daily work log 27/10/2026")), "title row");
@@ -451,10 +451,10 @@ class ReportXlsxTest {
   s = parts(p, l).get("xl/worksheets/sheet1.xml");
   System.out.println(s.substring(s.indexOf("<row r=\"15\"")));
   NoteTest.check(s.contains("<c r=\"A15\" t=\"inlineStr\" s=\"8\">" + t("Weekend overtime")) && s.contains("<c r=\"E16\" t=\"inlineStr\" s=\"4\">" + t("Hours"))
-      && s.contains("<c r=\"B17\" t=\"inlineStr\" s=\"6\">" + t("Yes")) && s.contains("<c r=\"C17\" t=\"inlineStr\" s=\"7\">" + t("No")) && s.contains("<c r=\"D17\" s=\"9\"/>")
-      && s.contains("<c r=\"E17\" s=\"9\"><v>8</v></c>") && s.contains("<c r=\"A18\" t=\"inlineStr\" s=\"1\">" + t("Yes total")) && s.contains("<c r=\"B18\" s=\"9\"><v>1</v></c>")
+      && s.contains("<c r=\"B17\" t=\"inlineStr\" s=\"14\">" + t("Yes")) && s.contains("<c r=\"C17\" t=\"inlineStr\" s=\"15\">" + t("No")) && s.contains("<c r=\"D17\" s=\"16\"/>")
+      && s.contains("<c r=\"E17\" s=\"16\"><v>8</v></c>") && s.contains("<c r=\"A17\" t=\"inlineStr\" s=\"13\">" + t("Sam")) && s.contains("<c r=\"G17\" s=\"13\"/>") && s.contains("<c r=\"A18\" t=\"inlineStr\" s=\"1\">" + t("Yes total")) && s.contains("<c r=\"B18\" s=\"9\"><v>1</v></c>")
       && s.contains("<c r=\"A19\" t=\"inlineStr\">" + t("Notes: Bring harness")), "overtime section");
-  NoteTest.check(s.contains("<c r=\"F16\" t=\"inlineStr\" s=\"4\">" + t("Confirmed")) && s.contains("<c r=\"F17\" t=\"inlineStr\" s=\"6\">" + t("Yes"))
+  NoteTest.check(s.contains("<c r=\"F16\" t=\"inlineStr\" s=\"4\">" + t("Confirmed")) && s.contains("<c r=\"F17\" t=\"inlineStr\" s=\"14\">" + t("Yes"))
       && s.contains("<c r=\"F18\" s=\"9\"><v>1</v></c>"), "overtime Confirmed column");
   java.io.ByteArrayOutputStream ob = new java.io.ByteArrayOutputStream();
   OvertimeXlsx.write(p, "Tanner", 0L, ob);
@@ -462,7 +462,7 @@ class ReportXlsxTest {
   try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(ob.toByteArray()))) {
     for (java.util.zip.ZipEntry ze; (ze = z.getNextEntry()) != null; ) if (ze.getName().equals("xl/worksheets/sheet1.xml")) os = new String(z.readAllBytes(), "UTF-8");
   }
-  NoteTest.check(os.contains("<c r=\"F5\" t=\"inlineStr\" s=\"2\">" + t("Confirmed")) && os.contains("<c r=\"F6\" t=\"inlineStr\" s=\"3\">" + t("Yes"))
+  NoteTest.check(os.contains("<c r=\"F5\" t=\"inlineStr\" s=\"2\">" + t("Confirmed")) && os.contains("<c r=\"F6\" t=\"inlineStr\" s=\"6\">" + t("Yes"))
       && os.contains("<c r=\"F7\" s=\"3\"><v>1</v></c>") && os.contains("<col min=\"6\" max=\"6\" width=\"11\""), "overtime xlsx Confirmed column");
   String doc = DelayTest.docx(p, l);
   NoteTest.check(doc.contains("<w:gridCol w:w=\"3080\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"1000\"/><w:gridCol w:w=\"2000\"/></w:tblGrid>")
@@ -1661,3 +1661,57 @@ class RowsAndDatesTest {
     Models.Place p = new Models.Place(0, 0.1, 0.20, 0.5, java.util.Arrays.asList(0.22, 0.26));
     FormLinesTest.near(p.rowFit(), 0.03 * 0.66, 1e-9, "rowFit uses the average gap");
     System.out.println("ROWSDATES PASS"); } }
+
+class ShadeTest {
+  static String sheet(java.io.ByteArrayOutputStream ob) throws Exception {
+    try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(ob.toByteArray()))) {
+      for (java.util.zip.ZipEntry ze; (ze = z.getNextEntry()) != null; ) {
+        String x = new String(z.readAllBytes(), "UTF-8");
+        javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new java.io.ByteArrayInputStream(x.getBytes("UTF-8")));
+        if (ze.getName().equals("xl/worksheets/sheet1.xml")) return x;
+      }
+    }
+    return "";
+  }
+  public static void main(String[] a) throws Exception {
+    NoteTest.check(Models.Overtime.shade("Yes") == 0xFFE3F6EA && Models.Overtime.shade("No") == 0xFFFDECEC
+        && Models.Overtime.shade("Training") == null && Models.Overtime.shade("") == null, "shade colours");
+    RichTest.eq(ReportDocx.shadeHex("Yes") + "/" + ReportDocx.shadeHex("No") + "/" + ReportDocx.shadeHex("Training"), "E3F6EA/FDECEC/null", "docx shade hex");
+    Models.Project p = new Models.Project(); p.name = "B44";
+    Models.DailyLog l = new Models.DailyLog(); l.date = "2026-11-19"; p.logs.add(l);
+    String[][] people = {{"Sam", "Yes", "8", ""}, {"Jo", "No", "x", "sick"}, {"Al", "Training", "4", ""}};
+    for (String[] pp : people) {
+      Models.Overtime.OtRow o = new Models.Overtime.OtRow(); o.name = pp[0]; o.fri = "Yes"; o.sat = "No"; o.confirmed = pp[1]; o.hours = pp[2]; o.comment = pp[3]; p.overtime.rows.add(o);
+    }
+    p.overtime.include = true;
+    // Overtime-only xlsx: rows 6 (Yes), 7 (No), 8 (Training)
+    java.io.ByteArrayOutputStream ob = new java.io.ByteArrayOutputStream();
+    OvertimeXlsx.write(p, "Tanner", 0L, ob);
+    String os = sheet(ob);
+    String t6 = "<row r=\"6\">", row6 = os.substring(os.indexOf(t6), os.indexOf("</row>", os.indexOf(t6)));
+    String t7 = "<row r=\"7\">", row7 = os.substring(os.indexOf(t7), os.indexOf("</row>", os.indexOf(t7)));
+    String t8 = "<row r=\"8\">", row8 = os.substring(os.indexOf(t8), os.indexOf("</row>", os.indexOf(t8)));
+    NoteTest.check(row6.contains("r=\"A6\" t=\"inlineStr\" s=\"5\"") && row6.contains("r=\"B6\" t=\"inlineStr\" s=\"6\"") && row6.contains("r=\"C6\" t=\"inlineStr\" s=\"7\"")
+        && row6.contains("<c r=\"E6\" s=\"5\"><v>8</v></c>") && row6.contains("r=\"F6\" t=\"inlineStr\" s=\"6\"") && row6.contains("r=\"G6\" t=\"inlineStr\" s=\"5\""), "ot xlsx Yes row pale green: " + row6);
+    NoteTest.check(row7.contains("r=\"A7\" t=\"inlineStr\" s=\"8\"") && row7.contains("r=\"B7\" t=\"inlineStr\" s=\"9\"") && row7.contains("r=\"C7\" t=\"inlineStr\" s=\"10\"")
+        && row7.contains("r=\"E7\" t=\"inlineStr\" s=\"8\"") && row7.contains("r=\"F7\" t=\"inlineStr\" s=\"10\"") && row7.contains("r=\"G7\" t=\"inlineStr\" s=\"8\">" + ReportXlsxTest.t("sick")), "ot xlsx No row pale red: " + row7);
+    NoteTest.check(row8.contains("<c r=\"A8\" t=\"inlineStr\">") && row8.contains("r=\"B8\" t=\"inlineStr\" s=\"3\"") && row8.contains("<c r=\"E8\"><v>4</v></c>") && !row8.contains("G8"), "ot xlsx Training row unshaded: " + row8);
+    // Daily report xlsx: overtime rows after the header
+    String s = ReportXlsxTest.parts(p, l).get("xl/worksheets/sheet1.xml");
+    String styles = ReportXlsxTest.parts(p, l).get("xl/styles.xml");
+    NoteTest.check(styles.contains("FFE3F6EA") && styles.contains("FFFDECEC"), "report xlsx pale fills");
+    int h = s.indexOf(ReportXlsxTest.t("Confirmed"));
+    int r0 = Integer.parseInt(s.substring(s.lastIndexOf("<row r=\"", h) + 8, s.indexOf("\"", s.lastIndexOf("<row r=\"", h) + 8)));
+    int y = r0 + 1, n = r0 + 2, tr = r0 + 3;
+    NoteTest.check(s.contains("<c r=\"A" + y + "\" t=\"inlineStr\" s=\"13\">") && s.contains("<c r=\"B" + y + "\" t=\"inlineStr\" s=\"14\">") && s.contains("<c r=\"C" + y + "\" t=\"inlineStr\" s=\"15\">")
+        && s.contains("<c r=\"D" + y + "\" s=\"16\"/>") && s.contains("<c r=\"E" + y + "\" s=\"16\"><v>8</v></c>") && s.contains("<c r=\"G" + y + "\" s=\"13\"/>"), "report xlsx Yes row");
+    NoteTest.check(s.contains("<c r=\"A" + n + "\" t=\"inlineStr\" s=\"17\">") && s.contains("<c r=\"B" + n + "\" t=\"inlineStr\" s=\"18\">") && s.contains("<c r=\"E" + n + "\" t=\"inlineStr\" s=\"20\">")
+        && s.contains("<c r=\"F" + n + "\" t=\"inlineStr\" s=\"19\">") && s.contains("<c r=\"G" + n + "\" t=\"inlineStr\" s=\"17\">"), "report xlsx No row");
+    NoteTest.check(s.contains("<c r=\"A" + tr + "\" t=\"inlineStr\" s=\"5\">") && s.contains("<c r=\"E" + tr + "\" s=\"9\"><v>4</v></c>") && s.contains("<c r=\"G" + tr + "\" s=\"5\"/>"), "report xlsx Training row");
+    // Docx: every cell of the Yes / No rows shaded
+    String doc = DelayTest.docx(p, l);
+    int g = 0, rd = 0;
+    for (int i = doc.indexOf("w:fill=\"E3F6EA\""); i >= 0; i = doc.indexOf("w:fill=\"E3F6EA\"", i + 1)) g++;
+    for (int i = doc.indexOf("w:fill=\"FDECEC\""); i >= 0; i = doc.indexOf("w:fill=\"FDECEC\"", i + 1)) rd++;
+    NoteTest.check(g == 7 && rd == 7, "docx 7 shaded cells each: " + g + "/" + rd);
+    System.out.println("SHADE PASS"); } }

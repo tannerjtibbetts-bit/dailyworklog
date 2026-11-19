@@ -1015,6 +1015,11 @@ public final class Models {
     /** Weekend overtime sign-up sheet: one row per crew member, Yes/No for Fri, Sat, Sun. */
     public static class Overtime {
         public static final String YES = "Yes", NO = "No", TRAINING = "Training";
+
+        /** Pale shading for a person's row on reports (ARGB): green when confirmed Yes, red when No, else null. */
+        public static Integer shade(String confirmed) {
+            return YES.equals(confirmed) ? Integer.valueOf(0xFFE3F6EA) : NO.equals(confirmed) ? Integer.valueOf(0xFFFDECEC) : null;
+        }
         /** ISO date of the Friday this sheet covers. */
         public String weekOf = "";
         public boolean include;

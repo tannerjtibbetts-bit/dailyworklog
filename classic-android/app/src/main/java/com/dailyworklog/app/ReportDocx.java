@@ -126,7 +126,7 @@ final class ReportDocx {
         otRow(head, true, "E4E7EC", true);
         for (Models.Overtime.OtRow r : rows) {
             otRow(new String[]{r.name, dash(r.fri), dash(r.sat), dash(r.sun), dash(r.hours), dash(r.confirmed),
-                    r.comment.trim().replace('\n', ' ')}, false, null, true);
+                    r.comment.trim().replace('\n', ' ')}, false, shadeHex(r.confirmed), true);  // Yes: pale green row; No: pale red
         }
         otRow(new String[]{"Yes total", String.valueOf(ot.yesCount(0)), String.valueOf(ot.yesCount(1)), String.valueOf(ot.yesCount(2)), "", String.valueOf(ot.confirmedCount()), ""}, true, null, false);
         body.append("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr></w:p>");
@@ -240,6 +240,12 @@ final class ReportDocx {
 
     /** Overtime table columns (twips): Name, Fri, Sat, Sun, Hours, Confirmed, Comment. */
     private static final int[] OT_WIDTHS = {3080, 1000, 1000, 1000, 1000, 1000, 2000};
+
+    /** Confirmed Yes: "E3F6EA" (pale green); No: "FDECEC" (pale red); else null. */
+    static String shadeHex(String confirmed) {
+        Integer c = Models.Overtime.shade(confirmed);
+        return c == null ? null : String.format("%06X", c & 0xFFFFFF);
+    }
 
     private void otRow(String[] cells, boolean bold, String shade, boolean keep) {
         int[] widths = OT_WIDTHS;

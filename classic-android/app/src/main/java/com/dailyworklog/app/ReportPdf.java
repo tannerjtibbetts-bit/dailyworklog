@@ -299,7 +299,19 @@ final class ReportPdf {
         }
         y += rowH;
         for (Models.Overtime.OtRow r : rows) {
-            ensure(rowH);
+            String comment = r.comment.trim().replace('\n', ' ');
+            StaticLayout cl = comment.isEmpty() ? null : layout("Comment: " + comment, small, w - 12);
+            float commentH = cl == null ? 0 : cl.getHeight() + 4;
+            // Keep the person and their comment together, so the shading covers both.
+            ensure(Math.min(rowH + commentH, H - 2 * M - 40));
+            // Confirmed Yes: pale green behind the person's row and comment; No: pale red.
+            Integer shade = Models.Overtime.shade(r.confirmed);
+            if (shade != null) {
+                Paint sp = new Paint();
+                sp.setStyle(Paint.Style.FILL);
+                sp.setColor(shade);
+                c.drawRect(M, y, M + w, y + rowH + commentH, sp);
+            }
             c.drawLine(M, y, M + w, y, line);
             c.drawText(r.name, M + 6, y + 13.5f, body);
             String[] v = {r.fri, r.sat, r.sun, r.hours, r.confirmed};
@@ -309,8 +321,11 @@ final class ReportPdf {
                 c.drawText(s, M + nameW + d * dayW + (dayW - tp.measureText(s)) / 2f, y + 13.5f, tp);
             }
             y += rowH;
-            String comment = r.comment.trim().replace('\n', ' ');
-            if (!comment.isEmpty()) text("Comment: " + comment, small, M + 6, w - 12, 4);  // under the row, from the name column
+            if (cl != null) {  // under the row, from the name column
+                ensure(Math.min(cl.getHeight(), H - 2 * M - 40));
+                draw(cl, M + 6);
+                y += 4;
+            }
         }
         c.drawLine(M, y, M + w, y, line);
         String tot = "Yes total";

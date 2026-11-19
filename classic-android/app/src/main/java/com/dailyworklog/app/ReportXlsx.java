@@ -191,14 +191,16 @@ final class ReportXlsx {
             s.row().text(0, "Weekend overtime", SECTION);
             s.header("Name", "Fri", "Sat", "Sun", "Hours", "Confirmed", "Comment");
             for (Models.Overtime.OtRow o : ot.filled()) {
+                // Confirmed Yes: the person's row is pale green; No: pale red.
+                String cf = o.confirmed;
                 s.row();
-                s.text(0, o.name, CELL);
+                s.text(0, o.name, shaded(CELL, cf));
                 String[] days = {o.fri, o.sat, o.sun};
-                for (int d = 0; d < 3; d++) s.text(1 + d, days[d], yesNoStyle(days[d]));
-                if (o.hours.matches("\\d+")) s.num(4, o.hours, NUM);
-                else s.text(4, o.hours, NUM);
-                s.text(5, o.confirmed, yesNoStyle(o.confirmed));
-                s.text(6, o.comment.trim(), CELL);
+                for (int d = 0; d < 3; d++) s.text(1 + d, days[d], shaded(yesNoStyle(days[d]), cf));
+                if (o.hours.matches("\\d+")) s.num(4, o.hours, shaded(NUM, cf));
+                else s.text(4, o.hours, shaded(NUM, cf));
+                s.text(5, o.confirmed, shaded(yesNoStyle(o.confirmed), cf));
+                s.text(6, o.comment.trim(), shaded(CELL, cf));
             }
             s.row().text(0, "Yes total", BOLD);
             for (int d = 0; d < 3; d++) s.num(1 + d, String.valueOf(ot.yesCount(d)), NUM);
@@ -258,13 +260,15 @@ final class ReportXlsx {
                 + font(false, 11, null) + font(true, 11, null) + font(true, 16, "FF14233A") + font(false, 11, "FF6B7685")
                 + font(true, 11, "FFFFFFFF") + font(true, 11, "FF1DB04B") + font(true, 11, "FFD93B3F") + font(true, 13, "FF14233A")
                 + "</fonts>"
-                + "<fills count=\"5\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill>"
+                + "<fills count=\"7\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill>"
                 + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF14233A\"/><bgColor indexed=\"64\"/></patternFill></fill>"
                 + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFEEF2F7\"/><bgColor indexed=\"64\"/></patternFill></fill>"
-                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFFF59D\"/><bgColor indexed=\"64\"/></patternFill></fill></fills>"
+                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFFF59D\"/><bgColor indexed=\"64\"/></patternFill></fill>"
+                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFE3F6EA\"/><bgColor indexed=\"64\"/></patternFill></fill>"
+                + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFDECEC\"/><bgColor indexed=\"64\"/></patternFill></fill></fills>"
                 + "<borders count=\"2\"><border><left/><right/><top/><bottom/><diagonal/></border>" + border + "</borders>"
                 + "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>"
-                + "<cellXfs count=\"13\">"
+                + "<cellXfs count=\"21\">"
                 + xf(0, 0, 0, null, "top", true)       // 0 normal
                 + xf(1, 0, 0, null, null, false)       // 1 bold
                 + xf(2, 0, 0, null, null, false)       // 2 title
@@ -278,6 +282,14 @@ final class ReportXlsx {
                 + xf(1, 3, 1, null, "top", false)      // 10 area cell
                 + xf(0, 4, 1, null, "top", true)       // 11 table cell with "on hold" (light yellow)
                 + xf(0, 4, 0, null, "top", true)       // 12 normal with "on hold" (light yellow)
+                + xf(0, 5, 1, null, "top", true)       // 13 table cell on pale green (overtime confirmed Yes)
+                + xf(5, 5, 1, "center", "top", false)  // 14 green on pale green
+                + xf(6, 5, 1, "center", "top", false)  // 15 red on pale green
+                + xf(0, 5, 1, "center", "top", false)  // 16 number on pale green
+                + xf(0, 6, 1, null, "top", true)       // 17 table cell on pale red (overtime confirmed No)
+                + xf(5, 6, 1, "center", "top", false)  // 18 green on pale red
+                + xf(6, 6, 1, "center", "top", false)  // 19 red on pale red
+                + xf(0, 6, 1, "center", "top", false)  // 20 number on pale red
                 + "</cellXfs><cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles>"
                 + "</styleSheet>";
 
@@ -324,6 +336,16 @@ final class ReportXlsx {
         if (!Models.Extra.NOTE.equals(e.type)) return new Rich.Tagged(d, java.util.Collections.emptyList());
         Models.Note n = p.findNote(e.refId);
         return Rich.tagged(d, noteRuns(p, e), n == null ? java.util.Collections.emptyList() : n.tags);
+    }
+
+    /**
+     * An overtime cell's style on a pale green row (confirmed Yes) or pale red row (No). Styles 13-16 are
+     * cell, green, red and number on pale green; 17-20 the same on pale red.
+     */
+    static int shaded(int style, String confirmed) {
+        int base = Models.Overtime.YES.equals(confirmed) ? 13 : Models.Overtime.NO.equals(confirmed) ? 17 : -1;
+        if (base < 0) return style;
+        return base + (style == GREEN ? 1 : style == RED ? 2 : style == NUM ? 3 : 0);
     }
 
     private static int yesNoStyle(String v) {

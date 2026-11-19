@@ -14,6 +14,13 @@ final class OvertimeXlsx {
     /** Cell styles in styles.xml: 0 normal, 1 bold, 2 bold heading row (grey fill), 3 green bold, 4 red bold. */
     private static final int NORMAL = 0, BOLD = 1, HEAD = 2, YES = 3, NO = 4;
 
+    /** The same on a pale green row (confirmed Yes: 5 normal, 6 green, 7 red) or pale red row (No: 8, 9, 10). */
+    static int shaded(int style, String confirmed) {
+        int base = Models.Overtime.YES.equals(confirmed) ? 5 : Models.Overtime.NO.equals(confirmed) ? 8 : -1;
+        if (base < 0) return style;
+        return base + (style == YES ? 1 : style == NO ? 2 : 0);
+    }
+
     static void write(Models.Project p, String by, long at, OutputStream out) throws IOException {
         Models.Overtime ot = p.overtime;
         StringBuilder rows = new StringBuilder();
@@ -27,17 +34,21 @@ final class OvertimeXlsx {
         for (Models.Overtime.OtRow o : filled) {
             r[0]++;
             rows.append("<row r=\"").append(r[0]).append("\">");
-            cell(rows, "A", r[0], o.name, NORMAL);
-            cell(rows, "B", r[0], o.fri, style(o.fri));
-            cell(rows, "C", r[0], o.sat, style(o.sat));
-            cell(rows, "D", r[0], o.sun, style(o.sun));
+            // Confirmed Yes: the person's whole row is pale green; No: pale red.
+            String cf = o.confirmed;
+            int plain = shaded(NORMAL, cf);
+            cell(rows, "A", r[0], o.name, plain);
+            cell(rows, "B", r[0], o.fri, shaded(style(o.fri), cf));
+            cell(rows, "C", r[0], o.sat, shaded(style(o.sat), cf));
+            cell(rows, "D", r[0], o.sun, shaded(style(o.sun), cf));
             if (o.hours.matches("\\d+")) {
-                rows.append("<c r=\"E").append(r[0]).append("\"><v>").append(o.hours).append("</v></c>");
+                rows.append("<c r=\"E").append(r[0]).append("\"").append(plain == NORMAL ? "" : " s=\"" + plain + "\"")
+                        .append("><v>").append(o.hours).append("</v></c>");
             } else {
-                cell(rows, "E", r[0], o.hours, NORMAL);
+                cell(rows, "E", r[0], o.hours, plain);
             }
-            cell(rows, "F", r[0], o.confirmed, style(o.confirmed));
-            if (!o.comment.trim().isEmpty()) cell(rows, "G", r[0], o.comment.trim(), NORMAL);
+            cell(rows, "F", r[0], o.confirmed, shaded(style(o.confirmed), cf));
+            if (!o.comment.trim().isEmpty() || plain != NORMAL) cell(rows, "G", r[0], o.comment.trim(), plain);
             rows.append("</row>");
         }
         r[0]++;
@@ -93,16 +104,24 @@ final class OvertimeXlsx {
                     + "<font><b/><sz val=\"11\"/><name val=\"Calibri\"/></font>"
                     + "<font><b/><sz val=\"11\"/><color rgb=\"FF148A3A\"/><name val=\"Calibri\"/></font>"
                     + "<font><b/><sz val=\"11\"/><color rgb=\"FFC9353A\"/><name val=\"Calibri\"/></font></fonts>"
-                    + "<fills count=\"3\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill>"
-                    + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFE4E7EC\"/><bgColor indexed=\"64\"/></patternFill></fill></fills>"
+                    + "<fills count=\"5\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill>"
+                    + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFE4E7EC\"/><bgColor indexed=\"64\"/></patternFill></fill>"
+                    + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFE3F6EA\"/><bgColor indexed=\"64\"/></patternFill></fill>"
+                    + "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFDECEC\"/><bgColor indexed=\"64\"/></patternFill></fill></fills>"
                     + "<borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders>"
                     + "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>"
-                    + "<cellXfs count=\"5\">"
+                    + "<cellXfs count=\"11\">"
                     + "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>"
                     + "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/>"
                     + "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
                     + "<xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/>"
                     + "<xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/>"
+                    + "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
+                    + "<xf numFmtId=\"0\" fontId=\"2\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
+                    + "<xf numFmtId=\"0\" fontId=\"3\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
+                    + "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"4\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
+                    + "<xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
+                    + "<xf numFmtId=\"0\" fontId=\"3\" fillId=\"4\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>"
                     + "</cellXfs><cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles>"
                     + "</styleSheet>");
             put(zip, "xl/worksheets/sheet1.xml", sheet);
