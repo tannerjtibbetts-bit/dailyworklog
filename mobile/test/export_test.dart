@@ -398,7 +398,8 @@ void main() {
         ),
       ),
     );
-    final done = Export.overtime(ctx, p, excel: true);
+    final l = p.logs.single..overtime = p.overtime;
+    final done = Export.overtime(ctx, p, l, excel: true);
     await tester.pump();
     expect(find.text('Building Excel sheet\u2026'), findsOneWidget);
     const name = 'Weekend overtime Fri Oct 9 B44 Zone 2 Tool Readiness.xlsx';

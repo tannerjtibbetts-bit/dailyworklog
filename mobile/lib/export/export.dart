@@ -71,14 +71,15 @@ class Export {
     await _sendEmail(context, f, project, log);
   }
 
-  /// Just the overtime sheet, as PDF or Excel.
-  static Future<void> overtime(BuildContext context, Project project, {required bool excel}) async {
+  /// Just this day's overtime sheet, as PDF or Excel.
+  static Future<void> overtime(BuildContext context, Project project, DailyLog log, {required bool excel}) async {
+    final ot = project.overtimeFor(log);
     final store = Store.instance;
     final by = store.me();
     final at = nowMs();
     final name =
         Fmt.fileSafe(
-          'Weekend overtime ${Fmt.weekendDay(project.overtime.weekOf, 0)}'
+          'Weekend overtime ${Fmt.weekendDay(ot.weekOf, 0)}'
           '${project.name.isEmpty ? '' : ' ${project.name}'}',
         ) +
         (excel ? '.xlsx' : '.pdf');
@@ -87,7 +88,7 @@ class Export {
       excel ? 'Building Excel sheet…' : 'Building PDF…',
       name,
       'Couldn\'t build the file. Please try again.',
-      () => compute(_overtimeJob, _OtJob(_slim(project), by, at, excel)),
+      () => compute(_overtimeJob, _OtJob(_slim(project, log), by, at, excel)),
     );
     if (f == null || !context.mounted) return;
     final mime = excel ? xlsx : pdf;
@@ -111,14 +112,15 @@ class Export {
   /// Opens the share sheet for a saved file (to open it in another app, send or save it).
   static Future<void> shareFile(BuildContext context, File f, String mime) => _share(context, f, mime);
 
-  /// Just the attendance sheet, as PDF or Excel.
-  static Future<void> attendance(BuildContext context, Project project, {required bool excel}) async {
+  /// Just this day's attendance sheet, as PDF or Excel.
+  static Future<void> attendance(BuildContext context, Project project, DailyLog log, {required bool excel}) async {
+    final a = project.attendanceFor(log);
     final store = Store.instance;
     final by = store.me();
     final at = nowMs();
     final name =
         Fmt.fileSafe(
-          'Attendance ${Fmt.logDate(project.attendance.date)}'
+          'Attendance ${Fmt.logDate(a.date)}'
           '${project.name.isEmpty ? '' : ' ${project.name}'}',
         ) +
         (excel ? '.xlsx' : '.pdf');
@@ -127,7 +129,7 @@ class Export {
       excel ? 'Building Excel sheet…' : 'Building PDF…',
       name,
       'Couldn\'t build the file. Please try again.',
-      () => compute(_attendanceJob, _OtJob(_slim(project), by, at, excel)),
+      () => compute(_attendanceJob, _OtJob(_slim(project, log), by, at, excel)),
     );
     if (f == null || !context.mounted) return;
     final mime = excel ? xlsx : pdf;
@@ -237,12 +239,17 @@ class Export {
 
   // ----- building -----
 
-  /// Just what the exports print, so the background job doesn't copy every checklist.
-  static Project _slim(Project p) => Project()
+  /// [_slim], for tests.
+  @visibleForTesting
+  static Project slimForTest(Project p, DailyLog log) => _slim(p, log);
+
+  /// Just what the exports print, so the background job doesn't copy every checklist. The overtime and
+  /// attendance printed are [log]'s own (none if that day never had them), never another day's.
+  static Project _slim(Project p, [DailyLog? log]) => Project()
     ..name = p.name
     ..location = p.location
-    ..overtime = p.overtime
-    ..attendance = p.attendance
+    ..overtime = log?.overtime ?? Overtime()
+    ..attendance = log?.attendance ?? Attendance()
     ..notes = p.notes // Notes-tab notes in "Also today" keep their formatting
     ..seaCans = p.seaCans
     ..seaCanInclude = p.seaCanInclude;
@@ -250,7 +257,7 @@ class Export {
   /// [format] is 'pdf', 'docx' or 'xlsx'.
   static Future<File?> _buildReport(BuildContext context, Project p, DailyLog log, String format) {
     final store = Store.instance;
-    final job = _ReportJob(_slim(p), log, store.me(), nowMs(), store.photoDir.path, format);
+    final job = _ReportJob(_slim(p, log), log, store.me(), nowMs(), store.photoDir.path, format);
     return _build(
       context,
       switch (format) {

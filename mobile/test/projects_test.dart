@@ -11,6 +11,7 @@ import 'package:dailyworklog/services/form_prefill.dart';
 import 'package:dailyworklog/screens/note_screen.dart';
 import 'package:dailyworklog/screens/notify_screen.dart';
 import 'package:dailyworklog/screens/overtime_pane.dart';
+import 'package:dailyworklog/screens/day_sheet_screen.dart';
 import 'package:dailyworklog/screens/project_screen.dart';
 import 'package:dailyworklog/screens/projects_screen.dart';
 import 'package:dailyworklog/ui/common.dart';
@@ -139,17 +140,17 @@ void main() {
 
     test('one row per crew member, names offered', () {
       final p = Project()..crew = ['Al', 'Bo', 'Cy'];
-      prepareOvertime(p);
+      prepareOvertime(p, p.overtime, '2026-10-14');
       expect(p.overtime.rows.length, 3);
-      expect(p.overtime.weekOf, isNotEmpty);
+      expect(p.overtime.weekOf, '2026-10-16');
       p.overtime.rows[0].name = 'Old Timer';
-      expect(overtimeNames(p), ['Select…', 'Al', 'Bo', 'Cy', 'Old Timer']);
+      expect(overtimeNames(p, p.overtime), ['Select…', 'Al', 'Bo', 'Cy', 'Old Timer']);
       final empty = Project();
-      prepareOvertime(empty);
+      prepareOvertime(empty, empty.overtime, '2026-10-14');
       expect(empty.overtime.rows.length, 1);
       // A removed row doesn't come back.
       p.overtime.rows.removeAt(1);
-      prepareOvertime(p);
+      prepareOvertime(p, p.overtime, '2026-10-14');
       expect(p.overtime.rows.length, 2);
     });
 
@@ -190,20 +191,128 @@ void main() {
     });
   });
 
-  group('AttendanceTest', () {
-    test('rows start with the crew names, today\'s date, and old files load', () {
+  group('DaySheetsTest', () {
+    DailyLog day(Project p, String iso) {
+      final l = DailyLog()..date = iso;
+      p.logs.add(l);
+      return l;
+    }
+
+    test('each day keeps its own attendance; a new day gets the names, not the answers', () {
       final p = Project()..crew = ['Al', 'Bo'];
-      prepareAttendance(p);
+      final mon = day(p, '2026-11-16');
+      final a = p.attendanceFor(mon);
+      prepareAttendance(p, a, mon.date);
+      a.include = true;
+      a.notes = 'Bo at medical';
+      a.rows[0].status = 'Yes';
+      a.rows[1].status = 'Called in';
+      a.rows[1].comment = 'Sick';
+
+      final tue = day(p, '2026-11-17');
+      final b = p.attendanceFor(tue);
+      expect(b.date, '2026-11-17');
+      expect(b.rows.map((r) => r.name), ['Al', 'Bo']);
+      expect(b.rows.every((r) => r.status.isEmpty && r.comment.isEmpty), true);
+      expect(b.include, true);
+      expect(b.notes, '');
+      b.rows[0].status = 'Vacation';
+
+      // Monday is untouched by Tuesday's answers, and survives save and load.
+      final q = Project.fromJson(Map<String, dynamic>.from(p.toJson()));
+      final qMon = q.logs.firstWhere((l) => l.date == '2026-11-16').attendance!;
+      expect(qMon.rows.map((r) => r.status), ['Yes', 'Called in']);
+      expect(qMon.rows[1].comment, 'Sick');
+      expect(qMon.notes, 'Bo at medical');
+      expect(q.logs.firstWhere((l) => l.date == '2026-11-17').attendance!.rows[0].status, 'Vacation');
+    });
+
+    test('overtime: same weekend keeps the answers, a new weekend keeps the names', () {
+      final p = Project()..crew = ['Al', 'Bo'];
+      final tue = day(p, '2026-11-17');
+      final ot = p.overtimeFor(tue);
+      expect(ot.weekOf, '2026-11-20');
+      ot.rows = [OtRow()..name = 'Al'..sat = 'Yes', OtRow()..name = 'Bo'..sat = 'No'];
+      ot.include = true;
+
+      final wed = day(p, '2026-11-18');
+      final w = p.overtimeFor(wed);
+      expect(w.rows.map((r) => r.sat), ['Yes', 'No']);
+      w.rows[1].sat = 'Yes';
+      expect(tue.overtime!.rows[1].sat, 'No'); // Tuesday keeps what it had
+
+      final nextMon = day(p, '2026-11-23');
+      final n = p.overtimeFor(nextMon);
+      expect(n.weekOf, '2026-11-27');
+      expect(n.rows.map((r) => r.name), ['Al', 'Bo']);
+      expect(n.rows.every((r) => r.sat.isEmpty), true);
+      expect(n.include, true);
+    });
+
+    test('an old day is seeded from the day before it, not from today', () {
+      final p = Project()..crew = ['Al'];
+      final d1 = day(p, '2026-11-02');
+      p.attendanceFor(d1).rows = [AttRow()..name = 'Early Guy'];
+      final d3 = day(p, '2026-11-20');
+      p.attendanceFor(d3).rows = [AttRow()..name = 'Late Guy'];
+      final d2 = day(p, '2026-11-10');
+      expect(p.attendanceFor(d2).rows.map((r) => r.name), ['Early Guy']);
+    });
+
+    test('reports print the day\'s own sheets, or none for a day that never had them', () {
+      final p = Project()..crew = ['Al'];
+      final old = day(p, '2026-11-02');
+      final today = day(p, '2026-11-20');
+      p.attendanceFor(today)
+        ..include = true
+        ..rows = [AttRow()..name = 'Al'..status = 'Yes'];
+      expect(old.attendance, isNull);
+      expect(Export.slimForTest(p, old).attendance.include, false);
+      expect(Export.slimForTest(p, old).attendance.rows, isEmpty);
+      expect(Export.slimForTest(p, today).attendance.rows.single.status, 'Yes');
+    });
+
+    test('old files: the project-wide sheets move onto a day once', () {
+      final p = Project()..crew = ['Al'];
+      day(p, '2026-11-18');
+      day(p, '2026-11-20');
+      p.attendance
+        ..date = '2026-11-18'
+        ..include = true
+        ..rows = [AttRow()..name = 'Al'..status = 'Late'];
+      p.overtime.rows = [OtRow()..name = 'Al'..fri = 'Yes'];
+      final q = Project.fromJson(Map<String, dynamic>.from(p.toJson()));
+      final d18 = q.logs.firstWhere((l) => l.date == '2026-11-18');
+      final d20 = q.logs.firstWhere((l) => l.date == '2026-11-20');
+      expect(d18.attendance!.rows.single.status, 'Late');
+      expect(d18.attendance!.include, true);
+      expect(d20.attendance, isNull);
+      expect(d20.overtime!.rows.single.fri, 'Yes');
+      expect(d18.overtime, isNull);
+      // Loading again doesn't move them a second time.
+      d20.overtime!.rows.single.fri = 'No';
+      final r = Project.fromJson(Map<String, dynamic>.from(q.toJson()));
+      expect(r.logs.firstWhere((l) => l.date == '2026-11-20').overtime!.rows.single.fri, 'No');
+      // Renaming reaches every day's sheets.
+      r.renamePerson('Al', 'Alan');
+      expect(r.logs.firstWhere((l) => l.date == '2026-11-18').attendance!.rows.single.name, 'Alan');
+    });
+  });
+
+  group('AttendanceTest', () {
+    test('rows start with the crew names, the day\'s date, and old files load', () {
+      final p = Project()..crew = ['Al', 'Bo'];
+      prepareAttendance(p, p.attendance, '2026-10-14');
       expect(p.attendance.rows.map((r) => r.name), ['Al', 'Bo']);
-      expect(p.attendance.date, Fmt.todayIso());
+      expect(p.attendance.date, '2026-10-14');
       p.attendance.rows[0].name = 'Old Timer';
-      expect(attendanceNames(p), ['Select…', 'Al', 'Bo', 'Old Timer']);
+      expect(attendanceNames(p, p.attendance), ['Select…', 'Al', 'Bo', 'Old Timer']);
       final empty = Project();
-      prepareAttendance(empty);
+      prepareAttendance(empty, empty.attendance, '2026-10-14');
       expect(empty.attendance.rows.single.name, '');
       // Rows aren't topped up again once there are some.
       p.attendance.rows.removeAt(1);
-      prepareAttendance(p);
+      prepareAttendance(p, p.attendance, '2026-10-14');
       expect(p.attendance.rows.length, 1);
       // A file from before Attendance existed.
       expect(Project.fromJson({'name': 'x'}).attendance.rows, isEmpty);
@@ -211,7 +320,7 @@ void main() {
 
     test('summary, save and load, clear answers, rename', () {
       final p = Project()..crew = ['Al', 'Bo', 'Cy', 'Di'];
-      prepareAttendance(p);
+      prepareAttendance(p, p.attendance, Fmt.todayIso());
       final a = p.attendance
         ..include = true
         ..notes = 'Cy at medical';
@@ -388,9 +497,12 @@ void main() {
       await tester.pump();
 
       expect(find.text('B44 Zone 2 Tool Readiness'), findsOneWidget);
-      for (final t in ['Checklists', 'Notify', 'Links', 'Overtime', 'Attendance', 'Notes', 'Sea Can Movements']) {
+      for (final t in ['Checklists', 'Notify', 'Links', 'Notes', 'Sea Can Movements']) {
         expect(find.text(t), findsOneWidget);
       }
+      // Attendance and Overtime are on each day, not the project.
+      expect(find.text('Overtime'), findsNothing);
+      expect(find.text('Attendance'), findsNothing);
       expect(find.text('Daily work log ${Fmt.logDate(Fmt.todayIso())}'), findsOneWidget);
       expect(find.text('1/2 fields completed'), findsOneWidget);
       expect(find.text('Search all days: fields, notes, sea cans'), findsOneWidget);
@@ -412,23 +524,6 @@ void main() {
       expect(e.include, true);
       expect(e.label(), 'Link used: Tool portal');
 
-      await tester.tap(find.text('Overtime'));
-      await tester.pump();
-      expect(find.text('Weekend overtime'), findsOneWidget);
-      expect(find.text('Export'), findsOneWidget);
-      expect(find.text('Yes total'), findsOneWidget);
-      expect(p.overtime.rows.length, 2);
-      expect(find.text('Search all days: fields, notes, sea cans'), findsNothing);
-      await tester.ensureVisible(find.text('+  Add a row'));
-      await tester.tap(find.text('+  Add a row'));
-      await tester.pumpAndSettle();
-      expect(p.overtime.rows.length, 3);
-      await tester.ensureVisible(find.text('Remove empty rows'));
-      await tester.tap(find.text('Remove empty rows'));
-      await tester.pumpAndSettle();
-      // Empty rows go, then the sheet is redrawn with one row per crew member again.
-      expect(p.overtime.rows.length, 2);
-
       await tester.tap(find.text('Notes').first);
       await tester.pumpAndSettle();
       expect(find.text('Pump 3 leaking'), findsOneWidget);
@@ -437,13 +532,16 @@ void main() {
       expect(find.text('By Tanner'), findsNWidgets(2));
     });
 
-    testWidgets('attendance tab: names, Here? answers, remove one row', (tester) async {
+    testWidgets('attendance sheet on a day: names, Here? answers, remove one row', (tester) async {
       final p = sample()..crew = ['Al Smith', 'Bo Jones', 'Cy Lee'];
       Store.instance.projects.add(p);
+      final day = p.logs.single;
       await tester.binding.setSurfaceSize(const Size(420, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.attendance)));
+      await tester.pumpWidget(
+          app(DaySheetScreen(projectId: p.id, logId: day.id, kind: DaySheet.attendance)));
       await tester.pump();
+      final att = day.attendance!;
       expect(find.text('Here?'), findsOneWidget);
       expect(find.text('Date: ${Fmt.longDay(Fmt.todayIso())}'), findsOneWidget);
       expect(find.text('Nobody marked yet'), findsOneWidget);
@@ -454,13 +552,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Vacation').last);
       await tester.pumpAndSettle();
-      expect(p.attendance.rows[1].status, 'Vacation');
+      expect(att.rows[1].status, 'Vacation');
       expect(find.text('Vacation 1'), findsOneWidget);
 
       // A comment for Al.
       await tester.enterText(find.widgetWithText(TextField, 'Comment').first, 'Left at 1pm');
       await tester.pump();
-      expect(p.attendance.rows[0].comment, 'Left at 1pm');
+      expect(att.rows[0].comment, 'Left at 1pm');
 
       // Remove Bo's row: asks first, the crew list stays. On a narrow phone the × is off to
       // the right, so slide the table over first.
@@ -471,31 +569,45 @@ void main() {
       expect(find.text("Bo Jones comes off this sheet. Your crew list doesn't change."), findsOneWidget);
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
-      expect(p.attendance.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+      expect(att.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
       expect(p.crew, contains('Bo Jones'));
 
       // An empty row goes without asking.
       await tester.tap(find.text('+  Add a row'));
       await tester.pumpAndSettle();
-      expect(p.attendance.rows.length, 3);
+      expect(att.rows.length, 3);
       await tester.ensureVisible(find.byTooltip('Remove row').last);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Remove row').last);
       await tester.pumpAndSettle();
-      expect(p.attendance.rows.length, 2);
+      expect(att.rows.length, 2);
     });
 
-    testWidgets('overtime tab: remove one row from the middle', (tester) async {
+    testWidgets('overtime sheet on a day: add, tidy and remove rows', (tester) async {
       final p = sample()..crew = ['Al Smith', 'Bo Jones', 'Cy Lee'];
-      prepareOvertime(p);
+      final day = p.logs.single;
+      final ot = p.overtimeFor(day);
+      prepareOvertime(p, ot, day.date);
       for (var i = 0; i < 3; i++) {
-        p.overtime.rows[i].name = p.crew[i];
+        ot.rows[i].name = p.crew[i];
       }
       Store.instance.projects.add(p);
       await tester.binding.setSurfaceSize(const Size(420, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.overtime)));
+      await tester.pumpWidget(app(DaySheetScreen(projectId: p.id, logId: day.id, kind: DaySheet.overtime)));
       await tester.pump();
+      expect(find.text('Weekend overtime'), findsOneWidget);
+      expect(find.text('Export'), findsOneWidget);
+      expect(find.text('Yes total'), findsOneWidget);
+      expect(find.text(day.displayTitle()), findsOneWidget);
+      await tester.ensureVisible(find.text('+  Add a row'));
+      await tester.tap(find.text('+  Add a row'));
+      await tester.pumpAndSettle();
+      expect(ot.rows.length, 4);
+      await tester.ensureVisible(find.text('Remove empty rows'));
+      await tester.tap(find.text('Remove empty rows'));
+      await tester.pumpAndSettle();
+      expect(ot.rows.length, 3);
       // The table is wider than this screen: slide it so the × buttons show.
       await tester.ensureVisible(find.byTooltip('Remove row').at(1));
       await tester.pumpAndSettle();
@@ -503,7 +615,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
-      expect(p.overtime.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+      expect(ot.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+      expect(p.overtime.rows, isEmpty); // the project-wide sheet isn't used any more
     });
 
     testWidgets('Clear all notes removes notes after confirming', (tester) async {

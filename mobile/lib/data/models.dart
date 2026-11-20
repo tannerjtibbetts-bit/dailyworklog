@@ -330,6 +330,11 @@ class DailyLog {
   List<Task> tasks = [];
   List<Extra> extras = [];
 
+  /// This day's own attendance and overtime sheets (null until the day's tab is first opened).
+  /// Each day keeps its own, so an old day's report shows what was filled in that day.
+  Attendance? attendance;
+  Overtime? overtime;
+
   Extra? findExtra(String refId) {
     for (final e in extras) {
       if (e.refId == refId) return e;
@@ -369,6 +374,8 @@ class DailyLog {
         'crew': crew,
         'tasks': [for (final t in tasks) t.toJson()],
         'extras': [for (final e in extras) e.toJson()],
+        if (attendance != null) 'attendance': attendance!.toJson(),
+        if (overtime != null) 'overtime': overtime!.toJson(),
       };
 
   static DailyLog fromJson(Map<String, dynamic> o) => DailyLog()
@@ -378,7 +385,9 @@ class DailyLog {
     ..createdAt = _i(o, 'createdAt')
     ..crew = _strings(o['crew'])
     ..tasks = _objects(o['tasks'], Task.fromJson)
-    ..extras = _objects(o['extras'], Extra.fromJson);
+    ..extras = _objects(o['extras'], Extra.fromJson)
+    ..attendance = o['attendance'] is Map ? Attendance.fromJson(o['attendance']) : null
+    ..overtime = o['overtime'] is Map ? Overtime.fromJson(o['overtime']) : null;
 }
 
 class Template {
@@ -613,6 +622,17 @@ class Overtime {
     }
   }
 
+  /// A copy for another day. The same weekend keeps every answer; a new weekend keeps just the names.
+  Overtime copyFor(String friday) {
+    final c = Overtime.fromJson(toJson());
+    if (c.weekOf != friday) {
+      c.notes = '';
+      c.startWeekend(friday);
+    }
+    c.removeEmptyRows();
+    return c;
+  }
+
   Map<String, dynamic> toJson() => {
         'weekOf': weekOf,
         'include': include,
@@ -686,6 +706,17 @@ class Attendance {
       r.status = '';
       r.comment = '';
     }
+  }
+
+  /// A fresh sheet for another day: the same names and Include tick, no answers, comments or notes.
+  Attendance copyFor(String iso) {
+    final c = Attendance()
+      ..date = iso
+      ..include = include;
+    for (final r in rows) {
+      if (r.name.isNotEmpty) c.rows.add(AttRow()..name = r.name);
+    }
+    return c;
   }
 
   Map<String, dynamic> toJson() => {
@@ -793,6 +824,10 @@ class Project {
 
   /// Who gets the emailed report.
   List<String> emails = [];
+
+  /// Project-wide sheets from before each day had its own. Only read to move them onto a day
+  /// ([moveOldSheets]) and to start the first day's names. Exports also use these two to carry the
+  /// day's sheets to the report writers.
   Overtime overtime = Overtime();
   Attendance attendance = Attendance();
 
@@ -891,11 +926,74 @@ class Project {
     for (final n in notices) {
       _replaceIn(n.to, from, to);
     }
-    for (final row in overtime.rows) {
-      if (row.name == from) row.name = to;
+    for (final ot in [overtime, for (final l in logs) ?l.overtime]) {
+      for (final row in ot.rows) {
+        if (row.name == from) row.name = to;
+      }
     }
-    for (final row in attendance.rows) {
-      if (row.name == from) row.name = to;
+    for (final a in [attendance, for (final l in logs) ?l.attendance]) {
+      for (final row in a.rows) {
+        if (row.name == from) row.name = to;
+      }
+    }
+  }
+
+  /// The day before [l] (by date, then when made) that has [has], else the newest other day that does.
+  DailyLog? _sheetSource(DailyLog l, bool Function(DailyLog) has) {
+    DailyLog? before, any;
+    int cmp(DailyLog a, DailyLog b) {
+      final c = a.date.compareTo(b.date);
+      return c != 0 ? c : a.createdAt.compareTo(b.createdAt);
+    }
+
+    for (final x in logs) {
+      if (identical(x, l) || !has(x)) continue;
+      if (any == null || cmp(x, any) > 0) any = x;
+      if (cmp(x, l) < 0 && (before == null || cmp(x, before) > 0)) before = x;
+    }
+    return before ?? any;
+  }
+
+  /// [l]'s attendance sheet, made the first time: the names (and Include tick) come from the day
+  /// before, answers start blank.
+  Attendance attendanceFor(DailyLog l) {
+    final have = l.attendance;
+    if (have != null) return have;
+    final src = _sheetSource(l, (x) => x.attendance != null)?.attendance ?? attendance;
+    final a = src.copyFor(l.date);
+    l.attendance = a;
+    return a;
+  }
+
+  /// [l]'s overtime sheet, made the first time from the day before: the same weekend keeps its
+  /// answers, a new weekend keeps just the names.
+  Overtime overtimeFor(DailyLog l) {
+    final have = l.overtime;
+    if (have != null) return have;
+    final friday = Fmt.upcomingFriday(DateTime.tryParse(l.date));
+    final src = _sheetSource(l, (x) => x.overtime != null)?.overtime ?? overtime;
+    final ot = src.copyFor(friday);
+    ot.weekOf = friday;
+    l.overtime = ot;
+    return ot;
+  }
+
+  /// Moves the old project-wide sheets onto a day, once: attendance onto the day it was dated
+  /// (else the newest day), overtime onto the newest day. Afterwards they only seed new days' names.
+  void moveOldSheets() {
+    if (logs.any((l) => l.attendance != null || l.overtime != null)) return;
+    final latest = latestLog();
+    if (latest == null) return;
+    if (attendance.rows.any((r) => !r.isEmpty) || attendance.notes.trim().isNotEmpty) {
+      DailyLog? day;
+      for (final l in logs) {
+        if (l.date == attendance.date && (day == null || l.createdAt > day.createdAt)) day = l;
+      }
+      day ??= latest;
+      day.attendance = Attendance.fromJson(attendance.toJson())..date = day.date;
+    }
+    if (overtime.rows.any((r) => !r.isEmpty) || overtime.notes.trim().isNotEmpty) {
+      latest.overtime = Overtime.fromJson(overtime.toJson());
     }
   }
 
@@ -1069,7 +1167,8 @@ class Project {
     ..notes = _objects(o['notes'], Note.fromJson)
     ..notices = _objects(o['notices'], Notice.fromJson)
     ..seaCans = _objects(o['seaCans'], SeaCanMove.fromJson)
-    ..seaCanInclude = _b(o, 'seaCanInclude');
+    ..seaCanInclude = _b(o, 'seaCanInclude')
+    ..moveOldSheets();
 
   static List<CrewGroup> _groups(dynamic list) {
     final out = <CrewGroup>[];

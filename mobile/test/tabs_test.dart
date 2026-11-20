@@ -10,14 +10,14 @@ void main() {
   test('Checklists always shows; hidden tabs are left out in order', () {
     expect(visibleTabs({}), ProjectTab.values);
     expect(visibleTabs({'links', 'seacans'}),
-        [ProjectTab.checklists, ProjectTab.notify, ProjectTab.contacts, ProjectTab.overtime, ProjectTab.attendance,
-          ProjectTab.notes]);
-    expect(tabIds[ProjectTab.attendance], 'attendance');
-    // Eight: four and four. Seven: four on top, three below. Six or fewer: rows of three.
-    expect(tabRows(ProjectTab.values).map((r) => r.length), [4, 4]);
-    expect(tabRows(visibleTabs({'links'})).map((r) => r.length), [4, 3]);
-    expect(tabRows(visibleTabs({'links', 'contacts'})).map((r) => r.length), [3, 3]);
-    expect(tabRows([...ProjectTab.values, ProjectTab.notes]).map((r) => r.length), [3, 3, 3]);
+        [ProjectTab.checklists, ProjectTab.notify, ProjectTab.contacts, ProjectTab.notes]);
+    // Attendance and Overtime are on each day now, not project tabs.
+    expect(tabIds.values, isNot(contains('attendance')));
+    expect(tabIds.values, isNot(contains('overtime')));
+    // Six or fewer: rows of three.
+    expect(tabRows(ProjectTab.values).map((r) => r.length), [3, 3]);
+    expect(tabRows(visibleTabs({'links'})).map((r) => r.length), [3, 2]);
+    expect(tabRows([...ProjectTab.values, ProjectTab.notes]).map((r) => r.length), [4, 3]);
     expect(tabIds[ProjectTab.contacts], 'contacts');
     expect(visibleTabs(tabIds.values.toSet()), [ProjectTab.checklists]);
   });

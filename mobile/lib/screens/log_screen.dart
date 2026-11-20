@@ -16,6 +16,7 @@ import '../ui/common.dart';
 import '../ui/rich_text.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
+import 'day_sheet_screen.dart';
 import 'field_widgets.dart';
 import 'task_screen.dart';
 
@@ -605,6 +606,17 @@ class _LogScreenState extends State<LogScreen> {
               ],
             ),
           ),
+          // This day's own Attendance and Overtime sheets.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Row(
+              children: [
+                Expanded(child: _sheetButton(p, l, DaySheet.attendance)),
+                const SizedBox(width: 12),
+                Expanded(child: _sheetButton(p, l, DaySheet.overtime)),
+              ],
+            ),
+          ),
           Container(height: 1, margin: const EdgeInsets.fromLTRB(24, 18, 24, 0), color: C.divider),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -619,6 +631,55 @@ class _LogScreenState extends State<LogScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Opens this day's Attendance or Overtime sheet, with a line saying what's on it.
+  Widget _sheetButton(Project p, DailyLog l, DaySheet kind) {
+    final att = kind == DaySheet.attendance;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => DaySheetScreen(projectId: p.id, logId: l.id, kind: kind),
+          ),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 64),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: C.cardStroke),
+          ),
+          child: Row(
+            children: [
+              Icon(att ? Icons.how_to_reg_outlined : Icons.schedule, color: C.blue),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      att ? 'Attendance' : 'Overtime',
+                      style: const TextStyle(color: C.navy, fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      daySheetSummary(p, l, kind),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: C.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
