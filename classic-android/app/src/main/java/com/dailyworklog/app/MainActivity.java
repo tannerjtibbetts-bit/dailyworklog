@@ -1,0 +1,406 @@
+package com.dailyworklog.app;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+/** Home screen: the list of projects (e.g. "Warehouse expansion"). */
+public class MainActivity extends AppCompatActivity {
+    private Store store;
+    private ProjectAdapter adapter;
+    private TextView empty;
+    private TextView subtitle;
+    private androidx.activity.result.ActivityResultLauncher<String[]> pickBackup;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (Access.need(this) != Access.Need.NONE) {  // e.g. reopened after being signed out
+            startActivity(new Intent(this, SignInActivity.class));
+            finish();
+            return;
+        }
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        setContentView(R.layout.activity_projects);
+        Ui.applyInsets(findViewById(R.id.root));
+        store = Store.get(this);
+        // The owner's crew list built into this copy: numbers go onto matching crew members, once.
+        int filled = CrewNumbers.applyBuiltIn(this, store);
+        if (filled > 0) {
+            android.widget.Toast.makeText(this, "Employee #, BP # and DISN # added for "
+                    + Fmt.plural(filled, "crew member", "crew members"), android.widget.Toast.LENGTH_LONG).show();
+        }
+        pickBackup = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri != null) restorePicked(uri);
+                });
+
+        empty = findViewById(R.id.empty);
+        subtitle = findViewById(R.id.subtitle);
+        RecyclerView list = findViewById(R.id.list);
+        list.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new ProjectAdapter();
+        list.setAdapter(adapter);
+
+        findViewById(R.id.fab).setOnClickListener(v -> editProject(null));
+        findViewById(R.id.profile).setOnClickListener(v -> askName());
+        if (store.userName.isEmpty() && savedInstanceState == null) list.post(this::askName);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refresh();
+    }
+
+    private void refresh() {
+        adapter.notifyDataSetChanged();
+        empty.setVisibility(store.projects.isEmpty() ? View.VISIBLE : View.GONE);
+        subtitle.setText(store.userName.isEmpty()
+                ? "Tap the person icon to set your name"
+                : "Signed in as " + store.userName
+                        + (store.workPosition.isEmpty() ? "" : " \u00B7 " + store.workPosition)
+                        + (store.contactPhone.isEmpty() ? "" : "  \u00B7  " + SmsHelper.formatPhone(store.contactPhone)));
+    }
+
+    /** Your name, email, work position and location, plus the number crew should reach you on (added to texts). */
+    private void askName() {
+        EditText name = new EditText(this);
+        name.setHint("Your name");
+        name.setText(store.userName);
+        name.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        name.setSingleLine(true);
+        EditText email = new EditText(this);
+        email.setHint("Email");
+        email.setText(store.userEmail);
+        email.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        email.setSingleLine(true);
+        EditText position = new EditText(this);
+        position.setHint("Work position, e.g. Foreman or Technician");
+        position.setText(store.workPosition);
+        position.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        position.setSingleLine(true);
+        EditText location = new EditText(this);
+        location.setHint("Work location, e.g. Main plant, Building 2");
+        location.setText(store.workLocation);
+        location.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        location.setSingleLine(true);
+        EditText phone = new EditText(this);
+        phone.setHint("Number crew should call or text you on");
+        phone.setText(store.contactPhone);
+        phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        phone.setSingleLine(true);
+        TextView hint = new TextView(this);
+        hint.setText("Your name is shown on completed fields and photos. The number is added under your name in texts. "
+                + "Tap the person icon any time to change these.");
+        hint.setTextColor(getColor(R.color.grey));
+        hint.setTextSize(14);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(Ui.dp(this, 22), Ui.dp(this, 8), Ui.dp(this, 22), 0);
+        box.addView(name);
+        box.addView(email);
+        box.addView(position);
+        box.addView(location);
+        box.addView(phone);
+        box.addView(hint);
+        // Profile: which task colours on the zone sheet are yours (photo imports pre-tick these)
+        TextView colTitle = new TextView(this);
+        colTitle.setText("My task colours on the zone sheet");
+        colTitle.setTextColor(getColor(R.color.navy));
+        colTitle.setTextSize(16);
+        colTitle.setPadding(0, Ui.dp(this, 16), 0, Ui.dp(this, 2));
+        box.addView(colTitle);
+        String[][] colours = {{ZoneSheet.BLUE, "Dark blue"}, {ZoneSheet.ORANGE, "Orange (maintenance)"},
+                {ZoneSheet.PINK, "Pink (electrical)"}};
+        android.widget.CheckBox[] colourBoxes = new android.widget.CheckBox[colours.length];
+        for (int i = 0; i < colours.length; i++) {
+            android.widget.CheckBox cb = new android.widget.CheckBox(this);
+            cb.setText(colours[i][1]);
+            cb.setChecked(store.myColours.contains(colours[i][0]));
+            colourBoxes[i] = cb;
+            box.addView(cb);
+        }
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(box);
+        androidx.appcompat.app.AlertDialog d = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Your profile").setView(scroll)
+                .setPositiveButton("Save", null).setNegativeButton("Cancel", null)
+                .setNeutralButton("More\u2026", (x, w) -> profileMore()).create();
+        d.setOnShowListener(x -> d.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String n = name.getText().toString().trim();
+            if (n.isEmpty()) {
+                name.setError("Enter your name");
+                return;
+            }
+            String mail = email.getText().toString().trim();
+            if (!mail.isEmpty() && !Fmt.isEmail(mail)) {
+                email.setError("Enter a valid email address");
+                email.requestFocus();
+                return;
+            }
+            d.dismiss();
+            store.userName = n;
+            store.userEmail = mail;
+            store.workPosition = position.getText().toString().trim();
+            store.workLocation = location.getText().toString().trim();
+            store.contactPhone = phone.getText().toString().trim();
+            store.myColours.clear();
+            for (int i = 0; i < colours.length; i++) if (colourBoxes[i].isChecked()) store.myColours.add(colours[i][0]);
+            store.save();
+            refresh();
+        }));
+        d.show();
+        name.requestFocus();
+    }
+
+    /** Approvals (app owner), the user manual and Sign out. */
+    private void profileMore() {
+        List<Ui.SheetItem> items = new ArrayList<>();
+        // Only when this build has the owner key: without it there's nothing to approve.
+        if (Access.builtInOwnerKey(this) != null) {
+            items.add(new Ui.SheetItem(R.drawable.ic_person_add, Access.isOwner(this) ? "Approvals / hand over" : "App owner / Approvals",
+                    () -> startActivity(new Intent(this, ApprovalsActivity.class))));
+        }
+        items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> LogsActivity.chooseTabs(this, null)));
+        items.add(new Ui.SheetItem(R.drawable.ic_send, "Email sending", () -> LoadEmail.setup(this, null)));
+        items.add(new Ui.SheetItem(R.drawable.ic_template, "User manual", () -> ManualActivity.open(this)));
+        items.add(new Ui.SheetItem(R.drawable.ic_download, "Back up all my work", this::backUp));
+        items.add(new Ui.SheetItem(R.drawable.ic_folder, "Restore from a backup",
+                // application/zip first; */* too, so .zip files from Drive or Downloads always show
+                () -> pickBackup.launch(new String[]{"application/zip", "*/*"})));
+        if (Access.hasPin(this)) {
+            items.add(new Ui.SheetItem(R.drawable.ic_back, "Sign out", () -> {
+                Access.signOut(this);
+                startActivity(new Intent(this, SignInActivity.class));
+                finish();
+            }));
+        }
+        Ui.menu(this, null, items);
+    }
+
+    // ----- backup and restore (the same .zip as the new app) -----
+
+    private AlertDialog busy(String message) {
+        AlertDialog d = new MaterialAlertDialogBuilder(this).setMessage(message).setCancelable(false).create();
+        d.show();
+        return d;
+    }
+
+    /** Makes the backup zip, saves a copy to Downloads and opens the share menu. */
+    private void backUp() {
+        store.save();
+        AlertDialog busy = busy("Making your backup\u2026");
+        PhotoUtil.BG.execute(() -> {
+            File zip;
+            try {
+                zip = Backup.create(store, new File(getCacheDir(), "exports"));
+            } catch (Exception e) {
+                zip = null;
+            }
+            boolean saved = false;
+            if (zip != null) {
+                try {
+                    Downloads.save(this, zip.getName(), "application/zip", zip);
+                    saved = true;
+                } catch (Exception ignored) {
+                    // the share menu still offers a way to keep it
+                }
+            }
+            final File done = zip;
+            final boolean inDownloads = saved;
+            runOnUiThread(() -> {
+                busy.dismiss();
+                if (done == null) {
+                    android.widget.Toast.makeText(this, "Couldn't make the backup. Please try again.", android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (inDownloads) {
+                    android.widget.Toast.makeText(this, "Backup saved to Downloads: " + done.getName(), android.widget.Toast.LENGTH_LONG).show();
+                }
+                android.net.Uri u = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".files", done);
+                Intent i = new Intent(Intent.ACTION_SEND).setType("application/zip")
+                        .putExtra(Intent.EXTRA_STREAM, u)
+                        .putExtra(Intent.EXTRA_SUBJECT, "Daily Work Log backup")
+                        .putExtra(Intent.EXTRA_TEXT, "Daily Work Log backup. Save it somewhere safe, or send it to your new phone.");
+                i.setClipData(android.content.ClipData.newRawUri("", u));
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(i, "Daily Work Log backup"));
+            });
+        });
+    }
+
+    /** Copies the picked file to the cache, shows what's in it and asks before replacing everything. */
+    private void restorePicked(android.net.Uri uri) {
+        AlertDialog busy = busy("Reading the backup\u2026");
+        PhotoUtil.BG.execute(() -> {
+            File copy = new File(getCacheDir(), "restore.zip");
+            try (java.io.InputStream in = getContentResolver().openInputStream(uri);
+                 java.io.OutputStream out = new java.io.FileOutputStream(copy)) {
+                if (in != null) Backup.copy(in, out);
+            } catch (Exception ignored) {
+                // the check below then says it isn't a backup
+            }
+            final Backup.Info found = Backup.inspect(copy);
+            runOnUiThread(() -> {
+                busy.dismiss();
+                if (found == null) {
+                    android.widget.Toast.makeText(this, "That file isn't a Daily Work Log backup", android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Ui.confirm(this, "Restore this backup?", restoreMessage(found), "Restore", () -> restore(copy));
+            });
+        });
+    }
+
+    static String restoreMessage(Backup.Info i) {
+        return "Backup" + (i.userName.trim().isEmpty() ? "" : " from " + i.userName.trim()) + ": "
+                + Fmt.plural(i.projects, "project", "projects") + ", " + Fmt.plural(i.photos, "photo", "photos")
+                + ".\n\nThis replaces everything on this phone with the backup. It can't be undone.";
+    }
+
+    private void restore(File zip) {
+        AlertDialog busy = busy("Restoring\u2026");
+        PhotoUtil.BG.execute(() -> {
+            org.json.JSONObject data;
+            try {
+                data = Backup.unpack(store, zip);
+            } catch (Exception e) {
+                data = null;
+            }
+            final org.json.JSONObject o = data;
+            runOnUiThread(() -> {
+                boolean restored = false;
+                if (o != null) {
+                    try {
+                        Backup.load(store, o); // on the main thread, so nothing reads the data mid-swap
+                        restored = true;
+                    } catch (Exception e) {
+                        restored = false;
+                    }
+                }
+                busy.dismiss();
+                android.widget.Toast.makeText(this, restored ? "Backup restored" : "Couldn't restore that backup",
+                        android.widget.Toast.LENGTH_LONG).show();
+                refresh();
+            });
+        });
+    }
+
+    private void editProject(Models.Project existing) {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_project, null);
+        EditText name = v.findViewById(R.id.name);
+        EditText loc = v.findViewById(R.id.location);
+        if (existing != null) {
+            name.setText(existing.name);
+            loc.setText(existing.location);
+            name.setSelection(name.getText().length());
+        }
+        final AlertDialog d = new MaterialAlertDialogBuilder(this)
+                .setTitle(existing == null ? "New project" : "Edit project")
+                .setView(v)
+                .setPositiveButton(existing == null ? "Create" : "Save", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        d.setOnShowListener(x -> d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(b -> {
+            String n = name.getText().toString().trim();
+            if (n.isEmpty()) {
+                name.setError("Enter a project name");
+                return;
+            }
+            Models.Project p = existing;
+            if (p == null) {
+                p = new Models.Project();
+                store.projects.add(0, p);
+            }
+            p.name = n;
+            p.location = loc.getText().toString().trim();
+            store.save();
+            d.dismiss();
+            refresh();
+            if (existing == null) open(p);
+        }));
+        if (d.getWindow() != null) {
+            d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        }
+        d.show();
+        name.requestFocus();
+    }
+
+    private void open(Models.Project p) {
+        startActivity(new Intent(this, LogsActivity.class).putExtra("project", p.id));
+    }
+
+    private void projectMenu(Models.Project p) {
+        List<Ui.SheetItem> items = new ArrayList<>();
+        items.add(new Ui.SheetItem(R.drawable.ic_edit, "Edit name and location", () -> editProject(p)));
+        items.add(new Ui.SheetItem(R.drawable.ic_delete, "Delete project", () ->
+                Ui.confirm(this, "Delete " + p.name + "?",
+                        "This removes all of its daily logs and photos. It can't be undone.", "Delete", () -> {
+                            store.deletePhotos(p);
+                            store.projects.remove(p);
+                            store.save();
+                            refresh();
+                        }), true));
+        Ui.menu(this, p.name, items);
+    }
+
+    private class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.VH> {
+        class VH extends RecyclerView.ViewHolder {
+            final TextView name, location, meta;
+
+            VH(View v) {
+                super(v);
+                name = v.findViewById(R.id.name);
+                location = v.findViewById(R.id.location);
+                meta = v.findViewById(R.id.meta);
+            }
+        }
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new VH(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_project, parent, false));
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH h, int position) {
+            Models.Project p = store.projects.get(position);
+            h.name.setText(p.name);
+            h.location.setText(p.location);
+            h.location.setVisibility(p.location.isEmpty() ? View.GONE : View.VISIBLE);
+            Models.DailyLog latest = p.latestLog();
+            h.meta.setText(latest == null ? "No daily logs yet"
+                    : Fmt.plural(p.logs.size(), "daily log", "daily logs") + ", latest " + Fmt.logDate(latest.date));
+            h.itemView.setOnClickListener(v -> open(p));
+            h.itemView.setOnLongClickListener(v -> {
+                projectMenu(p);
+                return true;
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return store.projects.size();
+        }
+    }
+}

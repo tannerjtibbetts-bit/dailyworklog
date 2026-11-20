@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:background="@color/bg">
+
+            <LinearLayout
+                android:id="@+id/topTitle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingStart="120dp"
+                android:paddingEnd="120dp">
+
+                <TextView
+                    android:id="@+id/topProject"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:letterSpacing="0.04"
+                    android:singleLine="true"
+                    android:textAllCaps="true"
+                    android:textColor="@color/grey"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/topLog"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/navy"
+                    android:textSize="19sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/back"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Back"
+                android:src="@drawable/ic_back"
+                app:tint="@color/navy" />
+
+            <!-- Add fields from a photo or spreadsheet (not the per-field photo camera) -->
+            <ImageButton
+                android:id="@+id/scan"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="64dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Add fields from a photo or spreadsheet"
+                android:src="@drawable/ic_camera"
+                app:tint="@color/navy" />
+
+            <ImageButton
+                android:id="@+id/more"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Checklist options"
+                android:src="@drawable/ic_more"
+                app:tint="@color/navy" />
+
+            <View
+                android:id="@+id/topDivider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_gravity="bottom"
+                android:alpha="0"
+                android:background="@color/divider" />
+        </FrameLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="150dp" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/mic"
+        android:layout_width="150dp"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/bg_pill_blue"
+        android:contentDescription="Add a field by voice"
+        android:elevation="8dp"
+        android:src="@drawable/ic_mic"
+        app:tint="@android:color/white" />
+</FrameLayout>
