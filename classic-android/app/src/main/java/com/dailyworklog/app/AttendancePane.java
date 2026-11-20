@@ -1,7 +1,6 @@
 package com.dailyworklog.app;
 
 import android.app.Activity;
-import android.app.DatePickerDialog;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
@@ -15,7 +14,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 
 /** Attendance tab: Name and Here? dropdowns, one row per person. Shares Overtime's look. */
@@ -27,7 +25,7 @@ final class AttendancePane {
     /** Narrower screens scroll the table sideways instead of squashing it. */
     private static final int MIN_WIDTH_DP = 470;
 
-    static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
+    static void render(Activity a, Store store, Models.Project p, Models.DailyLog l, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
         View parent = (View) box.getParent();
         final int scrollY = parent.getScrollY();
@@ -35,9 +33,9 @@ final class AttendancePane {
         if (focused != null) parent.requestFocus();
         box.removeAllViews();
         parent.post(() -> parent.scrollTo(0, scrollY));
-        Models.Attendance at = p.attendance;
+        Models.Attendance at = p.attendanceFor(l);
         // Rows (with crew names) are only made when there are none, so a removed row stays gone.
-        at.prepare(p.crew, Fmt.todayIso());
+        at.prepare(p.crew, l.date);
 
         LinearLayout card = OvertimePane.card(a);
         box.addView(card);
@@ -52,40 +50,16 @@ final class AttendancePane {
         export.setPadding(Ui.dp(a, 16), Ui.dp(a, 9), Ui.dp(a, 16), Ui.dp(a, 9));
         export.setContentDescription("Export attendance to PDF or Excel");
         export.setOnClickListener(v -> {
-            if (a instanceof LogsActivity) ((LogsActivity) a).exportAttendance();
+            if (a instanceof DaySheetActivity) ((DaySheetActivity) a).export();
         });
         titleRow.addView(export);
         card.addView(titleRow);
 
-        // Date line with a Change button
+        // The day this sheet is for: always its checklist's day.
         LinearLayout dateRow = new LinearLayout(a);
         dateRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView date = OvertimePane.text(a, "Date: " + Fmt.longDay(at.date), 16, R.color.text, false);
         dateRow.addView(date, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView change = OvertimePane.text(a, "Change", 16, R.color.blue, true);
-        change.setPadding(Ui.dp(a, 12), Ui.dp(a, 10), Ui.dp(a, 4), Ui.dp(a, 10));
-        change.setBackgroundResource(android.R.drawable.list_selector_background);
-        change.setContentDescription("Change the attendance date");
-        change.setOnClickListener(v -> {
-            Calendar c = Calendar.getInstance();
-            String[] parts = at.date.split("-");
-            int y = c.get(Calendar.YEAR), m = c.get(Calendar.MONTH), d = c.get(Calendar.DAY_OF_MONTH);
-            if (parts.length == 3) {
-                try {
-                    y = Integer.parseInt(parts[0]);
-                    m = Integer.parseInt(parts[1]) - 1;
-                    d = Integer.parseInt(parts[2]);
-                } catch (NumberFormatException ignored) {
-                    // keep today
-                }
-            }
-            new DatePickerDialog(a, (view, yy, mm, dd) -> {
-                at.date = Fmt.iso(yy, mm, dd);
-                store.save();
-                date.setText("Date: " + Fmt.longDay(at.date));
-            }, y, m, d).show();
-        });
-        dateRow.addView(change);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dlp.topMargin = Ui.dp(a, 4);
         card.addView(dateRow, dlp);
@@ -161,7 +135,7 @@ final class AttendancePane {
                 return;
             }
             store.save();
-            render(a, store, p, box);
+            render(a, store, p, l, box);
         });
         box.addView(trim);
 
@@ -198,10 +172,10 @@ final class AttendancePane {
 
         TextView clear = OvertimePane.action(a, "Clear answers", R.color.deep_blue);
         clear.setOnClickListener(v -> Ui.confirm(a, "Clear the attendance answers?",
-                "Answers and comments are cleared and the date changes to today. Names and notes stay.", "Clear", () -> {
-                    at.startDay(Fmt.todayIso());
+                "Answers and comments on this day are cleared. Names and notes stay. Other days aren't changed.", "Clear", () -> {
+                    at.startDay(at.date);
                     store.save();
-                    render(a, store, p, box);
+                    render(a, store, p, l, box);
                 }));
         box.addView(clear);
     }

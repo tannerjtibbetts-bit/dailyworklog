@@ -68,6 +68,19 @@ final class Fmt {
         return iso(c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
     }
 
+    /** The Friday of the weekend a day (yyyy-MM-dd) belongs to; today's if the date can't be read. */
+    static String upcomingFridayOf(String iso) {
+        try {
+            SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            f.setLenient(false);
+            Calendar c = Calendar.getInstance();
+            c.setTime(f.parse(iso));
+            return upcomingFriday(c);
+        } catch (Exception e) {
+            return upcomingFriday();
+        }
+    }
+
     static String upcomingFriday() {
         return upcomingFriday(Calendar.getInstance());
     }

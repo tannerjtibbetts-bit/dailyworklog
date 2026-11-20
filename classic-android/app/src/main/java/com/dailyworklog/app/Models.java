@@ -377,6 +377,10 @@ public final class Models {
         public List<String> crew = new ArrayList<>();
         public List<Task> tasks = new ArrayList<>();
         public List<Extra> extras = new ArrayList<>();
+        /** This day's own attendance and overtime sheets (null until first opened). Each day keeps its own,
+         *  so an old day's report shows what was filled in that day. */
+        public Attendance attendance;
+        public Overtime overtime;
 
         public Extra findExtra(String refId) {
             for (Extra e : extras) if (e.refId.equals(refId)) return e;
@@ -427,6 +431,8 @@ public final class Models {
             JSONArray x = new JSONArray();
             for (Extra e : extras) x.put(e.toJson());
             o.put("extras", x);
+            if (attendance != null) o.put("attendance", attendance.toJson());
+            if (overtime != null) o.put("overtime", overtime.toJson());
             return o;
         }
 
@@ -451,6 +457,9 @@ public final class Models {
                     if (e != null) l.extras.add(Extra.fromJson(e));
                 }
             }
+            JSONObject at = o.optJSONObject("attendance"), ot = o.optJSONObject("overtime");
+            l.attendance = at == null ? null : Attendance.fromJson(at);
+            l.overtime = ot == null ? null : Overtime.fromJson(ot);
             return l;
         }
     }
@@ -1114,6 +1123,18 @@ public final class Models {
             }
         }
 
+        /** A copy for another day. The same weekend keeps every answer; a new weekend keeps just the names. */
+        public Overtime copyFor(String friday) {
+            Overtime c;
+            try { c = fromJson(toJson()); } catch (JSONException e) { c = new Overtime(); }
+            if (!c.weekOf.equals(friday)) {
+                c.notes = "";
+                c.startWeekend(friday);
+            }
+            c.removeEmptyRows();
+            return c;
+        }
+
         JSONObject toJson() throws JSONException {
             JSONObject o = new JSONObject();
             o.put("weekOf", weekOf);
@@ -1234,6 +1255,20 @@ public final class Models {
             if (rows.isEmpty()) rows.add(new AttRow());
         }
 
+        /** A fresh sheet for another day: the same names and Include tick, no answers, comments or notes. */
+        public Attendance copyFor(String iso) {
+            Attendance c = new Attendance();
+            c.date = iso;
+            c.include = include;
+            for (AttRow r : rows) {
+                if (r.name.isEmpty()) continue;
+                AttRow n = new AttRow();
+                n.name = r.name;
+                c.rows.add(n);
+            }
+            return c;
+        }
+
         JSONObject toJson() throws JSONException {
             JSONObject o = new JSONObject();
             o.put("date", date);
@@ -1315,7 +1350,7 @@ public final class Models {
         }
     }
 
-    public static class Project {
+    public static class Project implements Cloneable {
         public String id = newId();
         public String name = "";
         public String location = "";
@@ -1501,8 +1536,90 @@ public final class Models {
             }
             for (Template x : templates) for (Task t : x.tasks) replaceIn(t.assignees, from, to);
             for (Notice n : notices) replaceIn(n.to, from, to);
-            for (Overtime.OtRow row : overtime.rows) if (row.name.equals(from)) row.name = to;
-            for (Attendance.AttRow row : attendance.rows) if (row.name.equals(from)) row.name = to;
+            List<Overtime> ots = new ArrayList<>();
+            List<Attendance> atts = new ArrayList<>();
+            ots.add(overtime);
+            atts.add(attendance);
+            for (DailyLog l : logs) {
+                if (l.overtime != null) ots.add(l.overtime);
+                if (l.attendance != null) atts.add(l.attendance);
+            }
+            for (Overtime ot : ots) for (Overtime.OtRow row : ot.rows) if (row.name.equals(from)) row.name = to;
+            for (Attendance a : atts) for (Attendance.AttRow row : a.rows) if (row.name.equals(from)) row.name = to;
+        }
+
+        private static int dayOrder(DailyLog a, DailyLog b) {
+            int c = a.date.compareTo(b.date);
+            return c != 0 ? c : Long.compare(a.createdAt, b.createdAt);
+        }
+
+        /** The day before l (by date, then when made) with a sheet, else the newest other day with one. */
+        private DailyLog sheetSource(DailyLog l, boolean att) {
+            DailyLog before = null, any = null;
+            for (DailyLog x : logs) {
+                if (x == l || (att ? x.attendance == null : x.overtime == null)) continue;
+                if (any == null || dayOrder(x, any) > 0) any = x;
+                if (dayOrder(x, l) < 0 && (before == null || dayOrder(x, before) > 0)) before = x;
+            }
+            return before != null ? before : any;
+        }
+
+        /** l's attendance sheet, made the first time: names and Include tick from the day before, no answers. */
+        public Attendance attendanceFor(DailyLog l) {
+            if (l.attendance != null) return l.attendance;
+            DailyLog src = sheetSource(l, true);
+            l.attendance = (src != null ? src.attendance : attendance).copyFor(l.date);
+            return l.attendance;
+        }
+
+        /** l's overtime sheet, made the first time from the day before: same weekend keeps its answers,
+         *  a new weekend keeps just the names. */
+        public Overtime overtimeFor(DailyLog l) {
+            if (l.overtime != null) return l.overtime;
+            String friday = Fmt.upcomingFridayOf(l.date);
+            DailyLog src = sheetSource(l, false);
+            Overtime ot = (src != null ? src.overtime : overtime).copyFor(friday);
+            ot.weekOf = friday;
+            l.overtime = ot;
+            return ot;
+        }
+
+        /** This project as a report for day l sees it: the same everything, but the overtime and attendance are
+         *  l's own (blank, so not printed, if that day never had them), never another day's. */
+        public Project forDay(DailyLog l) {
+            try {
+                Project c = (Project) super.clone();
+                c.overtime = l != null && l.overtime != null ? l.overtime : new Overtime();
+                c.attendance = l != null && l.attendance != null ? l.attendance : new Attendance();
+                return c;
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
+        }
+
+        /** Moves the old project-wide sheets onto a day, once: attendance onto the day it was dated (else the
+         *  newest day), overtime onto the newest day. */
+        void moveOldSheets() {
+            for (DailyLog l : logs) if (l.attendance != null || l.overtime != null) return;
+            DailyLog latest = latestLog();
+            if (latest == null) return;
+            try {
+                boolean att = !attendance.notes.trim().isEmpty();
+                for (Attendance.AttRow r : attendance.rows) if (!r.isBlank()) att = true;
+                if (att) {
+                    DailyLog day = null;
+                    for (DailyLog l : logs) {
+                        if (l.date.equals(attendance.date) && (day == null || l.createdAt > day.createdAt)) day = l;
+                    }
+                    if (day == null) day = latest;
+                    day.attendance = Attendance.fromJson(attendance.toJson());
+                    day.attendance.date = day.date;
+                }
+                boolean ot = !overtime.notes.trim().isEmpty();
+                for (Overtime.OtRow r : overtime.rows) if (!Overtime.isBlank(r)) ot = true;
+                if (ot) latest.overtime = Overtime.fromJson(overtime.toJson());
+            } catch (JSONException ignored) {
+            }
         }
 
         private static void replaceIn(List<String> list, String from, String to) {
@@ -1741,6 +1858,7 @@ public final class Models {
                     if (x != null) p.notices.add(Notice.fromJson(x));
                 }
             }
+            p.moveOldSheets();
             return p;
         }
     }
