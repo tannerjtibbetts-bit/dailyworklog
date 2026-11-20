@@ -132,6 +132,7 @@ final class FormPdf {
                     c.drawText(one, x, (float) (pl.y * ph), ink);
                 }
             }
+            ReportPdf.drawTag(c, 6, ph);  // the app's hidden tag
             doc.finishPage(page);
             page = null;
         }
@@ -297,6 +298,7 @@ final class FormPdf {
         c.drawText(footer, M, H - 22, small);
         String n = "Page " + pageNo;
         c.drawText(n, W - M - small.measureText(n), H - 22, small);
+        ReportPdf.drawTag(c, M, H);  // the app's hidden tag
         doc.finishPage(page);
         page = null;
     }

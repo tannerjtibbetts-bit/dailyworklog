@@ -73,4 +73,17 @@ void main() {
     final pdf = await ReportPdf.write(p, l, 'Tanner', 0, Directory.systemTemp.path);
     expect(latin1.decode(pdf, allowInvalid: true), contains(Ownership.mark));
   });
+
+  test('proofs made by the classic app check in this app too', () {
+    const v1 = 'DWL-PROOF-djF8cHJvb2Z8VGFubmVyIFRpYmJldHRzfDIwMjYtMTEtMjAgMTQ6MDN8RFdMLVBHOUgtWE1FVS1QQlo0LUhORks~MEYCIQDAbtlfThCkQjFWBAWSmKanKhJlFp0N3_3F4F7heMVjoQIhAMEb9Tw0DpgJC9Vs7GQJ9SMSqg6cHIgSrp0VfXvt_yBn~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKI4AA0QVdgOEs8TXq1aZEUvUoJiXOnRMY9jSZtwvZLE4-VQr2UdR-8Idb53U5f22wpCGy-N7J25GgiLNnyF5eA';
+    const v2 = 'DWL-PROOF-djF8cHJvb2Z8TmV3IE93bmVyfDIwMjctMDEtMDUgMDg6MDB8RFdMLVBHOUgtWE1FVS1QQlo0LUhORks~MEQCIADkNd57LUwoA9OSYChCnHxDzTYU33BWSTuOMQIekUvtAiAZE4el_kZLExKX1hLeMJInyg4MiUqRCLwtPYyvsYk3rQ~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKI4AA0QVdgOEs8TXq1aZEUvUoJiXOnRMY9jSZtwvZLE4-VQr2UdR-8Idb53U5f22wpCGy-N7J25GgiLNnyF5eA~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn1F0EosXjmLjK_1BXwxp2UdEreC-ejWrNNSwdCqn08KwU6uBCDLBsQmFKadPc0kDvi064XYVe8yW9QYs1Za7Ow.MEUCIExcIfvAsElwuOLW-CirZ70BIuzZ12o6qefFrg2QZHPCAiEAh2xUL3SJf39oK4O3ty2c3lVQYESy7Leuq8a5uv6y2ec';
+    final a = OwnershipProof.check(v1, null)!;
+    expect(a.genuine, true);
+    expect(a.name, 'Tanner Tibbetts');
+    expect(a.at, '2026-11-20 14:03');
+    final b = OwnershipProof.check(v2, null)!;
+    expect(b.genuine, true);
+    expect(b.name, 'New Owner');
+    expect(b.fingerprint, a.fingerprint); // the same original owner key
+  });
 }

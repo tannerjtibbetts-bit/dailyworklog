@@ -177,7 +177,17 @@ public class ManualActivity extends AppCompatActivity {
         tile.addView(sub);
         tile.setOnClickListener(v -> startActivity(new Intent(this, ManualActivity.class).putExtra("manual", true)));
         body.addView(tile, cardLp(Ui.dp(this, 12)));
-        TextView credit = text("App created by Tanner Tibbetts", 12, R.color.grey_light);
+        LinearLayout own = card();
+        own.setOrientation(LinearLayout.VERTICAL);
+        TextView ot = text("Ownership proof", 20, R.color.navy);
+        ot.setTypeface(null, Typeface.BOLD);
+        own.addView(ot);
+        TextView os = text("Who owns Daily Work Log, and a signed proof of it. Make one on the owner\u2019s phone, or check one you were sent.", 15, R.color.grey);
+        os.setPadding(0, Ui.dp(this, 4), 0, 0);
+        own.addView(os);
+        own.setOnClickListener(v -> startActivity(new Intent(this, OwnershipActivity.class)));
+        body.addView(own, cardLp(Ui.dp(this, 12)));
+        TextView credit = text(Ownership.CREDIT, 12, R.color.grey_light);
         credit.setGravity(Gravity.CENTER);
         credit.setPadding(0, Ui.dp(this, 24), 0, 0);
         body.addView(credit, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));

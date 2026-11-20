@@ -71,7 +71,7 @@ public class SignInActivity extends AppCompatActivity {
         support.setPadding(0, Ui.dp(this, 28), 0, Ui.dp(this, 4));
         support.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         support.setOnClickListener(v -> ManualActivity.open(this));
-        TextView t = text("App created by Tanner Tibbetts", 11, R.color.grey_light);
+        TextView t = text(Ownership.CREDIT, 11, R.color.grey_light);
         t.setGravity(Gravity.CENTER);
         t.setAlpha(0.8f);
         t.setPadding(0, Ui.dp(this, 40), 0, 0);

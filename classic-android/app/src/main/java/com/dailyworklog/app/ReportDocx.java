@@ -50,7 +50,7 @@ final class ReportDocx {
         ZipOutputStream z = new ZipOutputStream(out);
         ReportDocx r = new ReportDocx(z, encoder);
         r.render(p, log, generatedBy, generatedAt, photoDir);
-        r.finish();
+        r.finish("Daily work log", generatedBy);
         z.finish();
         z.flush();
     }
@@ -184,7 +184,7 @@ final class ReportDocx {
         r.para("Generated " + Fmt.longStamp(generatedAt) + " by " + generatedBy, false, 10, GREY, 120, false, null);
         if (p.filledSeaCans().isEmpty()) r.para("No sea cans entered yet.", false, 11, TEXT, 40, false, null);
         else r.renderSeaCans(p, true);
-        r.finish();
+        r.finish("Sea can movements", generatedBy);
         z.finish();
         z.flush();
     }
@@ -458,7 +458,7 @@ final class ReportDocx {
         zip.closeEntry();
     }
 
-    private void finish() throws IOException {
+    private void finish(String title, String by) throws IOException {
         String head = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>";
         entry("[Content_Types].xml", head
                 + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
@@ -466,11 +466,12 @@ final class ReportDocx {
                 + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
                 + "<Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/>"
                 + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
-                + "</Types>");
+                + Ownership.CONTENT_TYPES + "</Types>");
         entry("_rels/.rels", head
                 + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
                 + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>"
-                + "</Relationships>");
+                + Ownership.RELS + "</Relationships>");
+        Ownership.putParts(zip, title, by);  // the hidden tag: made with this app, and whose it is
         entry("word/_rels/document.xml.rels", head
                 + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
                 + rels + "</Relationships>");

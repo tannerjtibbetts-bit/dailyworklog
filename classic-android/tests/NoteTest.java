@@ -1789,3 +1789,85 @@ class DaySheetsTest {
     RichTest.eq(LogActivity.attendanceLine(tue), "Vacation 1 · in report", "attendance summary line");
     NoteTest.check(LogsActivity.isDaySheet("overtime") && LogsActivity.isDaySheet("attendance") && !LogsActivity.isDaySheet("notes"), "day sheet tabs");
     System.out.println("DAYSHEETS PASS"); } }
+
+class OwnershipTest {
+  static java.util.Map<String,String> zip(byte[] bytes) throws Exception {
+    java.util.Map<String,String> m = new java.util.HashMap<>();
+    try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bytes))) {
+      for (java.util.zip.ZipEntry e; (e = z.getNextEntry()) != null; ) {
+        String x = new String(z.readAllBytes(), "UTF-8");
+        if (e.getName().endsWith(".xml") || e.getName().endsWith(".rels"))
+          javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new java.io.ByteArrayInputStream(x.getBytes("UTF-8")));
+        m.put(e.getName(), x);
+      }
+    }
+    return m;
+  }
+  static byte[] sign(java.security.PrivateKey k, byte[] data) throws Exception {
+    java.security.Signature s = java.security.Signature.getInstance("SHA256withECDSA"); s.initSign(k); s.update(data); return s.sign();
+  }
+  public static void main(String[] a) throws Exception {
+    RichTest.eq(Ownership.NOTICE, "© 2026 Tanner Tibbetts. All rights reserved.", "notice");
+    RichTest.eq(Ownership.CREDIT, "App created by Tanner Tibbetts\n© 2026 Tanner Tibbetts. All rights reserved.", "credit");
+    RichTest.eq(Ownership.TAG, "Made with Daily Work Log. © 2026 Tanner Tibbetts. All rights reserved. DWL-PG9H-XMEU-PBZ4-HNFK", "tag");
+
+    // Round trip, tamper, other key, no key
+    java.security.KeyPairGenerator g = java.security.KeyPairGenerator.getInstance("EC");
+    g.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+    java.security.KeyPair owner = g.generateKeyPair();
+    String at = "2026-11-20 14:03";
+    String text = OwnershipProof.text(" Tanner Tibbetts ", at, sign(owner.getPrivate(), OwnershipProof.payload("Tanner Tibbetts", at)), owner.getPublic(), "");
+    NoteTest.check(text.contains(Ownership.NOTICE) && text.contains(Ownership.MARK) && text.startsWith("Daily Work Log ownership proof\nOwner: Tanner Tibbetts\nSigned: " + at + "\n"), "proof text");
+    OwnershipProof.Result r = OwnershipProof.check(text, owner.getPublic());
+    NoteTest.check(r != null && r.genuine && r.name.equals("Tanner Tibbetts") && r.at.equals(at) && Boolean.TRUE.equals(r.sameAsThisApp)
+        && r.fingerprint.equals(OwnershipProof.fingerprint(owner.getPublic())) && r.fingerprint.matches("[0-9A-F]{4}(-[0-9A-F]{4}){3}"), "round trip");
+    NoteTest.check(Boolean.FALSE.equals(OwnershipProof.check(text, g.generateKeyPair().getPublic()).sameAsThisApp), "someone else's key");
+    NoteTest.check(OwnershipProof.check(text, null).sameAsThisApp == null && OwnershipProof.check(text, null).genuine, "no key built in");
+    String code = text.substring(text.lastIndexOf('\n') + 1);
+    String rest = code.substring(code.indexOf('~'));
+    String forged = OwnershipProof.PREFIX + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(OwnershipProof.payload("Someone Else", at)) + rest;
+    NoteTest.check(!OwnershipProof.check(forged, owner.getPublic()).genuine, "tampered name is not genuine");
+    NoteTest.check(OwnershipProof.check("hello", owner.getPublic()) == null, "no proof");
+    RichTest.eq(OwnershipActivity.verdict(null)[0], "No proof found", "verdict none");
+    RichTest.eq(OwnershipActivity.verdict(OwnershipProof.check(forged, null))[0], "Not genuine", "verdict forged");
+    RichTest.eq(OwnershipActivity.verdict(r)[1], "Signed by Tanner Tibbetts on " + at + " with owner key " + r.fingerprint + ". It is the owner key built into this copy of the app.", "verdict genuine");
+
+    // Handover chain
+    java.security.KeyPair next = g.generateKeyPair();
+    String url = AccessCodes.keyUrl(next.getPublic());
+    String chain = AccessCodes.extendChain("", url, sign(owner.getPrivate(), AccessCodes.handoverPayload(url)));
+    String at2 = "2027-01-05 08:00";
+    OwnershipProof.Result h = OwnershipProof.check(OwnershipProof.text("New Owner", at2, sign(next.getPrivate(), OwnershipProof.payload("New Owner", at2)), owner.getPublic(), chain), owner.getPublic());
+    NoteTest.check(h != null && h.genuine && Boolean.TRUE.equals(h.sameAsThisApp), "handover chain");
+    NoteTest.check(!OwnershipProof.check(OwnershipProof.text("New Owner", at2, sign(next.getPrivate(), OwnershipProof.payload("New Owner", at2)), owner.getPublic(), ""), owner.getPublic()).genuine, "handed-over key without its chain");
+
+    // Fixed vectors made outside this app (openssl), in the new app's format: they must check here.
+    java.security.PublicKey root = AccessCodes.publicKey("MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKI4AA0QVdgOEs8TXq1aZEUvUoJiXOnRMY9jSZtwvZLE4+VQr2UdR+8Idb53U5f22wpCGy+N7J25GgiLNnyF5eA==");
+    String v1 = "DWL-PROOF-djF8cHJvb2Z8VGFubmVyIFRpYmJldHRzfDIwMjYtMTEtMjAgMTQ6MDN8RFdMLVBHOUgtWE1FVS1QQlo0LUhORks~MEYCIQDAbtlfThCkQjFWBAWSmKanKhJlFp0N3_3F4F7heMVjoQIhAMEb9Tw0DpgJC9Vs7GQJ9SMSqg6cHIgSrp0VfXvt_yBn~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKI4AA0QVdgOEs8TXq1aZEUvUoJiXOnRMY9jSZtwvZLE4-VQr2UdR-8Idb53U5f22wpCGy-N7J25GgiLNnyF5eA";
+    String v2 = "DWL-PROOF-djF8cHJvb2Z8TmV3IE93bmVyfDIwMjctMDEtMDUgMDg6MDB8RFdMLVBHOUgtWE1FVS1QQlo0LUhORks~MEQCIADkNd57LUwoA9OSYChCnHxDzTYU33BWSTuOMQIekUvtAiAZE4el_kZLExKX1hLeMJInyg4MiUqRCLwtPYyvsYk3rQ~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKI4AA0QVdgOEs8TXq1aZEUvUoJiXOnRMY9jSZtwvZLE4-VQr2UdR-8Idb53U5f22wpCGy-N7J25GgiLNnyF5eA~MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn1F0EosXjmLjK_1BXwxp2UdEreC-ejWrNNSwdCqn08KwU6uBCDLBsQmFKadPc0kDvi064XYVe8yW9QYs1Za7Ow.MEUCIExcIfvAsElwuOLW-CirZ70BIuzZ12o6qefFrg2QZHPCAiEAh2xUL3SJf39oK4O3ty2c3lVQYESy7Leuq8a5uv6y2ec";
+    OwnershipProof.Result x1 = OwnershipProof.check("pasted:\n" + v1 + "\n", root), x2 = OwnershipProof.check(v2, root);
+    NoteTest.check(x1 != null && x1.genuine && x1.name.equals("Tanner Tibbetts") && x1.at.equals("2026-11-20 14:03") && x1.fingerprint.equals("FBEF-5D0B-29E0-A983") && Boolean.TRUE.equals(x1.sameAsThisApp), "outside vector");
+    NoteTest.check(x2 != null && x2.genuine && x2.name.equals("New Owner") && Boolean.TRUE.equals(x2.sameAsThisApp), "outside vector with handover");
+    NoteTest.check(OwnershipProof.text("Tanner Tibbetts", "2026-11-20 14:03", java.util.Base64.getUrlDecoder().decode(v1.split("~")[1]), root, "").endsWith("\n\n" + v1), "same code as the outside vector");
+
+    // Word and Excel files carry the hidden tag
+    Models.Project p = new Models.Project(); p.name = "B44";
+    Models.DailyLog l = new Models.DailyLog(); l.date = "2026-11-20"; p.logs.add(l);
+    java.util.List<byte[]> files = new java.util.ArrayList<>();
+    java.io.ByteArrayOutputStream b1 = new java.io.ByteArrayOutputStream(); ReportDocx.write(p, l, "Tanner", 0L, new java.io.File("."), f -> null, b1); files.add(b1.toByteArray());
+    java.io.ByteArrayOutputStream b2 = new java.io.ByteArrayOutputStream(); ReportXlsx.write(p, l, "Tanner", 0L, b2); files.add(b2.toByteArray());
+    java.io.ByteArrayOutputStream b3 = new java.io.ByteArrayOutputStream(); OvertimeXlsx.write(p, "Tanner", 0L, b3); files.add(b3.toByteArray());
+    java.io.ByteArrayOutputStream b4 = new java.io.ByteArrayOutputStream(); AttendanceXlsx.write(p, b4); files.add(b4.toByteArray());
+    java.io.ByteArrayOutputStream b5 = new java.io.ByteArrayOutputStream(); SeaCanExport.writeXlsx(p, "Tanner", 0L, b5); files.add(b5.toByteArray());
+    java.io.ByteArrayOutputStream b6 = new java.io.ByteArrayOutputStream(); ReportDocx.writeSeaCans(p, "Tanner", 0L, b6); files.add(b6.toByteArray());
+    int i = 0;
+    for (byte[] f : files) {
+      java.util.Map<String,String> m = zip(f);
+      i++;
+      NoteTest.check(m.get("docProps/core.xml").contains("<cp:keywords>Daily Work Log " + Ownership.MARK + "</cp:keywords>") && m.get("docProps/core.xml").contains(Ownership.TAG)
+          && m.get("docProps/app.xml").contains("<Company>" + Ownership.NOTICE + "</Company>") && m.get("[Content_Types].xml").contains("/docProps/core.xml")
+          && m.get("_rels/.rels").contains("Target=\"docProps/app.xml\"") && m.get("_rels/.rels").contains("rIdCore"), "file " + i + " carries the tag");
+    }
+    NoteTest.check(Ownership.coreXml("A & B", "Jo", 0L).contains("<dc:title>A &amp; B</dc:title><dc:creator>Jo</dc:creator>")
+        && Ownership.coreXml("x", "", 0L).contains("1970-01-01T00:00:00Z"), "core.xml");
+    System.out.println("OWNERSHIP PASS"); } }

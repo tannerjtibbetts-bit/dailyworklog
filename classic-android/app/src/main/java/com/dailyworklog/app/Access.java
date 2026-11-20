@@ -145,6 +145,16 @@ final class Access {
         return s.sign();
     }
 
+    // ----- ownership proof -----
+
+    /** Owner only: a signed ownership proof (see OwnershipProof), as text to share or keep. */
+    static String ownershipProof(Context c, String name) throws Exception {
+        PublicKey root = builtInOwnerKey(c);
+        if (root == null || !isOwner(c)) throw new Exception("only the owner's phone can make one");
+        String at = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT).format(new Date());
+        return OwnershipProof.text(name, at, sign(c, OwnershipProof.payload(name, at)), root, ownerChain(c));
+    }
+
     // ----- handing the owner role to another phone -----
 
     /**

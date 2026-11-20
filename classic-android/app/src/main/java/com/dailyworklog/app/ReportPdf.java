@@ -573,7 +573,20 @@ final class ReportPdf {
         c.drawText(footerTitle, M, fy, tiny);
         String n = "Page " + pageNo;
         c.drawText(n, W - M - tiny.measureText(n), fy, tiny);
+        drawTag(c, M, H);
         doc.finishPage(page);
         page = null;
+    }
+
+    /**
+     * The app's hidden tag (made with Daily Work Log, whose it is, and the app's mark): tiny white text
+     * in the bottom margin, so it's in the file but not seen. Android's PdfDocument can't set the file's
+     * properties, so this is how a PDF carries it.
+     */
+    static void drawTag(android.graphics.Canvas c, float x, float pageH) {
+        TextPaint p = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(0xFFFFFFFF);
+        p.setTextSize(3f);
+        c.drawText(Ownership.TAG, x, pageH - 6, p);
     }
 }

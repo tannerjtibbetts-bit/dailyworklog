@@ -3876,6 +3876,73 @@
       ]
     },
     {
+      "id": "ownership-proof",
+      "title": "Copyright and ownership proof",
+      "group": "App owner",
+      "summary": "Daily Work Log belongs to Tanner Tibbetts. Make a signed ownership proof on the owner's phone, or check one you were sent.",
+      "keywords": [
+        "copyright",
+        "owner",
+        "ownership",
+        "proof",
+        "fingerprint",
+        "watermark",
+        "mark",
+        "stolen",
+        "copy",
+        "rights"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Daily Work Log was created by Tanner Tibbetts. © 2026 Tanner Tibbetts. All rights reserved. The notice shows at the bottom of the opening screen, the sign-in screen and Support."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Every PDF, Word and Excel file the app makes carries a hidden tag in its file properties: \"Made with Daily Work Log\", the copyright notice and the app's own mark. PDFs also carry it as invisible text on each page.",
+            "The app's code carries the same mark, a made-up code that exists only in this app. If it ever turns up in someone else's app or files, they came from this one."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "An ownership proof is a statement signed on the owner's phone with the app's owner key, the same key that approves people. Only that phone can make one, and anyone can check it."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the owner's phone, tap \"Support\", then \"Ownership proof\".",
+            "Check your name under \"Make an ownership proof\" and tap \"Make ownership proof\".",
+            "Pick where to send it, for example email it to yourself. It is also copied, ready to paste. Keep a copy somewhere safe."
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            "To check a proof, open \"Support\", then \"Ownership proof\".",
+            "Paste the whole proof under \"Check an ownership proof\" and tap \"Check\".",
+            "\"Genuine\" means it was signed with the owner key shown by its fingerprint. The app also says whether that is the owner key built into this copy of the app. \"Not genuine\" means the proof was changed."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "\"Make an ownership proof\" only works on the owner's phone. After you hand over ownership to another phone, make proofs on that phone."
+        },
+        {
+          "type": "see",
+          "id": "approving-requests",
+          "text": "Related: Approving a request"
+        },
+        {
+          "type": "see",
+          "id": "hand-over-ownership",
+          "text": "Related: Handing over ownership"
+        }
+      ]
+    },
+    {
       "id": "user-manual",
       "title": "Using this user manual (Support)",
       "group": "Help",

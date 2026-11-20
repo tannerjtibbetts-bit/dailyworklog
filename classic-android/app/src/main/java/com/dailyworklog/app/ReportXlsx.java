@@ -301,11 +301,12 @@ final class ReportXlsx {
                     + "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
                     + "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
                     + "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
-                    + "</Types>");
+                    + Ownership.CONTENT_TYPES + "</Types>");
             put(zip, "_rels/.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
                     + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
                     + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/>"
-                    + "</Relationships>");
+                    + Ownership.RELS + "</Relationships>");
+            Ownership.putParts(zip, "Daily work log", me);
             put(zip, "xl/workbook.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
                     + "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
                     + "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
