@@ -7,6 +7,7 @@ import 'package:archive/archive.dart';
 import 'package:intl/intl.dart';
 
 import '../data/fmt.dart';
+import '../about/ownership.dart';
 import '../data/models.dart';
 import '../data/rich.dart';
 
@@ -286,7 +287,7 @@ class ReportXlsx {
       ))
       ..addFile(ArchiveFile.string('xl/styles.xml', styleSheet))
       ..addFile(ArchiveFile.string('xl/worksheets/sheet1.xml', sheet));
-    return ZipEncoder().encodeBytes(zip);
+    return Ownership.tagged(zip, title: 'Daily work log');
   }
 }
 

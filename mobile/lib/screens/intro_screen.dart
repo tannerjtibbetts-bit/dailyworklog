@@ -1,6 +1,7 @@
 // Opening screen: logo, app name and an Enter button.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../about/ownership.dart';
 
 import '../support/support_screens.dart';
 import '../access/access.dart';
@@ -160,7 +161,8 @@ class _IntroScreenState extends State<IntroScreen> with SingleTickerProviderStat
                         child: Opacity(
                           opacity: 0.7,
                           child: Text(
-                            'App created by Tanner Tibbetts',
+                            Ownership.credit,
+                            textAlign: TextAlign.center,
                             style: TextStyle(color: C.introSub, fontSize: 11),
                           ),
                         ),

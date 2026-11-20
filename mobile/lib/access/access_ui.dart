@@ -1,6 +1,7 @@
 // Small building blocks shared by the sign-in and approvals screens.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../about/ownership.dart';
 
 import '../ui/theme.dart';
 
@@ -31,7 +32,7 @@ Widget accessCredit() => const Padding(
   child: Opacity(
     opacity: 0.8,
     child: Text(
-      'App created by Tanner Tibbetts',
+      Ownership.credit,
       textAlign: TextAlign.center,
       style: TextStyle(fontSize: 11, color: C.greyLight),
     ),

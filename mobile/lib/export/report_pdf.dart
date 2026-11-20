@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 
+import '../about/ownership.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/rich.dart';
@@ -75,7 +76,17 @@ class ReportPdf {
   /// The project being printed, to find Notes-tab notes and their formatting.
   Project? _project;
 
-  ReportPdf._(this._footerTitle, this._photoDir);
+  ReportPdf._(this._footerTitle, this._photoDir) {
+    // Hidden in the file's properties: made with this app, and whose it is.
+    PdfInfo(
+      _doc,
+      title: _footerTitle,
+      creator: 'Daily Work Log',
+      subject: Ownership.notice,
+      keywords: 'Daily Work Log ${Ownership.mark}',
+      producer: 'Daily Work Log',
+    );
+  }
 
   /// The day's report. [photoDir] is the folder the photo files are in.
   static Future<Uint8List> write(Project p, DailyLog log, String generatedBy, int generatedAt, String photoDir) {
@@ -838,6 +849,8 @@ class ReportPdf {
     final nw = _measure(n, _tiny);
     _drawString(_ellipsize(_footerTitle, _tiny, _w - 2 * _m - nw - 16), _tiny, _m, fy);
     _drawString(n, _tiny, _w - _m - nw, fy);
+    // Invisible text (it can't be seen or printed, but it's in the file): the app's tag.
+    _g!.drawString(_regular, 4, Ownership.tag, _m, 6, mode: PdfTextRenderingMode.invisible);
     _g = null;
   }
 }

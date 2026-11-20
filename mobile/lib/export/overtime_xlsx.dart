@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 
 import '../data/fmt.dart';
+import '../about/ownership.dart';
 import '../data/models.dart';
 
 class OvertimeXlsx {
@@ -159,7 +160,7 @@ class OvertimeXlsx {
         ),
       )
       ..addFile(ArchiveFile.string('xl/worksheets/sheet1.xml', sheet));
-    return ZipEncoder().encodeBytes(zip);
+    return Ownership.tagged(zip, title: 'Weekend overtime', by: by);
   }
 
   static int _style(String v) => v == Overtime.yes

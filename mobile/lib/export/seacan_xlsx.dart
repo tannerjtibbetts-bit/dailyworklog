@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
+import '../about/ownership.dart';
 import '../data/models.dart';
 
 class SeaCanXlsx {
@@ -175,7 +176,7 @@ class SeaCanXlsx {
         ),
       )
       ..addFile(ArchiveFile.string('xl/worksheets/sheet1.xml', sheet));
-    return ZipEncoder().encodeBytes(zip);
+    return Ownership.tagged(zip, title: 'Sea can movements', by: by);
   }
 
   /// A weight that reads as a number ("2", "2.5", ".5", "3.") as Excel number text, else null (kept as text).

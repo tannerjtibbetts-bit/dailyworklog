@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dailyworklog/about/ownership.dart';
 import 'package:dailyworklog/access/access.dart';
 import 'package:dailyworklog/access/access_codes.dart';
 import 'package:dailyworklog/screens/approvals_screen.dart';
@@ -263,11 +264,11 @@ void main() {
       expect(find.text('1. Ask for access'), findsOneWidget);
       expect(find.text('Request access'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('App created by Tanner Tibbetts'),
+        find.text(Ownership.credit),
         300,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('App created by Tanner Tibbetts'), findsOneWidget);
+      expect(find.text(Ownership.credit), findsOneWidget);
     });
 
     testWidgets('sign-in emails the request when the owner email is built in', (tester) async {

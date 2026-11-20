@@ -18,6 +18,7 @@ import '../screens/approvals_screen.dart';
 import '../screens/projects_screen.dart';
 import '../screens/sign_in_screen.dart';
 import 'access_codes.dart';
+import 'ownership_proof.dart';
 
 enum Need { none, approval, newPin, pin }
 
@@ -158,6 +159,19 @@ class Access {
       if (sig != null) return sig;
     }
     throw Exception('this phone has no owner key');
+  }
+
+  // ----- ownership proof -----
+
+  /// Owner only: a signed ownership proof (see OwnershipProof), as text to share or keep.
+  static Future<String> ownershipProof(String name) async {
+    final p = await _prefs();
+    final root = await builtInOwnerKey();
+    if (root == null || !await isOwner()) throw Exception("only the owner's phone can make one");
+    final n = DateTime.now();
+    final at = '${_iso(n)} ${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
+    final sig = await _sign(p, OwnershipProof.payload(name, at));
+    return OwnershipProof.text(name, at, sig, root, await _ownerChain(p));
   }
 
   // ----- handing the owner role to another phone -----

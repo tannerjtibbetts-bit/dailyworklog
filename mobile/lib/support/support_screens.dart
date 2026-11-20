@@ -1,5 +1,7 @@
 // Support: the user manual, with contents, search and one page per topic.
 import 'package:flutter/material.dart';
+import '../about/ownership.dart';
+import 'ownership_screen.dart';
 
 import '../ui/theme.dart';
 import 'manual.dart';
@@ -43,9 +45,17 @@ class SupportScreen extends StatelessWidget {
           'Every part of the app: what it does and how to use it, with pictures. Search for what you need.',
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ManualScreen())),
         ),
+        const SizedBox(height: 12),
+        _tile(
+          context,
+          Icons.verified_outlined,
+          'Ownership proof',
+          'Who owns Daily Work Log, and a signed proof of it. Make one on the owner\'s phone, or check one you were sent.',
+          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OwnershipScreen())),
+        ),
         const SizedBox(height: 24),
         const Text(
-          'App created by Tanner Tibbetts',
+          Ownership.credit,
           textAlign: TextAlign.center,
           style: TextStyle(color: C.greyLight, fontSize: 12),
         ),

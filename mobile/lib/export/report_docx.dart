@@ -8,6 +8,7 @@ import 'package:archive/archive.dart';
 import 'package:intl/intl.dart';
 
 import '../data/fmt.dart';
+import '../about/ownership.dart';
 import '../data/models.dart';
 import '../data/rich.dart';
 import 'photo_layout.dart';
@@ -503,6 +504,6 @@ class ReportDocx {
     for (final f in _media.files) {
       zip.addFile(f);
     }
-    return ZipEncoder().encodeBytes(zip);
+    return Ownership.tagged(zip, title: 'Daily work log');
   }
 }
