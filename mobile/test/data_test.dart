@@ -101,4 +101,96 @@ void main() {
     final s2again = await Store.open(dir2);
     expect(s2again.projects.single.logs.single.tasks.single.title, 'D1716 sea can');
   });
+
+  group("each day's own overtime and attendance", () {
+    test('a new day copies the day before; an old day keeps its own', () {
+      final p = Project()..crew = ['Al', 'Bo'];
+      final mon = DailyLog()..date = '2026-11-16';
+      p.logs.add(mon);
+      p.startSheets(mon);
+      mon.overtime!
+        ..include = true
+        ..rows = [OtRow()..name = 'Al'..sat = 'Yes'..confirmed = 'Yes'];
+      mon.attendance!
+        ..include = true
+        ..notes = 'Gate 3'
+        ..rows = [AttRow()..name = 'Al'..status = 'Yes'..comment = 'Late truck'];
+
+      final tue = DailyLog()..date = '2026-11-17';
+      p.logs.add(tue);
+      p.startSheets(tue);
+      // Overtime carries over as it was; attendance keeps the names and notes, not the answers.
+      expect(tue.overtime!.rows.single.confirmed, 'Yes');
+      expect(tue.overtime!.include, true);
+      expect(tue.attendance!.rows.single.name, 'Al');
+      expect(tue.attendance!.rows.single.status, '');
+      expect(tue.attendance!.rows.single.comment, '');
+      expect(tue.attendance!.notes, 'Gate 3');
+      expect(tue.attendance!.date, '2026-11-17');
+      expect(tue.attendance!.include, true);
+
+      // Changing Tuesday leaves Monday alone, and Monday's report shows Monday's sheets.
+      tue.overtime!.rows.single.confirmed = 'No';
+      tue.attendance!.rows.single.status = 'Vacation';
+      expect(mon.overtime!.rows.single.confirmed, 'Yes');
+      expect(p.forDay(mon).overtime.rows.single.confirmed, 'Yes');
+      expect(p.forDay(mon).attendance.rows.single.status, 'Yes');
+      expect(p.forDay(tue).attendance.rows.single.status, 'Vacation');
+
+      // Saved and read back.
+      final q = Project.fromJson(jsonDecode(jsonEncode(p.toJson())) as Map<String, dynamic>);
+      expect(q.logs[0].overtime!.rows.single.confirmed, 'Yes');
+      expect(q.logs[1].attendance!.rows.single.status, 'Vacation');
+    });
+
+    test("a day from before has no sheets on its report, never today's", () {
+      final p = Project();
+      final old = DailyLog()..date = '2026-10-01';
+      p.logs.add(old);
+      final today = DailyLog()..date = '2026-11-20';
+      p.logs.add(today);
+      p.startSheets(today);
+      today.overtime!
+        ..include = true
+        ..rows = [OtRow()..name = 'Al'..confirmed = 'Yes'];
+      expect(p.forDay(old).overtime.include, false);
+      expect(p.forDay(old).overtime.rows, isEmpty);
+      expect(p.forDay(old).attendance.include, false);
+    });
+
+    test('the old project-wide sheets move to their day, once', () {
+      final json = {
+        'name': 'B44',
+        'logs': [
+          {'id': 'a', 'date': '2026-11-18', 'createdAt': 1},
+          {'id': 'b', 'date': '2026-11-19', 'createdAt': 2},
+        ],
+        'overtime': {'include': true, 'rows': [{'name': 'Al', 'confirmed': 'Yes'}]},
+        'attendance': {'date': '2026-11-18', 'include': true, 'rows': [{'name': 'Bo', 'status': 'Yes'}]},
+      };
+      final p = Project.fromJson(json);
+      final a = p.logs[0], b = p.logs[1];
+      expect(b.overtime!.rows.single.name, 'Al'); // the latest day
+      expect(a.overtime, isNull);
+      expect(a.attendance!.rows.single.status, 'Yes'); // the day of its date
+      expect(b.attendance, isNull);
+      // A day with nothing gets a copy when it's opened.
+      p.ensureSheets(b);
+      expect(b.overtime!.rows.single.name, 'Al');
+      expect(b.attendance!.rows.single.name, 'Bo');
+      expect(b.attendance!.rows.single.status, '');
+    });
+
+    test('renaming someone renames them on every day', () {
+      final p = Project()..crew = ['Al'];
+      final d = DailyLog()..date = '2026-11-20';
+      p.logs.add(d);
+      p.startSheets(d);
+      d.overtime!.rows = [OtRow()..name = 'Al'];
+      d.attendance!.rows = [AttRow()..name = 'Al'];
+      p.renamePerson('Al', 'Alan');
+      expect(d.overtime!.rows.single.name, 'Alan');
+      expect(d.attendance!.rows.single.name, 'Alan');
+    });
+  });
 }

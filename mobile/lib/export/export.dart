@@ -72,7 +72,9 @@ class Export {
   }
 
   /// Just the overtime sheet, as PDF or Excel.
-  static Future<void> overtime(BuildContext context, Project project, {required bool excel}) async {
+  static Future<void> overtime(BuildContext context, Project p, DailyLog log, {required bool excel}) async {
+    // The day's own sheet.
+    final project = p.forDay(log);
     final store = Store.instance;
     final by = store.me();
     final at = nowMs();
@@ -112,7 +114,9 @@ class Export {
   static Future<void> shareFile(BuildContext context, File f, String mime) => _share(context, f, mime);
 
   /// Just the attendance sheet, as PDF or Excel.
-  static Future<void> attendance(BuildContext context, Project project, {required bool excel}) async {
+  static Future<void> attendance(BuildContext context, Project p, DailyLog log, {required bool excel}) async {
+    // The day's own sheet.
+    final project = p.forDay(log);
     final store = Store.instance;
     final by = store.me();
     final at = nowMs();
@@ -250,7 +254,8 @@ class Export {
   /// [format] is 'pdf', 'docx' or 'xlsx'.
   static Future<File?> _buildReport(BuildContext context, Project p, DailyLog log, String format) {
     final store = Store.instance;
-    final job = _ReportJob(_slim(p), log, store.me(), nowMs(), store.photoDir.path, format);
+    // The day's own overtime and attendance, not whatever the sheets say today.
+    final job = _ReportJob(_slim(p.forDay(log)), log, store.me(), nowMs(), store.photoDir.path, format);
     return _build(
       context,
       switch (format) {

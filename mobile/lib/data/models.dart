@@ -330,6 +330,12 @@ class DailyLog {
   List<Task> tasks = [];
   List<Extra> extras = [];
 
+  /// This day's own overtime and attendance sheets, so an old day's report shows what was entered that
+  /// day. Made when the day is (copied from the day before, see [Project.startSheets]); null on days
+  /// from before sheets moved into the day.
+  Overtime? overtime;
+  Attendance? attendance;
+
   Extra? findExtra(String refId) {
     for (final e in extras) {
       if (e.refId == refId) return e;
@@ -369,9 +375,13 @@ class DailyLog {
         'crew': crew,
         'tasks': [for (final t in tasks) t.toJson()],
         'extras': [for (final e in extras) e.toJson()],
+        if (overtime != null) 'overtime': overtime!.toJson(),
+        if (attendance != null) 'attendance': attendance!.toJson(),
       };
 
   static DailyLog fromJson(Map<String, dynamic> o) => DailyLog()
+    ..overtime = o['overtime'] is Map ? Overtime.fromJson(o['overtime']) : null
+    ..attendance = o['attendance'] is Map ? Attendance.fromJson(o['attendance']) : null
     ..id = _s(o, 'id', newId())
     ..date = _s(o, 'date')
     ..name = _s(o, 'name')
@@ -891,11 +901,76 @@ class Project {
     for (final n in notices) {
       _replaceIn(n.to, from, to);
     }
-    for (final row in overtime.rows) {
-      if (row.name == from) row.name = to;
+    for (final ot in [overtime, for (final l in logs) ?l.overtime]) {
+      for (final row in ot.rows) {
+        if (row.name == from) row.name = to;
+      }
     }
-    for (final row in attendance.rows) {
-      if (row.name == from) row.name = to;
+    for (final a in [attendance, for (final l in logs) ?l.attendance]) {
+      for (final row in a.rows) {
+        if (row.name == from) row.name = to;
+      }
+    }
+  }
+
+  // ----- each day's overtime and attendance -----
+
+  /// The latest other day (on or before [l]'s date if there is one) that has a sheet [has].
+  DailyLog? _sheetDay(DailyLog l, bool Function(DailyLog) has) {
+    DailyLog? before, any;
+    bool later(DailyLog a, DailyLog? b) =>
+        b == null || a.date.compareTo(b.date) > 0 || (a.date == b.date && a.createdAt > b.createdAt);
+    for (final x in logs) {
+      if (identical(x, l) || !has(x)) continue;
+      if (later(x, any)) any = x;
+      if (x.date.compareTo(l.date) <= 0 && later(x, before)) before = x;
+    }
+    return before ?? any;
+  }
+
+  /// Gives a new day its own overtime and attendance, copied from the day before (or the older
+  /// project-wide sheets): overtime as it was (sign-ups build up over the week), attendance with the
+  /// names, notes and "include" kept but the answers and comments cleared for the new date.
+  void startSheets(DailyLog l) {
+    l.overtime = Overtime.fromJson((_sheetDay(l, (x) => x.overtime != null)?.overtime ?? overtime).toJson());
+    l.attendance = Attendance.fromJson((_sheetDay(l, (x) => x.attendance != null)?.attendance ?? attendance).toJson())
+      ..startDay(l.date);
+  }
+
+  /// Makes sure [l] has its sheets (a day from before sheets moved into the day gets a fresh copy).
+  void ensureSheets(DailyLog l) {
+    if (l.overtime != null && l.attendance != null) return;
+    final ot = l.overtime, att = l.attendance;
+    startSheets(l);
+    if (ot != null) l.overtime = ot;
+    if (att != null) l.attendance = att;
+  }
+
+  /// What a day's report prints: this project with the day's own overtime and attendance (none for a
+  /// day that never had them, so an old day never shows today's sheets).
+  Project forDay(DailyLog l) => Project()
+    ..id = id
+    ..name = name
+    ..location = location
+    ..crew = crew
+    ..overtime = l.overtime ?? Overtime()
+    ..attendance = l.attendance ?? Attendance()
+    ..notes = notes
+    ..seaCans = seaCans
+    ..seaCanInclude = seaCanInclude;
+
+  /// Before sheets moved into the day, they were one per project: give them to the day they belong to
+  /// (attendance: the day of its date, else the latest day; overtime: the latest day). Only once.
+  void _moveSheetsToDays() {
+    if (logs.isEmpty || logs.any((l) => l.overtime != null || l.attendance != null)) return;
+    final latest = latestLog()!;
+    if (overtime.rows.isNotEmpty || overtime.notes.trim().isNotEmpty) {
+      latest.overtime = Overtime.fromJson(overtime.toJson());
+    }
+    if (attendance.rows.isNotEmpty || attendance.notes.trim().isNotEmpty) {
+      final day = logs.where((l) => l.date == attendance.date).fold<DailyLog?>(
+          null, (b, l) => b == null || l.createdAt > b.createdAt ? l : b) ?? latest;
+      day.attendance = Attendance.fromJson(attendance.toJson());
     }
   }
 
@@ -1013,6 +1088,7 @@ class Project {
       l.tasks.add(t.freshCopy()..createdBy = me);
     }
     logs.add(l);
+    startSheets(l);
     return l;
   }
 
@@ -1069,7 +1145,8 @@ class Project {
     ..notes = _objects(o['notes'], Note.fromJson)
     ..notices = _objects(o['notices'], Notice.fromJson)
     ..seaCans = _objects(o['seaCans'], SeaCanMove.fromJson)
-    ..seaCanInclude = _b(o, 'seaCanInclude');
+    ..seaCanInclude = _b(o, 'seaCanInclude')
+    .._moveSheetsToDays();
 
   static List<CrewGroup> _groups(dynamic list) {
     final out = <CrewGroup>[];

@@ -16,7 +16,9 @@ import '../ui/common.dart';
 import '../ui/rich_text.dart';
 import '../ui/theme.dart';
 import 'assign_sheet.dart';
+import 'day_sheet_screen.dart';
 import 'field_widgets.dart';
+import 'project_screen.dart' show ProjectTab, daySheetShown;
 import 'task_screen.dart';
 
 /// When a delay was cleared: just the time if it was on the checklist's day, otherwise with the date.
@@ -605,6 +607,7 @@ class _LogScreenState extends State<LogScreen> {
               ],
             ),
           ),
+          _sheetButtons(l),
           Container(height: 1, margin: const EdgeInsets.fromLTRB(24, 18, 24, 0), color: C.divider),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -620,6 +623,66 @@ class _LogScreenState extends State<LogScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// This day's own Overtime and Attendance (each day keeps its own, copied from the day before).
+  Widget _sheetButtons(DailyLog l) {
+    final showOt = daySheetShown(ProjectTab.overtime), showAtt = daySheetShown(ProjectTab.attendance);
+    if (!showOt && !showAtt) return const SizedBox.shrink();
+    final ot = l.overtime, att = l.attendance;
+    final otLine = ot == null
+        ? 'Tap to open'
+        : '${ot.confirmedCount()} confirmed${ot.include ? ' · in report' : ''}';
+    final attSummary = att?.summary() ?? '';
+    final attLine = att == null
+        ? 'Tap to open'
+        : '${attSummary.isEmpty ? 'No answers yet' : attSummary}${att.include ? ' · in report' : ''}';
+    Widget button(String title, String line, IconData icon, bool overtime) => Expanded(
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: C.cardStroke),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => DaySheetScreen(projectId: widget.projectId, logId: l.id, overtime: overtime),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(icon, color: C.deepBlue, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // One line even on a narrow phone.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(title,
+                        maxLines: 1,
+                        style: const TextStyle(color: C.navy, fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  Text(line, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: C.grey, fontSize: 14)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (showOt) button('Overtime', otLine, Icons.more_time, true),
+        if (showOt && showAtt) const SizedBox(width: 10),
+        if (showAtt) button('Attendance', attLine, Icons.how_to_reg_outlined, false),
+      ]),
     );
   }
 

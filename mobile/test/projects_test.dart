@@ -7,6 +7,8 @@ import 'package:dailyworklog/data/rich.dart';
 import 'package:dailyworklog/data/store.dart';
 import 'package:dailyworklog/export/export.dart';
 import 'package:dailyworklog/screens/attendance_pane.dart';
+import 'package:dailyworklog/screens/day_sheet_screen.dart';
+import 'package:dailyworklog/screens/log_screen.dart';
 import 'package:dailyworklog/services/form_prefill.dart';
 import 'package:dailyworklog/screens/note_screen.dart';
 import 'package:dailyworklog/screens/notify_screen.dart';
@@ -388,9 +390,12 @@ void main() {
       await tester.pump();
 
       expect(find.text('B44 Zone 2 Tool Readiness'), findsOneWidget);
-      for (final t in ['Checklists', 'Notify', 'Links', 'Overtime', 'Attendance', 'Notes', 'Sea Can Movements']) {
+      for (final t in ['Checklists', 'Notify', 'Links', 'Notes', 'Sea Can Movements']) {
         expect(find.text(t), findsOneWidget);
       }
+      // Overtime and Attendance are inside each day now.
+      expect(find.text('Overtime'), findsNothing);
+      expect(find.text('Attendance'), findsNothing);
       expect(find.text('Daily work log ${Fmt.logDate(Fmt.todayIso())}'), findsOneWidget);
       expect(find.text('1/2 fields completed'), findsOneWidget);
       expect(find.text('Search all days: fields, notes, sea cans'), findsOneWidget);
@@ -412,23 +417,6 @@ void main() {
       expect(e.include, true);
       expect(e.label(), 'Link used: Tool portal');
 
-      await tester.tap(find.text('Overtime'));
-      await tester.pump();
-      expect(find.text('Weekend overtime'), findsOneWidget);
-      expect(find.text('Export'), findsOneWidget);
-      expect(find.text('Yes total'), findsOneWidget);
-      expect(p.overtime.rows.length, 2);
-      expect(find.text('Search all days: fields, notes, sea cans'), findsNothing);
-      await tester.ensureVisible(find.text('+  Add a row'));
-      await tester.tap(find.text('+  Add a row'));
-      await tester.pumpAndSettle();
-      expect(p.overtime.rows.length, 3);
-      await tester.ensureVisible(find.text('Remove empty rows'));
-      await tester.tap(find.text('Remove empty rows'));
-      await tester.pumpAndSettle();
-      // Empty rows go, then the sheet is redrawn with one row per crew member again.
-      expect(p.overtime.rows.length, 2);
-
       await tester.tap(find.text('Notes').first);
       await tester.pumpAndSettle();
       expect(find.text('Pump 3 leaking'), findsOneWidget);
@@ -442,10 +430,11 @@ void main() {
       Store.instance.projects.add(p);
       await tester.binding.setSurfaceSize(const Size(420, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.attendance)));
+      final l = p.logs.first;
+      await tester.pumpWidget(app(DaySheetScreen(projectId: p.id, logId: l.id, overtime: false)));
       await tester.pump();
       expect(find.text('Here?'), findsOneWidget);
-      expect(find.text('Date: ${Fmt.longDay(Fmt.todayIso())}'), findsOneWidget);
+      expect(find.text('Date: ${Fmt.longDay(l.date)}'), findsOneWidget);
       expect(find.text('Nobody marked yet'), findsOneWidget);
       expect(find.text('Bo Jones'), findsOneWidget);
 
@@ -454,13 +443,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Vacation').last);
       await tester.pumpAndSettle();
-      expect(p.attendance.rows[1].status, 'Vacation');
+      expect(l.attendance!.rows[1].status, 'Vacation');
       expect(find.text('Vacation 1'), findsOneWidget);
 
       // A comment for Al.
       await tester.enterText(find.widgetWithText(TextField, 'Comment').first, 'Left at 1pm');
       await tester.pump();
-      expect(p.attendance.rows[0].comment, 'Left at 1pm');
+      expect(l.attendance!.rows[0].comment, 'Left at 1pm');
 
       // Remove Bo's row: asks first, the crew list stays. On a narrow phone the × is off to
       // the right, so slide the table over first.
@@ -471,30 +460,32 @@ void main() {
       expect(find.text("Bo Jones comes off this sheet. Your crew list doesn't change."), findsOneWidget);
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
-      expect(p.attendance.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+      expect(l.attendance!.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
       expect(p.crew, contains('Bo Jones'));
 
       // An empty row goes without asking.
       await tester.tap(find.text('+  Add a row'));
       await tester.pumpAndSettle();
-      expect(p.attendance.rows.length, 3);
+      expect(l.attendance!.rows.length, 3);
       await tester.ensureVisible(find.byTooltip('Remove row').last);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Remove row').last);
       await tester.pumpAndSettle();
-      expect(p.attendance.rows.length, 2);
+      expect(l.attendance!.rows.length, 2);
     });
 
     testWidgets('overtime tab: remove one row from the middle', (tester) async {
       final p = sample()..crew = ['Al Smith', 'Bo Jones', 'Cy Lee'];
-      prepareOvertime(p);
+      final l = p.logs.first;
+      p.ensureSheets(l);
+      prepareOvertime(p, l.overtime);
       for (var i = 0; i < 3; i++) {
-        p.overtime.rows[i].name = p.crew[i];
+        l.overtime!.rows[i].name = p.crew[i];
       }
       Store.instance.projects.add(p);
       await tester.binding.setSurfaceSize(const Size(420, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(app(ProjectScreen(projectId: p.id, initialTab: ProjectTab.overtime)));
+      await tester.pumpWidget(app(DaySheetScreen(projectId: p.id, logId: l.id, overtime: true)));
       await tester.pump();
       // The table is wider than this screen: slide it so the × buttons show.
       await tester.ensureVisible(find.byTooltip('Remove row').at(1));
@@ -503,7 +494,36 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
-      expect(p.overtime.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+      expect(l.overtime!.rows.map((r) => r.name), ['Al Smith', 'Cy Lee']);
+    });
+
+    testWidgets("a day's Overtime: opened from the day, its own rows", (tester) async {
+      final p = sample();
+      Store.instance.projects.add(p);
+      final l = p.logs.first;
+      await tester.binding.setSurfaceSize(const Size(420, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(app(LogScreen(projectId: p.id, logId: l.id)));
+      await tester.pump();
+      expect(find.text('Attendance'), findsOneWidget);
+      await tester.tap(find.text('Overtime'));
+      await tester.pumpAndSettle();
+      expect(find.text('Weekend overtime'), findsOneWidget);
+      expect(find.text('Export'), findsOneWidget);
+      expect(find.text('Yes total'), findsOneWidget);
+      expect(l.overtime!.rows.length, 2);
+      expect(find.text('Search all days: fields, notes, sea cans'), findsNothing);
+      await tester.ensureVisible(find.text('+  Add a row'));
+      await tester.tap(find.text('+  Add a row'));
+      await tester.pumpAndSettle();
+      expect(l.overtime!.rows.length, 3);
+      await tester.ensureVisible(find.text('Remove empty rows'));
+      await tester.tap(find.text('Remove empty rows'));
+      await tester.pumpAndSettle();
+      // Empty rows go, then the sheet is redrawn with one row per crew member again.
+      expect(l.overtime!.rows.length, 2);
+
+      expect(p.overtime.rows, isEmpty); // the project-wide sheet isn't used
     });
 
     testWidgets('Clear all notes removes notes after confirming', (tester) async {

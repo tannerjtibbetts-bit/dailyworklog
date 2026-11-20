@@ -24,8 +24,8 @@ String? otHours(String typed) {
 }
 
 /// Fills in the week and, for an empty sheet, makes one row per crew member (at least one).
-void prepareOvertime(Project p) {
-  final ot = p.overtime;
+void prepareOvertime(Project p, [Overtime? sheet]) {
+  final ot = sheet ?? p.overtime;
   if (ot.weekOf.isEmpty) ot.weekOf = Fmt.upcomingFriday();
   // Only when the sheet is empty, so a row someone removed doesn't come back.
   if (ot.rows.isEmpty) {
@@ -36,9 +36,9 @@ void prepareOvertime(Project p) {
 }
 
 /// Names offered in the Name dropdown: crew, plus any name already on a row.
-List<String> overtimeNames(Project p) {
+List<String> overtimeNames(Project p, [Overtime? sheet]) {
   final names = <String>[_pick, ...p.crew];
-  for (final r in p.overtime.rows) {
+  for (final r in (sheet ?? p.overtime).rows) {
     if (r.name.isNotEmpty && !names.contains(r.name)) names.add(r.name);
   }
   return names;
@@ -169,10 +169,13 @@ void confirmRemoveRow(BuildContext context, String name, bool empty, VoidCallbac
 class OvertimePane extends StatefulWidget {
   final Project project;
 
+  /// The day's own sheet (each daily log has one).
+  final Overtime sheet;
+
   /// The Export button: just this sheet, as PDF or Excel.
   final VoidCallback onExport;
 
-  const OvertimePane({super.key, required this.project, required this.onExport});
+  const OvertimePane({super.key, required this.project, required this.sheet, required this.onExport});
 
   @override
   State<OvertimePane> createState() => _OvertimePaneState();
@@ -182,11 +185,11 @@ class _OvertimePaneState extends State<OvertimePane> {
   final Map<OtRow, TextEditingController> _hours = {};
   final Map<OtRow, String?> _hourErrors = {};
   final Map<OtRow, TextEditingController> _comments = {};
-  late final TextEditingController _notes = TextEditingController(text: widget.project.overtime.notes);
+  late final TextEditingController _notes = TextEditingController(text: widget.sheet.notes);
   final _lastRow = GlobalKey();
 
   Store get store => Store.instance;
-  Overtime get ot => widget.project.overtime;
+  Overtime get ot => widget.sheet;
 
   @override
   void dispose() {
@@ -406,7 +409,7 @@ class _OvertimePaneState extends State<OvertimePane> {
   @override
   Widget build(BuildContext context) {
     final p = widget.project;
-    prepareOvertime(p);
+    prepareOvertime(p, ot);
     // Rows removed elsewhere drop their boxes.
     for (final m in [_hours, _comments]) {
       m.removeWhere((r, c) {
@@ -415,7 +418,7 @@ class _OvertimePaneState extends State<OvertimePane> {
         return true;
       });
     }
-    final names = overtimeNames(p);
+    final names = overtimeNames(p, ot);
     final card = BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
@@ -479,7 +482,7 @@ class _OvertimePaneState extends State<OvertimePane> {
                           },
                         ),
                         const Expanded(
-                          child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                          child: Text("Include in this day's report (PDF, Word and email)", style: TextStyle(fontSize: 16)),
                         ),
                       ],
                     ),

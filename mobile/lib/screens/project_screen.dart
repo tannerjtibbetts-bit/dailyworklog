@@ -1,4 +1,5 @@
-// A project's screen: Checklists, Notify, Links, Overtime, Attendance, Notes and Sea Can Movements tabs.
+// A project's screen: Checklists, Notify, Links, Contacts, Notes and Sea Can Movements tabs.
+// (Overtime and Attendance are inside each daily log.)
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,10 +21,8 @@ import 'field_widgets.dart' show ProgressRing;
 import 'log_screen.dart';
 import 'note_screen.dart';
 import 'notify_screen.dart';
-import 'attendance_pane.dart';
 import 'contacts_pane.dart';
 import 'documents_screen.dart';
-import 'overtime_pane.dart';
 import 'seacan_pane.dart';
 import 'projects_screen.dart' show AddPill;
 
@@ -52,10 +51,18 @@ const tabIds = {
 };
 
 /// Tabs shown, in their usual order.
+/// Overtime and Attendance aren't project tabs any more: each daily log has its own (see the day's
+/// screen), so an old day's report keeps what was entered that day. Hiding them still hides them there.
 List<ProjectTab> visibleTabs(Set<String> hidden) => [
   for (final t in ProjectTab.values)
-    if (t == ProjectTab.checklists || !hidden.contains(tabIds[t])) t,
+    if (t == ProjectTab.checklists || (!daySheetTabs.contains(t) && !hidden.contains(tabIds[t]))) t,
 ];
+
+/// The "tabs" that live inside each daily log.
+const daySheetTabs = {ProjectTab.overtime, ProjectTab.attendance};
+
+/// Whether the day's Overtime or Attendance button is shown (they can be hidden like tabs).
+bool daySheetShown(ProjectTab t) => !Store.instance.hiddenTabs.contains(tabIds[t]);
 
 /// Splits the shown tabs into rows: threes, or four then the rest when there are seven or eight.
 List<List<ProjectTab>> tabRows(List<ProjectTab> shown) {
@@ -144,6 +151,7 @@ DailyLog createLog(Project project, String iso, List<Task>? source, bool unfinis
     }
   }
   project.logs.add(l);
+  project.startSheets(l);
   if (tmpl != null) {
     project.record(
       l,
@@ -169,6 +177,7 @@ DailyLog carryMarked(Project project, String iso, List<Task> marked, String me) 
     l.tasks.add(t.carryCopy()..createdBy = me);
   }
   project.logs.add(l);
+  project.startSheets(l);
   return l;
 }
 
@@ -498,36 +507,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
           },
         );
       }, danger: true),
-    ]);
-  }
-
-  // ----- overtime -----
-
-  /// Overtime tab's Export button: just that sheet, as PDF or Excel.
-  void _exportOvertime() {
-    final p = project!;
-    menu(context, 'Send just the overtime sheet. Your daily report still includes it when ticked.', [
-      SheetItem(
-        Icons.picture_as_pdf_outlined,
-        'Export overtime to PDF',
-        () => Export.overtime(context, p, excel: false),
-      ),
-      SheetItem(Icons.grid_on, 'Export overtime to Excel', () => Export.overtime(context, p, excel: true)),
-    ]);
-  }
-
-  // ----- attendance -----
-
-  /// Attendance tab's Export button: just that sheet, as PDF or Excel.
-  void _exportAttendance() {
-    final p = project!;
-    menu(context, 'Send just the attendance sheet. Your daily report still includes it when ticked.', [
-      SheetItem(
-        Icons.picture_as_pdf_outlined,
-        'Export attendance to PDF',
-        () => Export.attendance(context, p, excel: false),
-      ),
-      SheetItem(Icons.grid_on, 'Export attendance to Excel', () => Export.attendance(context, p, excel: true)),
     ]);
   }
 
@@ -1160,10 +1139,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
         }
         return const Scaffold();
       }
-      // Overtime, Attendance and Sea Can Movements are full pages, not lists.
+      // Sea Can Movements is a full page, not a list.
       // A tab hidden while it was open goes back to Checklists.
       if (!visibleTabs(Store.instance.hiddenTabs).contains(mode)) mode = ProjectTab.checklists;
-      final ot = mode == ProjectTab.overtime || mode == ProjectTab.attendance || mode == ProjectTab.seaCans;
+      final ot = mode == ProjectTab.seaCans;
       final rows = ot ? const <Widget>[] : _rows(p);
       return Scaffold(
         body: SafeArea(
@@ -1236,10 +1215,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   Expanded(
                     child: mode == ProjectTab.seaCans
                         ? SeaCanPane(project: p, onExport: _exportSeaCans)
-                        : mode == ProjectTab.attendance
-                        ? AttendancePane(project: p, onExport: _exportAttendance)
-                        : ot
-                        ? OvertimePane(project: p, onExport: _exportOvertime)
                         : rows.isEmpty
                         ? Center(
                             child: SingleChildScrollView(

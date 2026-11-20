@@ -11,8 +11,8 @@ import 'overtime_pane.dart' show confirmRemoveRow, removeRowButton, sheetDropdow
 const _pick = 'Select…', _blank = '–';
 
 /// Fills in today's date and, for an empty sheet, makes one row per crew member with their name.
-void prepareAttendance(Project p) {
-  final a = p.attendance;
+void prepareAttendance(Project p, [Attendance? sheet]) {
+  final a = sheet ?? p.attendance;
   if (a.date.isEmpty) a.date = Fmt.todayIso();
   if (a.rows.isEmpty) {
     for (final n in p.crew) {
@@ -23,9 +23,9 @@ void prepareAttendance(Project p) {
 }
 
 /// Names offered in the Name dropdown: crew, plus any name already on a row.
-List<String> attendanceNames(Project p) {
+List<String> attendanceNames(Project p, [Attendance? sheet]) {
   final names = <String>[_pick, ...p.crew];
-  for (final r in p.attendance.rows) {
+  for (final r in (sheet ?? p.attendance).rows) {
     if (r.name.isNotEmpty && !names.contains(r.name)) names.add(r.name);
   }
   return names;
@@ -37,19 +37,23 @@ class AttendancePane extends StatefulWidget {
   /// The Export button: just this sheet, as PDF or Excel.
   final VoidCallback onExport;
 
-  const AttendancePane({super.key, required this.project, required this.onExport});
+  /// The day's own sheet (each daily log has one) and that day's date.
+  final Attendance sheet;
+  final String day;
+
+  const AttendancePane({super.key, required this.project, required this.sheet, required this.day, required this.onExport});
 
   @override
   State<AttendancePane> createState() => _AttendancePaneState();
 }
 
 class _AttendancePaneState extends State<AttendancePane> {
-  late final TextEditingController _notes = TextEditingController(text: widget.project.attendance.notes);
+  late final TextEditingController _notes = TextEditingController(text: widget.sheet.notes);
   final Map<AttRow, TextEditingController> _comments = {};
   final _lastRow = GlobalKey();
 
   Store get store => Store.instance;
-  Attendance get att => widget.project.attendance;
+  Attendance get att => widget.sheet;
 
   @override
   void dispose() {
@@ -70,20 +74,6 @@ class _AttendancePaneState extends State<AttendancePane> {
       final c = _lastRow.currentContext;
       if (c != null && c.mounted) Scrollable.ensureVisible(c, duration: const Duration(milliseconds: 250));
     });
-  }
-
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final cur = DateTime.tryParse(att.date) ?? now;
-    final d = await showDatePicker(
-      context: context,
-      initialDate: cur,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 5),
-    );
-    if (d == null) return;
-    att.date = Fmt.isoOf(d);
-    store.save();
   }
 
   /// The table is at least this wide; on a narrow phone it slides sideways.
@@ -163,8 +153,9 @@ class _AttendancePaneState extends State<AttendancePane> {
   @override
   Widget build(BuildContext context) {
     final p = widget.project;
-    prepareAttendance(p);
-    final names = attendanceNames(p);
+    prepareAttendance(p, att);
+    if (att.date != widget.day) att.date = widget.day;
+    final names = attendanceNames(p, att);
     // Rows removed elsewhere drop their comment boxes.
     _comments.removeWhere((r, c) {
       if (att.rows.contains(r)) return false;
@@ -203,15 +194,10 @@ class _AttendancePaneState extends State<AttendancePane> {
                 ),
               ),
             ]),
-            // The day this sheet is for; Change opens a calendar.
+            // The day this sheet is for: the daily log's date.
             Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Row(children: [
-                Expanded(
-                  child: Text('Date: ${Fmt.longDay(att.date)}', style: const TextStyle(fontSize: 16, color: C.text)),
-                ),
-                TextButton(onPressed: _pickDate, child: const Text('Change', style: TextStyle(fontSize: 16))),
-              ]),
+              padding: const EdgeInsets.only(top: 6, bottom: 4),
+              child: Text('Date: ${Fmt.longDay(att.date)}', style: const TextStyle(fontSize: 16, color: C.text)),
             ),
             InkWell(
               onTap: () {
@@ -227,7 +213,7 @@ class _AttendancePaneState extends State<AttendancePane> {
                   },
                 ),
                 const Expanded(
-                  child: Text('Include in my reports (PDF, Word and email)', style: TextStyle(fontSize: 16)),
+                  child: Text("Include in this day's report (PDF, Word and email)", style: TextStyle(fontSize: 16)),
                 ),
               ]),
             ),
@@ -315,9 +301,9 @@ class _AttendancePaneState extends State<AttendancePane> {
         Align(
           alignment: Alignment.centerLeft,
           child: _action('Clear answers', C.deepBlue, () {
-            confirm(context, 'Clear the attendance answers?', 'Answers and comments are cleared and the date changes to today. Names and notes stay.',
+            confirm(context, 'Clear the attendance answers?', 'Answers and comments are cleared. Names and notes stay.',
                 'Clear', () {
-              att.startDay(Fmt.todayIso());
+              att.startDay(widget.day);
               for (final c in _comments.values) {
                 c.clear();
               }
