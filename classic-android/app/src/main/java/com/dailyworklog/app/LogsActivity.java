@@ -87,6 +87,7 @@ public class LogsActivity extends AppCompatActivity {
         pillContacts = findViewById(R.id.pillContacts);
         if (savedInstanceState != null) mode = savedInstanceState.getInt("mode", MODE_LOGS);
         if (mode == MODE_TEMPLATES) mode = MODE_LOGS;  // the Templates tab was retired
+        if (mode == MODE_OVERTIME || mode == MODE_ATTENDANCE) mode = MODE_LOGS;  // these moved onto each day
         search = findViewById(R.id.search);
 
         RecyclerView list = findViewById(R.id.list);
@@ -139,9 +140,10 @@ public class LogsActivity extends AppCompatActivity {
     }
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
-    static final String[] TAB_IDS = {"notify", "links", "contacts", "overtime", "attendance", "notes", "seacans"};
-    static final String[] TAB_NAMES = {"Notify", "Links", "Contacts", "Overtime", "Attendance", "Notes", "Sea Can Movements"};
-    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_CONTACTS, MODE_OVERTIME, MODE_ATTENDANCE, MODE_NOTES, MODE_SEACANS};
+    /** (Attendance and Overtime belong to each day now: they're on the checklist's screen.) */
+    static final String[] TAB_IDS = {"notify", "links", "contacts", "notes", "seacans"};
+    static final String[] TAB_NAMES = {"Notify", "Links", "Contacts", "Notes", "Sea Can Movements"};
+    private static final int[] TAB_MODES = {MODE_NOTIFY, MODE_LINKS, MODE_CONTACTS, MODE_NOTES, MODE_SEACANS};
 
     /** Pills per row: up to 6 tabs in rows of three, 7 as 4 + 3, 8 as 4 + 4, 9 or more in rows of three. */
     static int[] tabRowSizes(int shown) {
@@ -161,7 +163,12 @@ public class LogsActivity extends AppCompatActivity {
     /** Puts the tabs that aren't hidden into rows, in their usual order. */
     private void layoutTabs() {
         LinearLayout[] tabRows = {findViewById(R.id.tabRow1), findViewById(R.id.tabRow2), findViewById(R.id.tabRow3)};
-        TextView[] pills = {pillNotify, pillLinks, pillContacts, pillOvertime, pillAttendance, pillNotes, pillSeaCans};
+        TextView[] pills = {pillNotify, pillLinks, pillContacts, pillNotes, pillSeaCans};
+        // Attendance and Overtime moved onto each day.
+        for (TextView gone : new TextView[]{pillOvertime, pillAttendance}) {
+            if (gone.getParent() instanceof ViewGroup) ((ViewGroup) gone.getParent()).removeView(gone);
+            gone.setVisibility(View.GONE);
+        }
         for (LinearLayout r : tabRows) {
             r.removeAllViews();
             // Line the bubbles up by their edges, not by their text: tabs whose text shrinks to fit would
@@ -233,8 +240,8 @@ public class LogsActivity extends AppCompatActivity {
         stylePill(pillNotify, mode == MODE_NOTIFY);
         stylePill(pillNotes, mode == MODE_NOTES);
         stylePill(pillContacts, mode == MODE_CONTACTS);
-        // Overtime, Attendance and Sea Can Movements are full pages in the same scroller, not lists.
-        boolean ot = mode == MODE_OVERTIME || mode == MODE_ATTENDANCE || mode == MODE_SEACANS;
+        // Sea Can Movements is a full page in the same scroller, not a list.
+        boolean ot = mode == MODE_SEACANS;
         findViewById(R.id.overtimePane).setVisibility(ot ? View.VISIBLE : View.GONE);
         findViewById(R.id.list).setVisibility(ot ? View.GONE : View.VISIBLE);
         findViewById(R.id.searchBox).setVisibility(ot ? View.GONE : View.VISIBLE);
@@ -243,9 +250,7 @@ public class LogsActivity extends AppCompatActivity {
         if (ot) {
             findViewById(R.id.reportCards).setVisibility(View.GONE);
             empty.setVisibility(View.GONE);
-            if (mode == MODE_SEACANS) SeaCanPane.render(this, store, project, findViewById(R.id.overtimeContent));
-            else if (mode == MODE_ATTENDANCE) AttendancePane.render(this, store, project, findViewById(R.id.overtimeContent));
-            else OvertimePane.render(this, store, project, findViewById(R.id.overtimeContent));
+            SeaCanPane.render(this, store, project, findViewById(R.id.overtimeContent));
             return;
         }
         search.setHint(mode == MODE_NOTIFY ? "Search sent notes" : mode == MODE_NOTES ? "Search notes" : mode == MODE_LINKS ? "Search links" : mode == MODE_CONTACTS ? "Search contacts"
@@ -815,9 +820,9 @@ public class LogsActivity extends AppCompatActivity {
         Ui.menu(this, "To " + Fmt.join(n.to), items);
     }
 
-    // ----- overtime -----
+    // ----- sea cans -----
 
-    /** Overtime tab's Export button: just that sheet, as PDF or Excel. */
+    /** Sea Can Movements tab's Export button: just that list, in any format. */
     void exportSeaCans() {
         List<Ui.SheetItem> items = new ArrayList<>();
         items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export sea cans to PDF", () -> exporter.exportSeaCans(project, "pdf")));
@@ -825,21 +830,6 @@ public class LogsActivity extends AppCompatActivity {
         items.add(new Ui.SheetItem(R.drawable.ic_template, "Export sea cans to CSV", () -> exporter.exportSeaCans(project, "csv")));
         items.add(new Ui.SheetItem(R.drawable.ic_word, "Export sea cans to Word", () -> exporter.exportSeaCans(project, "docx")));
         Ui.menu(this, "Send just the sea can list. Your daily report still includes it when ticked.", items);
-    }
-
-    void exportOvertime() {
-        List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export overtime to PDF", () -> exporter.exportOvertime(project, false)));
-        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export overtime to Excel", () -> exporter.exportOvertime(project, true)));
-        Ui.menu(this, "Send just the overtime sheet. Your daily report still includes it when ticked.", items);
-    }
-
-    /** Attendance tab's Export button: just that sheet, as PDF or Excel. */
-    void exportAttendance() {
-        List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export attendance to PDF", () -> exporter.exportAttendance(project, false)));
-        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export attendance to Excel", () -> exporter.exportAttendance(project, true)));
-        Ui.menu(this, "Send just the attendance sheet. Your daily report still includes it when ticked.", items);
     }
 
     // ----- notes -----

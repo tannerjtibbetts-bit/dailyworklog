@@ -58,8 +58,10 @@ final class ExportHelper {
         void write(OutputStream os) throws Exception;
     }
 
-    /** Just the Overtime tab, as a PDF or an Excel sheet, then Share / Open / Save to phone. */
-    void exportOvertime(Models.Project p, boolean excel) {
+    /** Just this day's Overtime sheet, as a PDF or an Excel sheet, then Share / Open / Save to phone. */
+    void exportOvertime(Models.Project project, Models.DailyLog log, boolean excel) {
+        project.overtimeFor(log);
+        final Models.Project p = project.forDay(log);
         Store store = Store.get(activity);
         final String by = store.me();
         final long at = System.currentTimeMillis();
@@ -73,8 +75,10 @@ final class ExportHelper {
                 f -> offer(f, excel ? XLSX : PDF, excel ? saveXlsx : savePdf));
     }
 
-    /** Just the Attendance tab, as a PDF or an Excel sheet, then Share / Open / Save to phone. */
-    void exportAttendance(Models.Project p, boolean excel) {
+    /** Just this day's Attendance sheet, as a PDF or an Excel sheet, then Share / Open / Save to phone. */
+    void exportAttendance(Models.Project project, Models.DailyLog log, boolean excel) {
+        project.attendanceFor(log);
+        final Models.Project p = project.forDay(log);
         Store store = Store.get(activity);
         final String by = store.me();
         final long at = System.currentTimeMillis();
@@ -176,7 +180,7 @@ final class ExportHelper {
         final String by = store.me();
         final long at = System.currentTimeMillis();
         buildFile("Building Excel sheet\u2026", Fmt.fileSafe(log.displayTitle()) + ".xlsx",
-                os -> ReportXlsx.write(p, log, by, at, os),
+                os -> ReportXlsx.write(p.forDay(log), log, by, at, os),
                 f -> offer(f, XLSX, saveXlsx));
     }
 
@@ -245,9 +249,9 @@ final class ExportHelper {
                 File f = new File(dir, Fmt.fileSafe(log.displayTitle()) + (word ? ".docx" : ".pdf"));
                 try (OutputStream os = new FileOutputStream(f)) {
                     if (word) {
-                        ReportDocx.write(p, log, by, at, photoDir, file -> PhotoUtil.encode(file, 1100), os);
+                        ReportDocx.write(p.forDay(log), log, by, at, photoDir, file -> PhotoUtil.encode(file, 1100), os);
                     } else {
-                        ReportPdf.write(p, log, by, at, photoDir, os);
+                        ReportPdf.write(p.forDay(log), log, by, at, photoDir, os);
                     }
                 }
                 out = f;

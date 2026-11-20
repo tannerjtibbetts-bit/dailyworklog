@@ -1,4 +1,5 @@
-// A project's screen: Checklists, Notify, Links, Overtime, Attendance, Notes and Sea Can Movements tabs.
+// A project's screen: Checklists, Notify, Links, Contacts, Notes and Sea Can Movements tabs.
+// (Attendance and Overtime belong to each day: they're on the checklist's screen.)
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,22 +21,18 @@ import 'field_widgets.dart' show ProgressRing;
 import 'log_screen.dart';
 import 'note_screen.dart';
 import 'notify_screen.dart';
-import 'attendance_pane.dart';
 import 'contacts_pane.dart';
 import 'documents_screen.dart';
-import 'overtime_pane.dart';
 import 'seacan_pane.dart';
 import 'projects_screen.dart' show AddPill;
 
-enum ProjectTab { checklists, notify, links, contacts, overtime, attendance, notes, seaCans }
+enum ProjectTab { checklists, notify, links, contacts, notes, seaCans }
 
 const _tabLabels = {
   ProjectTab.checklists: 'Checklists',
   ProjectTab.notify: 'Notify',
   ProjectTab.links: 'Links',
   ProjectTab.contacts: 'Contacts',
-  ProjectTab.overtime: 'Overtime',
-  ProjectTab.attendance: 'Attendance',
   ProjectTab.notes: 'Notes',
   ProjectTab.seaCans: 'Sea Can Movements',
 };
@@ -45,8 +42,6 @@ const tabIds = {
   ProjectTab.notify: 'notify',
   ProjectTab.links: 'links',
   ProjectTab.contacts: 'contacts',
-  ProjectTab.overtime: 'overtime',
-  ProjectTab.attendance: 'attendance',
   ProjectTab.notes: 'notes',
   ProjectTab.seaCans: 'seacans',
 };
@@ -501,35 +496,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     ]);
   }
 
-  // ----- overtime -----
 
-  /// Overtime tab's Export button: just that sheet, as PDF or Excel.
-  void _exportOvertime() {
-    final p = project!;
-    menu(context, 'Send just the overtime sheet. Your daily report still includes it when ticked.', [
-      SheetItem(
-        Icons.picture_as_pdf_outlined,
-        'Export overtime to PDF',
-        () => Export.overtime(context, p, excel: false),
-      ),
-      SheetItem(Icons.grid_on, 'Export overtime to Excel', () => Export.overtime(context, p, excel: true)),
-    ]);
-  }
-
-  // ----- attendance -----
-
-  /// Attendance tab's Export button: just that sheet, as PDF or Excel.
-  void _exportAttendance() {
-    final p = project!;
-    menu(context, 'Send just the attendance sheet. Your daily report still includes it when ticked.', [
-      SheetItem(
-        Icons.picture_as_pdf_outlined,
-        'Export attendance to PDF',
-        () => Export.attendance(context, p, excel: false),
-      ),
-      SheetItem(Icons.grid_on, 'Export attendance to Excel', () => Export.attendance(context, p, excel: true)),
-    ]);
-  }
 
   // ----- sea cans -----
 
@@ -1160,10 +1127,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
         }
         return const Scaffold();
       }
-      // Overtime, Attendance and Sea Can Movements are full pages, not lists.
+      // Sea Can Movements is a full page, not a list.
       // A tab hidden while it was open goes back to Checklists.
       if (!visibleTabs(Store.instance.hiddenTabs).contains(mode)) mode = ProjectTab.checklists;
-      final ot = mode == ProjectTab.overtime || mode == ProjectTab.attendance || mode == ProjectTab.seaCans;
+      final ot = mode == ProjectTab.seaCans;
       final rows = ot ? const <Widget>[] : _rows(p);
       return Scaffold(
         body: SafeArea(
@@ -1234,12 +1201,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       ),
                     ),
                   Expanded(
-                    child: mode == ProjectTab.seaCans
+                    child: ot
                         ? SeaCanPane(project: p, onExport: _exportSeaCans)
-                        : mode == ProjectTab.attendance
-                        ? AttendancePane(project: p, onExport: _exportAttendance)
-                        : ot
-                        ? OvertimePane(project: p, onExport: _exportOvertime)
                         : rows.isEmpty
                         ? Center(
                             child: SingleChildScrollView(

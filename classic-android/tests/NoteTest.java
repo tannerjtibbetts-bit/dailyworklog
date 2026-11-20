@@ -328,8 +328,8 @@ class ManualTest { public static void main(String[] a) throws Exception {
   System.out.println("MANUAL PASS"); } }
 class HiddenTabsTest { public static void main(String[] a) throws Exception {
   NoteTest.check(LogsActivity.TAB_IDS.length == LogsActivity.TAB_NAMES.length && java.util.Arrays.asList(LogsActivity.TAB_IDS).contains("seacans"), "tab ids");
-  NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,contacts,overtime,attendance,notes,seacans")
-      && LogsActivity.TAB_NAMES[4].equals("Attendance") && LogsActivity.TAB_NAMES[2].equals("Contacts"), "contacts after links, attendance after overtime");
+  NoteTest.check(String.join(",", LogsActivity.TAB_IDS).equals("notify,links,contacts,notes,seacans")
+      && LogsActivity.TAB_NAMES[2].equals("Contacts"), "contacts after links; attendance and overtime are on each day");
   NoteTest.check(LogsActivity.firstRowCount(7)==4 && LogsActivity.firstRowCount(6)==3 && LogsActivity.firstRowCount(2)==2, "pill rows");
   System.out.println("TABS PASS"); } }
 class DoneTextTest { public static void main(String[] a) throws Exception {
@@ -1715,3 +1715,54 @@ class ShadeTest {
     for (int i = doc.indexOf("w:fill=\"FDECEC\""); i >= 0; i = doc.indexOf("w:fill=\"FDECEC\"", i + 1)) rd++;
     NoteTest.check(g == 7 && rd == 7, "docx 7 shaded cells each: " + g + "/" + rd);
     System.out.println("SHADE PASS"); } }
+
+class DaySheetsTest { public static void main(String[] a) throws Exception {
+  Models.Project p = new Models.Project(); p.crew.add("Al"); p.crew.add("Bo");
+  Models.DailyLog mon = new Models.DailyLog(); mon.date = "2026-11-16"; p.logs.add(mon);
+  Models.Attendance m = p.attendanceFor(mon); m.prepare(p.crew, mon.date);
+  m.include = true; m.notes = "Bo at medical"; m.rows.get(0).status = "Yes"; m.rows.get(1).status = "Called in";
+  Models.DailyLog tue = new Models.DailyLog(); tue.date = "2026-11-17"; p.logs.add(tue);
+  Models.Attendance t = p.attendanceFor(tue);
+  NoteTest.check(t.date.equals("2026-11-17") && t.rows.size() == 2 && t.rows.get(1).name.equals("Bo")
+      && t.rows.get(0).status.isEmpty() && t.include && t.notes.isEmpty(), "new day: names and tick, no answers");
+  t.rows.get(0).status = "Vacation";
+  Models.Project q = Models.Project.fromJson(p.toJson());
+  NoteTest.check(q.logs.get(0).attendance.rows.get(0).status.equals("Yes")
+      && q.logs.get(0).attendance.notes.equals("Bo at medical"), "Monday keeps its own answers after save");
+  NoteTest.check(q.logs.get(1).attendance.rows.get(0).status.equals("Vacation"), "Tuesday saved");
+  // Reports see only that day's sheets.
+  Models.DailyLog old = new Models.DailyLog(); old.date = "2026-11-02"; q.logs.add(old);
+  NoteTest.check(!q.forDay(old).attendance.include && q.forDay(old).attendance.rows.isEmpty(), "day with no sheet prints none");
+  NoteTest.check(q.forDay(q.logs.get(0)).attendance.rows.get(1).status.equals("Called in")
+      && q.forDay(q.logs.get(0)).name.equals(q.name), "report uses the day's sheet");
+  // Overtime: same weekend keeps answers, next weekend keeps names.
+  Models.Overtime ot = p.overtimeFor(tue);
+  NoteTest.check(ot.weekOf.equals("2026-11-20"), "weekend of the day, got " + ot.weekOf);
+  ot.rows.clear();
+  Models.Overtime.OtRow r1 = new Models.Overtime.OtRow(); r1.name = "Al"; r1.sat = "Yes"; ot.rows.add(r1);
+  ot.include = true;
+  Models.DailyLog wed = new Models.DailyLog(); wed.date = "2026-11-18"; p.logs.add(wed);
+  Models.Overtime w = p.overtimeFor(wed);
+  NoteTest.check(w.rows.get(0).sat.equals("Yes"), "same weekend keeps answers");
+  w.rows.get(0).sat = "No";
+  NoteTest.check(tue.overtime.rows.get(0).sat.equals("Yes"), "earlier day unchanged");
+  Models.DailyLog next = new Models.DailyLog(); next.date = "2026-11-23"; p.logs.add(next);
+  Models.Overtime n = p.overtimeFor(next);
+  NoteTest.check(n.weekOf.equals("2026-11-27") && n.rows.get(0).name.equals("Al") && n.rows.get(0).sat.isEmpty() && n.include,
+      "new weekend keeps names only");
+  // Old files: project-wide sheets move onto a day once.
+  Models.Project o = new Models.Project(); o.crew.add("Al");
+  Models.DailyLog d18 = new Models.DailyLog(); d18.date = "2026-11-18"; o.logs.add(d18);
+  Models.DailyLog d20 = new Models.DailyLog(); d20.date = "2026-11-20"; o.logs.add(d20);
+  o.attendance.date = "2026-11-18";
+  Models.Attendance.AttRow ar = new Models.Attendance.AttRow(); ar.name = "Al"; ar.status = "Late"; o.attendance.rows.add(ar);
+  Models.Overtime.OtRow orow = new Models.Overtime.OtRow(); orow.name = "Al"; orow.fri = "Yes"; o.overtime.rows.add(orow);
+  Models.Project r = Models.Project.fromJson(o.toJson());
+  NoteTest.check(r.logs.get(0).attendance.rows.get(0).status.equals("Late") && r.logs.get(1).attendance == null, "old attendance onto its day");
+  NoteTest.check(r.logs.get(1).overtime.rows.get(0).fri.equals("Yes") && r.logs.get(0).overtime == null, "old overtime onto newest day");
+  r.logs.get(1).overtime.rows.get(0).fri = "No";
+  Models.Project r2 = Models.Project.fromJson(r.toJson());
+  NoteTest.check(r2.logs.get(1).overtime.rows.get(0).fri.equals("No"), "moved only once");
+  r2.renamePerson("Al", "Alan");
+  NoteTest.check(r2.logs.get(0).attendance.rows.get(0).name.equals("Alan"), "rename reaches each day");
+  System.out.println("DAY SHEETS PASS"); } }

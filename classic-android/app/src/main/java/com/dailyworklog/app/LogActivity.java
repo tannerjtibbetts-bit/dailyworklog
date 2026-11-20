@@ -687,11 +687,20 @@ public class LogActivity extends AppCompatActivity {
 
     // ----- adapter -----
 
+    /** Opens this day's Attendance or Overtime sheet. */
+    private void openSheet(String kind) {
+        startActivity(new Intent(this, DaySheetActivity.class)
+                .putExtra("project", project.id)
+                .putExtra("log", log.id)
+                .putExtra("kind", kind));
+    }
+
     private class HeaderVH extends RecyclerView.ViewHolder {
         final TextView title, location, count;
         final ProgressRing ring;
         final LinearLayout crew;
         final TextView[] chips;
+        final TextView attendanceSub, overtimeSub;
 
         HeaderVH(View v) {
             super(v);
@@ -716,6 +725,10 @@ public class LogActivity extends AppCompatActivity {
                     });
             v.findViewById(R.id.addCrew).setOnClickListener(assign);
             crew.setOnClickListener(assign);
+            attendanceSub = v.findViewById(R.id.sheetAttendanceSub);
+            overtimeSub = v.findViewById(R.id.sheetOvertimeSub);
+            v.findViewById(R.id.sheetAttendance).setOnClickListener(x -> openSheet(DaySheetActivity.KIND_ATTENDANCE));
+            v.findViewById(R.id.sheetOvertime).setOnClickListener(x -> openSheet(DaySheetActivity.KIND_OVERTIME));
         }
 
         void bindProgress(boolean animate) {
@@ -725,6 +738,8 @@ public class LogActivity extends AppCompatActivity {
         }
 
         void bind() {
+            attendanceSub.setText(DaySheetActivity.summary(log, true));
+            overtimeSub.setText(DaySheetActivity.summary(log, false));
             title.setText(log.displayTitle());
             location.setText(project.location);
             location.setVisibility(project.location.isEmpty() ? View.GONE : View.VISIBLE);

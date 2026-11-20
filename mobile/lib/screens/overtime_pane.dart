@@ -1,4 +1,4 @@
-// Overtime tab: weekend sign-up table with Name / Fri / Sat / Sun dropdowns.
+// A day's Overtime sheet: weekend sign-up table with Name / Fri / Sat / Sun dropdowns.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -24,9 +24,8 @@ String? otHours(String typed) {
 }
 
 /// Fills in the week and, for an empty sheet, makes one row per crew member (at least one).
-void prepareOvertime(Project p) {
-  final ot = p.overtime;
-  if (ot.weekOf.isEmpty) ot.weekOf = Fmt.upcomingFriday();
+void prepareOvertime(Project p, Overtime ot, String dayIso) {
+  if (ot.weekOf.isEmpty) ot.weekOf = Fmt.upcomingFriday(DateTime.tryParse(dayIso));
   // Only when the sheet is empty, so a row someone removed doesn't come back.
   if (ot.rows.isEmpty) {
     for (var i = 0; i < (p.crew.isEmpty ? 1 : p.crew.length); i++) {
@@ -36,9 +35,9 @@ void prepareOvertime(Project p) {
 }
 
 /// Names offered in the Name dropdown: crew, plus any name already on a row.
-List<String> overtimeNames(Project p) {
+List<String> overtimeNames(Project p, Overtime ot) {
   final names = <String>[_pick, ...p.crew];
-  for (final r in p.overtime.rows) {
+  for (final r in ot.rows) {
     if (r.name.isNotEmpty && !names.contains(r.name)) names.add(r.name);
   }
   return names;
@@ -169,10 +168,13 @@ void confirmRemoveRow(BuildContext context, String name, bool empty, VoidCallbac
 class OvertimePane extends StatefulWidget {
   final Project project;
 
+  /// The day this sheet belongs to.
+  final DailyLog log;
+
   /// The Export button: just this sheet, as PDF or Excel.
   final VoidCallback onExport;
 
-  const OvertimePane({super.key, required this.project, required this.onExport});
+  const OvertimePane({super.key, required this.project, required this.log, required this.onExport});
 
   @override
   State<OvertimePane> createState() => _OvertimePaneState();
@@ -182,11 +184,11 @@ class _OvertimePaneState extends State<OvertimePane> {
   final Map<OtRow, TextEditingController> _hours = {};
   final Map<OtRow, String?> _hourErrors = {};
   final Map<OtRow, TextEditingController> _comments = {};
-  late final TextEditingController _notes = TextEditingController(text: widget.project.overtime.notes);
+  late final TextEditingController _notes = TextEditingController(text: ot.notes);
   final _lastRow = GlobalKey();
 
   Store get store => Store.instance;
-  Overtime get ot => widget.project.overtime;
+  Overtime get ot => widget.project.overtimeFor(widget.log);
 
   @override
   void dispose() {
@@ -406,7 +408,7 @@ class _OvertimePaneState extends State<OvertimePane> {
   @override
   Widget build(BuildContext context) {
     final p = widget.project;
-    prepareOvertime(p);
+    prepareOvertime(p, ot, widget.log.date);
     // Rows removed elsewhere drop their boxes.
     for (final m in [_hours, _comments]) {
       m.removeWhere((r, c) {
@@ -415,7 +417,7 @@ class _OvertimePaneState extends State<OvertimePane> {
         return true;
       });
     }
-    final names = overtimeNames(p);
+    final names = overtimeNames(p, ot);
     final card = BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
@@ -603,10 +605,10 @@ class _OvertimePaneState extends State<OvertimePane> {
               confirm(
                 context,
                 'Clear the Yes/No answers?',
-                'Answers and comments are cleared. Names and notes stay in place, ready for the next weekend.',
+                'Answers and comments on this day are cleared. Names and notes stay in place, ready for the next weekend. Other days aren\'t changed.',
                 'Clear',
                 () {
-                  ot.startWeekend(Fmt.upcomingFriday());
+                  ot.startWeekend(Fmt.upcomingFriday(DateTime.tryParse(widget.log.date)));
                   _resetHours();
                   store.save();
                 },

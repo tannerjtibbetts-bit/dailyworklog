@@ -34,7 +34,7 @@ final class OvertimePane {
     /** The table is at least this wide (full names, "Training" at normal size); narrower phones slide it sideways. */
     private static final int MIN_WIDTH_DP = 580;
 
-    static void render(Activity a, Store store, Models.Project p, LinearLayout box) {
+    static void render(Activity a, Store store, Models.Project p, Models.DailyLog l, LinearLayout box) {
         // Redrawing must not jump the screen back to the top.
         View parent = (View) box.getParent();
         final int scrollY = parent.getScrollY();
@@ -42,9 +42,9 @@ final class OvertimePane {
         if (focused != null) parent.requestFocus();  // park focus on the scroller, not the first Hours box
         box.removeAllViews();
         parent.post(() -> parent.scrollTo(0, scrollY));
-        Models.Overtime ot = p.overtime;
+        Models.Overtime ot = p.overtimeFor(l);
         // Rows are only made when there are none, so a removed row stays gone.
-        ot.prepare(p.crew.size(), Fmt.upcomingFriday());
+        ot.prepare(p.crew.size(), Fmt.upcomingFridayOf(l.date));
 
         LinearLayout card = card(a);
         box.addView(card);
@@ -59,7 +59,7 @@ final class OvertimePane {
         export.setPadding(Ui.dp(a, 16), Ui.dp(a, 9), Ui.dp(a, 16), Ui.dp(a, 9));
         export.setContentDescription("Export overtime to PDF or Excel");
         export.setOnClickListener(v -> {
-            if (a instanceof LogsActivity) ((LogsActivity) a).exportOvertime();
+            if (a instanceof DaySheetActivity) ((DaySheetActivity) a).export();
         });
         titleRow.addView(export);
         card.addView(titleRow);
@@ -161,7 +161,7 @@ final class OvertimePane {
                 return;
             }
             store.save();
-            render(a, store, p, box);
+            render(a, store, p, l, box);
         });
         box.addView(trim);
 
@@ -198,10 +198,10 @@ final class OvertimePane {
 
         TextView newWeek = action(a, "Clear answers", R.color.deep_blue);
         newWeek.setOnClickListener(v -> Ui.confirm(a, "Clear the Yes/No answers?",
-                "Answers and comments are cleared. Names and notes stay in place, ready for the next weekend.", "Clear", () -> {
-                    ot.startWeekend(Fmt.upcomingFriday());
+                "Answers and comments on this day are cleared. Names and notes stay in place, ready for the next weekend. Other days aren't changed.", "Clear", () -> {
+                    ot.startWeekend(Fmt.upcomingFridayOf(l.date));
                     store.save();
-                    render(a, store, p, box);
+                    render(a, store, p, l, box);
                 }));
         box.addView(newWeek);
     }
