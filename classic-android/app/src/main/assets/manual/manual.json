@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-11-19",
+  "updated": "2026-11-20",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -31,7 +31,7 @@
             "You tick fields off as they get done. Your name and the time are stamped on each one.",
             "You can add photos and notes to a field, and assign crew to it. The app can text them.",
             "At the end of the day you send a PDF or Word report, or email it to your report list.",
-            "Each project also has tabs for texting the crew (Notify), web links, weekend overtime, attendance, notes and sea can movements."
+            "Each project also has tabs for texting the crew (Notify), web links, contacts, notes and sea can movements. Each daily log has its own weekend overtime sheet and attendance."
           ]
         },
         {
@@ -657,7 +657,7 @@
       "id": "project-screen",
       "title": "Inside a project: the tabs",
       "group": "Projects & checklists",
-      "summary": "A project has eight tabs: Checklists, Notify, Links, Contacts, Overtime, Attendance, Notes and Sea Can Movements.",
+      "summary": "A project has six tabs: Checklists, Notify, Links, Contacts, Notes and Sea Can Movements.",
       "keywords": [
         "tabs",
         "pills",
@@ -676,7 +676,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "When you open a project, you see its name at the top and the tab buttons in two rows of four."
+          "text": "When you open a project, you see its name at the top and the tab buttons in two rows of three."
         },
         {
           "type": "image",
@@ -690,11 +690,13 @@
             "\"Notify\": send a crew member a note or photo by text.",
             "\"Links\": saved web links and forms. They show in every project.",
             "\"Contacts\": company contacts who aren't on your crew. They show in every project.",
-            "\"Overtime\": the weekend overtime sign-up sheet.",
-            "\"Attendance\": who is here today, and why not if they aren't.",
             "\"Notes\": your own notes and photos.",
             "\"Sea Can Movements\": where each sea can came from and where it is now."
           ]
+        },
+        {
+          "type": "tip",
+          "text": "Overtime and Attendance are not project tabs. They are inside each daily log, so every day keeps its own. Open a daily log and tap \"Overtime\" or \"Attendance\"."
         },
         {
           "type": "text",
@@ -876,6 +878,10 @@
         {
           "type": "text",
           "text": "The tabs you kept move up to fill the rows. \"Checklists\" is always shown, so it isn't in the list."
+        },
+        {
+          "type": "tip",
+          "text": "\"Overtime\" and \"Attendance\" are in the list too. Unticking one hides its button in every daily log."
         },
         {
           "type": "steps",
@@ -2948,7 +2954,7 @@
       "id": "overtime-tab",
       "title": "Overtime: the weekend sign-up sheet",
       "group": "Tabs",
-      "summary": "Weekend sign-up: Yes/No for Fri, Sat, Sun, hours 1 to 10, Confirmed, totals, export and Clear answers.",
+      "summary": "Each daily log has its own weekend sign-up: Yes/No for Fri, Sat, Sun, hours 1 to 10, Confirmed, totals, export and Clear answers.",
       "keywords": [
         "overtime",
         "weekend",
@@ -2978,24 +2984,33 @@
         "confirmed colour",
         "confirmed color",
         "shaded",
-        "highlighted report"
+        "highlighted report",
+        "old day",
+        "each day",
+        "daily log",
+        "past report"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Overtime\" tab is a weekend overtime sheet. It starts with one row per crew member."
+          "text": "Each daily log has its own \"Overtime\" sheet for the weekend. When you start a new day, it is filled in from the day before, so sign-ups carry on through the week. Changing it on one day never changes another day, so an old day's report always shows what was on the sheet that day."
+        },
+        {
+          "type": "image",
+          "file": "day_sheets.png",
+          "caption": "The \"Overtime\" and \"Attendance\" buttons in a daily log"
         },
         {
           "type": "image",
           "file": "overtime.png",
-          "caption": "The Overtime tab"
+          "caption": "The day's Overtime sheet"
         },
         {
           "type": "steps",
           "items": [
-            "Open the project and tap \"Overtime\".",
+            "Open today's daily log and tap \"Overtime\" (under the crew, next to \"Attendance\").",
             "In each row, tap \"Select…\" and pick a name.",
             "Under \"Fri\", \"Sat\" and \"Sun\", pick \"Yes\" or \"No\". Yes turns green, No turns red.",
             "Under \"Hours\", type the hours the person is willing to work, 1 to 10.",
@@ -3045,14 +3060,14 @@
         {
           "type": "steps",
           "items": [
-            "On the \"Overtime\" tab, tap \"Export\" at the top right.",
+            "On the day's \"Overtime\" sheet, tap \"Export\" at the top right.",
             "Pick \"Export overtime to PDF\" or \"Export overtime to Excel\".",
             "When it's ready, pick \"Share or email\" or \"Save to phone\"."
           ]
         },
         {
           "type": "text",
-          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the overtime table and notes to your daily reports too. Comments print under each person in the PDF, and in a \"Comment\" column in Word and Excel. On the PDF, Word and Excel, a person confirmed \"Yes\" has their whole row shaded pale green, and \"No\" pale red, so the crew can see at a glance who is coming."
+          "text": "Tick \"Include in this day's report (PDF, Word and email)\" to add the overtime table and notes to that day's report. The tick carries on to the next day. Comments print under each person in the PDF, and in a \"Comment\" column in Word and Excel. On the PDF, Word and Excel, a person confirmed \"Yes\" has their whole row shaded pale green, and \"No\" pale red, so the crew can see at a glance who is coming."
         },
         {
           "type": "steps",
@@ -3072,7 +3087,7 @@
       "id": "attendance-tab",
       "title": "Attendance: who's here today",
       "group": "Tabs",
-      "summary": "Mark each person Yes, No, Called in, AWOL, Vacation, Off, Training, B72, Step up, Late or Left early, and add a comment. Remove rows, export, and Clear answers.",
+      "summary": "Each daily log has its own attendance: mark each person Yes, No, Called in, AWOL, Vacation, Off, Training, B72, Step up, Late or Left early, and add a comment.",
       "keywords": [
         "attendance",
         "called in",
@@ -3099,25 +3114,29 @@
         "late",
         "left early",
         "comment",
-        "why"
+        "why",
+        "old day",
+        "each day",
+        "daily log",
+        "past report"
       ],
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
         {
           "type": "text",
-          "text": "The \"Attendance\" tab shows who is here today. It starts with one row for each person in your crew, with their name filled in."
+          "text": "Each daily log has its own \"Attendance\" sheet for that day. When you start a new day, the names and notes are copied from the day before, with the answers and comments blank. An old day keeps its own answers, so its report shows who was there that day."
         },
         {
           "type": "image",
           "file": "attendance.png",
-          "caption": "The Attendance tab"
+          "caption": "The day's Attendance sheet"
         },
         {
           "type": "steps",
           "items": [
-            "Open the project and tap \"Attendance\".",
-            "Check the date at the top. To pick another day, tap \"Change\".",
+            "Open the daily log and tap \"Attendance\" (under the crew, next to \"Overtime\").",
+            "The date at the top is the daily log's date.",
             "In each row, tap the box under \"Here?\" and pick an answer: \"Yes\", \"No\", \"Called in\", \"AWOL\", \"Vacation\", \"Off\", \"Training\", \"B72\", \"Step up\", \"Late\" or \"Left early\".",
             "To add a comment for that person, tap the \"Comment\" box at the end of the row and type, for example \"Left at 1pm, doctor\".",
             "To change who is on a row, tap the name and pick someone else.",
@@ -3148,20 +3167,20 @@
         {
           "type": "steps",
           "items": [
-            "On the \"Attendance\" tab, tap \"Export\" at the top right.",
+            "On the day's \"Attendance\" sheet, tap \"Export\" at the top right.",
             "Pick \"Export attendance to PDF\" or \"Export attendance to Excel\".",
             "When it's ready, pick \"Share or email\" or \"Save to phone\"."
           ]
         },
         {
           "type": "text",
-          "text": "Tick \"Include in my reports (PDF, Word and email)\" to add the attendance table, with the comments, to your daily reports too."
+          "text": "Tick \"Include in this day's report (PDF, Word and email)\" to add the attendance table, with the comments, to that day's report. The tick carries on to the next day."
         },
         {
           "type": "steps",
           "items": [
             "For a new day, tap \"Clear answers\" at the bottom.",
-            "Tap \"Clear\". The answers and comments are cleared and the date changes to today. Names and notes stay."
+            "Tap \"Clear\". The answers and comments are cleared. Names and notes stay."
           ]
         },
         {
@@ -3491,7 +3510,7 @@
         },
         {
           "type": "text",
-          "text": "The Excel sheet looks like the PDF: the title, how many fields are done, the crew, then a table with one row per field (Area, Field, Status, Completed by, Completed at, Assigned, Load secured, Next shift, Notes and Photos). \"Done\" is green and \"Not done\" is red. Below it come \"Also today\", and overtime, attendance and sea cans when they are ticked for your reports."
+          "text": "The Excel sheet looks like the PDF: the title, how many fields are done, the crew, then a table with one row per field (Area, Field, Status, Completed by, Completed at, Assigned, Load secured, Next shift, Notes and Photos). \"Done\" is green and \"Not done\" is red. Below it come \"Also today\", and the day's overtime and attendance and the sea cans when they are ticked for the report."
         },
         {
           "type": "tip",
@@ -3615,7 +3634,7 @@
         },
         {
           "type": "tip",
-          "text": "Unticked \"Also today\" items and unticked notes are not in the report. Neither are sea cans, overtime or attendance unless their \"Include in my reports\" box is ticked."
+          "text": "Unticked \"Also today\" items and unticked notes are not in the report. Neither are sea cans unless their \"Include in my reports\" box is ticked, or the day's overtime and attendance unless their \"Include in this day's report\" box is ticked. A report always shows that day's own overtime and attendance."
         },
         {
           "type": "see",

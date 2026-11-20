@@ -1715,3 +1715,77 @@ class ShadeTest {
     for (int i = doc.indexOf("w:fill=\"FDECEC\""); i >= 0; i = doc.indexOf("w:fill=\"FDECEC\"", i + 1)) rd++;
     NoteTest.check(g == 7 && rd == 7, "docx 7 shaded cells each: " + g + "/" + rd);
     System.out.println("SHADE PASS"); } }
+
+class DaySheetsTest {
+  public static void main(String[] a) throws Exception {
+    // A new day copies the day before; an old day keeps its own.
+    Models.Project p = new Models.Project(); p.crew.add("Al"); p.crew.add("Bo");
+    Models.DailyLog mon = new Models.DailyLog(); mon.date = "2026-11-16"; p.logs.add(mon);
+    p.startSheets(mon);
+    mon.overtime.include = true;
+    Models.Overtime.OtRow o = new Models.Overtime.OtRow(); o.name = "Al"; o.sat = "Yes"; o.confirmed = "Yes"; mon.overtime.rows.add(o);
+    mon.attendance.include = true; mon.attendance.notes = "Gate 3";
+    Models.Attendance.AttRow r = new Models.Attendance.AttRow(); r.name = "Al"; r.status = "Yes"; r.comment = "Late truck"; mon.attendance.rows.add(r);
+    Models.DailyLog tue = new Models.DailyLog(); tue.date = "2026-11-17"; p.logs.add(tue);
+    p.startSheets(tue);
+    NoteTest.check(tue.overtime.rows.size() == 1 && tue.overtime.rows.get(0).confirmed.equals("Yes") && tue.overtime.include, "overtime carries over as it was");
+    Models.Attendance.AttRow tr = tue.attendance.rows.get(0);
+    NoteTest.check(tue.attendance.rows.size() == 1 && tr.name.equals("Al") && tr.status.isEmpty() && tr.comment.isEmpty()
+        && tue.attendance.notes.equals("Gate 3") && tue.attendance.date.equals("2026-11-17") && tue.attendance.include, "attendance keeps names and notes, not answers");
+    tue.overtime.rows.get(0).confirmed = "No";
+    tr.status = "Vacation";
+    NoteTest.check(mon.overtime.rows.get(0).confirmed.equals("Yes") && p.forDay(mon).overtime.rows.get(0).confirmed.equals("Yes")
+        && p.forDay(mon).attendance.rows.get(0).status.equals("Yes") && p.forDay(tue).attendance.rows.get(0).status.equals("Vacation"), "old day keeps its own");
+    // A new day dated between copies from the day on/before it, not the latest.
+    Models.DailyLog wed = new Models.DailyLog(); wed.date = "2026-11-18"; p.logs.add(wed); p.startSheets(wed);
+    Models.DailyLog back = new Models.DailyLog(); back.date = "2026-11-16"; back.createdAt = mon.createdAt + 5; p.logs.add(back); p.startSheets(back);
+    NoteTest.check(back.overtime.rows.get(0).confirmed.equals("Yes") && wed.overtime.rows.get(0).confirmed.equals("No"), "copies from the day on or before");
+    p.logs.remove(back); p.logs.remove(wed);
+    // Saved and read back.
+    Models.Project q = Models.Project.fromJson(new org.json.JSONObject(p.toJson().toString()));
+    NoteTest.check(q.logs.get(0).overtime.rows.get(0).confirmed.equals("Yes") && q.logs.get(1).attendance.rows.get(0).status.equals("Vacation"), "saved and read back");
+    // duplicate makes sheets too
+    Models.DailyLog dup = p.duplicate(tue, "2026-11-19", "Tanner");
+    NoteTest.check(dup.overtime != null && dup.attendance != null && dup.attendance.date.equals("2026-11-19") && dup.overtime.rows.get(0).confirmed.equals("No"), "duplicate starts its sheets");
+
+    // A day from before has no sheets on its report, never today's.
+    Models.Project p2 = new Models.Project();
+    Models.DailyLog old = new Models.DailyLog(); old.date = "2026-10-01"; p2.logs.add(old);
+    Models.DailyLog today = new Models.DailyLog(); today.date = "2026-11-20"; p2.logs.add(today);
+    p2.startSheets(today);
+    today.overtime.include = true;
+    Models.Overtime.OtRow o2 = new Models.Overtime.OtRow(); o2.name = "Al"; o2.confirmed = "Yes"; today.overtime.rows.add(o2);
+    NoteTest.check(!p2.forDay(old).overtime.include && p2.forDay(old).overtime.rows.isEmpty() && !p2.forDay(old).attendance.include, "old day prints no sheets");
+    NoteTest.check(old.toJson().opt("overtime") == null && today.toJson().has("overtime") && today.toJson().has("attendance"), "written only when present");
+
+    // The old project-wide sheets move to their day, once.
+    org.json.JSONObject json = new org.json.JSONObject("{\"name\":\"B44\",\"logs\":[{\"id\":\"a\",\"date\":\"2026-11-18\",\"createdAt\":1},{\"id\":\"b\",\"date\":\"2026-11-19\",\"createdAt\":2}],"
+        + "\"overtime\":{\"include\":true,\"rows\":[{\"name\":\"Al\",\"confirmed\":\"Yes\"}]},"
+        + "\"attendance\":{\"date\":\"2026-11-18\",\"include\":true,\"rows\":[{\"name\":\"Bo\",\"status\":\"Yes\"}]}}");
+    Models.Project m = Models.Project.fromJson(json);
+    Models.DailyLog ma = m.logs.get(0), mb = m.logs.get(1);
+    NoteTest.check(mb.overtime != null && mb.overtime.rows.get(0).name.equals("Al") && ma.overtime == null, "overtime moves to the latest day");
+    NoteTest.check(ma.attendance != null && ma.attendance.rows.get(0).status.equals("Yes") && mb.attendance == null, "attendance moves to the day of its date");
+    m.ensureSheets(mb);
+    NoteTest.check(mb.overtime.rows.get(0).name.equals("Al") && mb.attendance.rows.get(0).name.equals("Bo") && mb.attendance.rows.get(0).status.isEmpty(), "ensureSheets fills only what's missing");
+    // Only once: changing the project-wide sheet and reloading moves nothing again.
+    org.json.JSONObject saved = m.toJson();
+    saved.getJSONObject("overtime").put("notes", "changed");
+    Models.Project m2 = Models.Project.fromJson(saved);
+    NoteTest.check(m2.logs.get(1).overtime.notes.isEmpty(), "migration only once");
+
+    // Renaming someone renames them on every day.
+    Models.Project p3 = new Models.Project(); p3.crew.add("Al");
+    Models.DailyLog d = new Models.DailyLog(); d.date = "2026-11-20"; p3.logs.add(d); p3.startSheets(d);
+    Models.Overtime.OtRow o3 = new Models.Overtime.OtRow(); o3.name = "Al"; d.overtime.rows.add(o3);
+    Models.Attendance.AttRow r3 = new Models.Attendance.AttRow(); r3.name = "Al"; d.attendance.rows.add(r3);
+    p3.renamePerson("Al", "Alan");
+    NoteTest.check(d.overtime.rows.get(0).name.equals("Alan") && d.attendance.rows.get(0).name.equals("Alan"), "rename on every day");
+
+    // Sheet buttons' lines
+    RichTest.eq(LogActivity.overtimeLine(old), "Tap to open", "no sheet yet");
+    RichTest.eq(LogActivity.overtimeLine(today), "1 confirmed · in report", "overtime line");
+    RichTest.eq(LogActivity.attendanceLine(today), "No answers yet", "attendance line");
+    RichTest.eq(LogActivity.attendanceLine(tue), "Vacation 1 · in report", "attendance summary line");
+    NoteTest.check(LogsActivity.isDaySheet("overtime") && LogsActivity.isDaySheet("attendance") && !LogsActivity.isDaySheet("notes"), "day sheet tabs");
+    System.out.println("DAYSHEETS PASS"); } }

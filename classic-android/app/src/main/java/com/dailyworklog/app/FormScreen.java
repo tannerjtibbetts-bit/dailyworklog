@@ -70,6 +70,14 @@ abstract class FormScreen extends AppCompatActivity {
         subView.setVisibility(sub == null || sub.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
+    /** Small grey line above the title (e.g. the day's name above "Overtime"). */
+    protected void setTitlesSmallFirst(String small, String title) {
+        setTitles(title, small);
+        LinearLayout titles = (LinearLayout) titleView.getParent();
+        titles.removeView(subView);
+        titles.addView(subView, 0);
+    }
+
     protected TextView text(String s, int sp, int color, boolean bold) {
         TextView t = new TextView(this);
         t.setText(s);

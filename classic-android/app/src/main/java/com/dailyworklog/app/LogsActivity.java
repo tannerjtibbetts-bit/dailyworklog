@@ -171,7 +171,8 @@ public class LogsActivity extends AppCompatActivity {
         List<TextView> shown = new ArrayList<>();
         shown.add(pillLogs);
         for (int i = 0; i < TAB_IDS.length; i++) {
-            boolean hidden = store.hiddenTabs.contains(TAB_IDS[i]);
+            // Overtime and Attendance live in each daily log now; hiding them there still works.
+            boolean hidden = store.hiddenTabs.contains(TAB_IDS[i]) || isDaySheet(TAB_IDS[i]);
             if (!hidden) shown.add(pills[i]);
             if (hidden && mode == TAB_MODES[i]) mode = MODE_LOGS;
         }
@@ -188,6 +189,16 @@ public class LogsActivity extends AppCompatActivity {
             }
         }
         for (int r = 1; r < tabRows.length; r++) tabRows[r].setVisibility(tabRows[r].getChildCount() == 0 ? View.GONE : View.VISIBLE);
+    }
+
+    /** The "tabs" that live inside each daily log (Overtime and Attendance), not on the project screen. */
+    static boolean isDaySheet(String tabId) {
+        return "overtime".equals(tabId) || "attendance".equals(tabId);
+    }
+
+    /** Whether a day's Overtime or Attendance button is shown (they can be hidden like tabs). */
+    static boolean daySheetShown(Store store, String tabId) {
+        return !store.hiddenTabs.contains(tabId);
     }
 
     /** Tick the tabs to show; unticked ones disappear from every project until ticked again. */
@@ -233,8 +244,8 @@ public class LogsActivity extends AppCompatActivity {
         stylePill(pillNotify, mode == MODE_NOTIFY);
         stylePill(pillNotes, mode == MODE_NOTES);
         stylePill(pillContacts, mode == MODE_CONTACTS);
-        // Overtime, Attendance and Sea Can Movements are full pages in the same scroller, not lists.
-        boolean ot = mode == MODE_OVERTIME || mode == MODE_ATTENDANCE || mode == MODE_SEACANS;
+        // Sea Can Movements is a full page in its own scroller, not a list.
+        boolean ot = mode == MODE_SEACANS;
         findViewById(R.id.overtimePane).setVisibility(ot ? View.VISIBLE : View.GONE);
         findViewById(R.id.list).setVisibility(ot ? View.GONE : View.VISIBLE);
         findViewById(R.id.searchBox).setVisibility(ot ? View.GONE : View.VISIBLE);
@@ -243,9 +254,7 @@ public class LogsActivity extends AppCompatActivity {
         if (ot) {
             findViewById(R.id.reportCards).setVisibility(View.GONE);
             empty.setVisibility(View.GONE);
-            if (mode == MODE_SEACANS) SeaCanPane.render(this, store, project, findViewById(R.id.overtimeContent));
-            else if (mode == MODE_ATTENDANCE) AttendancePane.render(this, store, project, findViewById(R.id.overtimeContent));
-            else OvertimePane.render(this, store, project, findViewById(R.id.overtimeContent));
+            SeaCanPane.render(this, store, project, findViewById(R.id.overtimeContent));
             return;
         }
         search.setHint(mode == MODE_NOTIFY ? "Search sent notes" : mode == MODE_NOTES ? "Search notes" : mode == MODE_LINKS ? "Search links" : mode == MODE_CONTACTS ? "Search contacts"
@@ -400,6 +409,7 @@ public class LogsActivity extends AppCompatActivity {
             }
         }
         project.logs.add(l);
+        project.startSheets(l);
         if (tmpl != null) {
             project.record(l, Fmt.todayIso(), Models.Extra.TEMPLATE, tmpl.id, tmpl.name,
                     Fmt.plural(tmpl.tasks.size(), "field", "fields"), null, store.me(), System.currentTimeMillis());
@@ -420,6 +430,7 @@ public class LogsActivity extends AppCompatActivity {
             l.tasks.add(c);
         }
         project.logs.add(l);
+        project.startSheets(l);
         store.save();
         open(l);
     }
@@ -815,9 +826,9 @@ public class LogsActivity extends AppCompatActivity {
         Ui.menu(this, "To " + Fmt.join(n.to), items);
     }
 
-    // ----- overtime -----
+    // ----- sea cans -----
 
-    /** Overtime tab's Export button: just that sheet, as PDF or Excel. */
+    /** Sea Can Movements tab's Export button: just the list, as PDF, Excel, CSV or Word. */
     void exportSeaCans() {
         List<Ui.SheetItem> items = new ArrayList<>();
         items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export sea cans to PDF", () -> exporter.exportSeaCans(project, "pdf")));
@@ -827,20 +838,6 @@ public class LogsActivity extends AppCompatActivity {
         Ui.menu(this, "Send just the sea can list. Your daily report still includes it when ticked.", items);
     }
 
-    void exportOvertime() {
-        List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export overtime to PDF", () -> exporter.exportOvertime(project, false)));
-        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export overtime to Excel", () -> exporter.exportOvertime(project, true)));
-        Ui.menu(this, "Send just the overtime sheet. Your daily report still includes it when ticked.", items);
-    }
-
-    /** Attendance tab's Export button: just that sheet, as PDF or Excel. */
-    void exportAttendance() {
-        List<Ui.SheetItem> items = new ArrayList<>();
-        items.add(new Ui.SheetItem(R.drawable.ic_pdf, "Export attendance to PDF", () -> exporter.exportAttendance(project, false)));
-        items.add(new Ui.SheetItem(R.drawable.ic_template, "Export attendance to Excel", () -> exporter.exportAttendance(project, true)));
-        Ui.menu(this, "Send just the attendance sheet. Your daily report still includes it when ticked.", items);
-    }
 
     // ----- notes -----
 

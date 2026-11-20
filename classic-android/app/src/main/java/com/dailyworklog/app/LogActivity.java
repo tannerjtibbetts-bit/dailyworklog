@@ -690,7 +690,7 @@ public class LogActivity extends AppCompatActivity {
     private class HeaderVH extends RecyclerView.ViewHolder {
         final TextView title, location, count;
         final ProgressRing ring;
-        final LinearLayout crew;
+        final LinearLayout crew, sheetButtons;
         final TextView[] chips;
 
         HeaderVH(View v) {
@@ -701,6 +701,7 @@ public class LogActivity extends AppCompatActivity {
             ring = v.findViewById(R.id.ring);
             ring.setFilledWhenComplete(false);
             crew = v.findViewById(R.id.crew);
+            sheetButtons = v.findViewById(R.id.sheetButtons);
             chips = new TextView[]{v.findViewById(R.id.chipMe), v.findViewById(R.id.chipIncomplete),
                     v.findViewById(R.id.chipComplete), v.findViewById(R.id.chipUnassigned)};
             int[] codes = {F_ME, F_INCOMPLETE, F_COMPLETE, F_UNASSIGNED};
@@ -730,6 +731,7 @@ public class LogActivity extends AppCompatActivity {
             location.setVisibility(project.location.isEmpty() ? View.GONE : View.VISIBLE);
             bindProgress(false);
             Ui.fillBadges(crew, log.crew, 52, 4);
+            bindSheetButtons(sheetButtons);
             int[] codes = {F_ME, F_INCOMPLETE, F_COMPLETE, F_UNASSIGNED};
             for (int i = 0; i < chips.length; i++) {
                 boolean on = filter == codes[i];
@@ -737,6 +739,76 @@ public class LogActivity extends AppCompatActivity {
                 chips[i].setTextColor(on ? 0xFFFFFFFF : getColor(R.color.text));
             }
         }
+    }
+
+    /** This day's own Overtime and Attendance buttons (each day keeps its own, copied from the day before). */
+    private void bindSheetButtons(LinearLayout box) {
+        box.removeAllViews();
+        boolean showOt = LogsActivity.daySheetShown(store, "overtime"), showAtt = LogsActivity.daySheetShown(store, "attendance");
+        box.setVisibility(showOt || showAtt ? View.VISIBLE : View.GONE);
+        if (showOt) box.addView(sheetButton("Overtime", overtimeLine(log), R.drawable.ic_calendar, true), sheetLp(box));
+        if (showAtt) box.addView(sheetButton("Attendance", attendanceLine(log), R.drawable.ic_person, false), sheetLp(box));
+    }
+
+    /** "3 confirmed · in report", or "Tap to open" for a day without its sheet yet. */
+    static String overtimeLine(Models.DailyLog l) {
+        if (l.overtime == null) return "Tap to open";
+        return l.overtime.confirmedCount() + " confirmed" + (l.overtime.include ? " \u00B7 in report" : "");
+    }
+
+    /** "Yes 5 · Vacation 1 · in report", "No answers yet", or "Tap to open". */
+    static String attendanceLine(Models.DailyLog l) {
+        if (l.attendance == null) return "Tap to open";
+        String s = l.attendance.summary();
+        return (s.isEmpty() ? "No answers yet" : s) + (l.attendance.include ? " \u00B7 in report" : "");
+    }
+
+    private LinearLayout.LayoutParams sheetLp(LinearLayout box) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        if (box.getChildCount() > 0) lp.setMarginStart(Ui.dp(this, 10));
+        return lp;
+    }
+
+    private View sheetButton(String title, String line, int icon, boolean overtime) {
+        LinearLayout b = new LinearLayout(this);
+        b.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        b.setBackgroundResource(R.drawable.bg_card);
+        b.setForeground(getDrawable(android.R.drawable.list_selector_background));
+        b.setPadding(Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12));
+        android.widget.ImageView i = new android.widget.ImageView(this);
+        i.setImageResource(icon);
+        i.setColorFilter(getColor(R.color.deep_blue));
+        b.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 26), Ui.dp(this, 26)));
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        TextView t = new TextView(this);
+        t.setText(title);
+        t.setTextSize(18);
+        t.setTextColor(getColor(R.color.navy));
+        t.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        t.setMaxLines(1);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView s = new TextView(this);
+        s.setText(line);
+        s.setTextSize(14);
+        s.setTextColor(getColor(R.color.grey));
+        s.setMaxLines(2);
+        s.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        texts.addView(t);
+        texts.addView(s);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        tlp.setMarginStart(Ui.dp(this, 10));
+        b.addView(texts, tlp);
+        android.widget.ImageView chev = new android.widget.ImageView(this);
+        chev.setImageResource(R.drawable.ic_chevron);
+        chev.setColorFilter(getColor(R.color.grey));
+        b.addView(chev, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
+        b.setContentDescription(title + ", " + line);
+        b.setOnClickListener(v -> startActivity(new Intent(this, DaySheetActivity.class)
+                .putExtra("project", project.id)
+                .putExtra("log", log.id)
+                .putExtra("overtime", overtime)));
+        return b;
     }
 
     /** "Delay cleared 2:15 PM", with the date as well when it wasn't cleared on the checklist's day. */

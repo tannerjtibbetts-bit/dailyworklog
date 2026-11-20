@@ -377,6 +377,13 @@ public final class Models {
         public List<String> crew = new ArrayList<>();
         public List<Task> tasks = new ArrayList<>();
         public List<Extra> extras = new ArrayList<>();
+        /**
+         * This day's own overtime and attendance sheets, so an old day's report shows what was entered that
+         * day. Made when the day is (copied from the day before, see Project.startSheets); null on days from
+         * before sheets moved into the day.
+         */
+        public Overtime overtime;
+        public Attendance attendance;
 
         public Extra findExtra(String refId) {
             for (Extra e : extras) if (e.refId.equals(refId)) return e;
@@ -427,6 +434,8 @@ public final class Models {
             JSONArray x = new JSONArray();
             for (Extra e : extras) x.put(e.toJson());
             o.put("extras", x);
+            if (overtime != null) o.put("overtime", overtime.toJson());
+            if (attendance != null) o.put("attendance", attendance.toJson());
             return o;
         }
 
@@ -451,6 +460,10 @@ public final class Models {
                     if (e != null) l.extras.add(Extra.fromJson(e));
                 }
             }
+            JSONObject ot = o.optJSONObject("overtime");
+            if (ot != null) l.overtime = Overtime.fromJson(ot);
+            JSONObject at = o.optJSONObject("attendance");
+            if (at != null) l.attendance = Attendance.fromJson(at);
             return l;
         }
     }
@@ -1125,6 +1138,15 @@ public final class Models {
             return o;
         }
 
+        /** A deep copy. */
+        public Overtime copy() {
+            try {
+                return fromJson(toJson());
+            } catch (JSONException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
         static Overtime fromJson(JSONObject o) {
             Overtime t = new Overtime();
             if (o == null) return t;
@@ -1243,6 +1265,15 @@ public final class Models {
             for (AttRow r : rows) a.put(r.toJson());
             o.put("rows", a);
             return o;
+        }
+
+        /** A deep copy. */
+        public Attendance copy() {
+            try {
+                return fromJson(toJson());
+            } catch (JSONException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         static Attendance fromJson(JSONObject o) {
@@ -1503,6 +1534,10 @@ public final class Models {
             for (Notice n : notices) replaceIn(n.to, from, to);
             for (Overtime.OtRow row : overtime.rows) if (row.name.equals(from)) row.name = to;
             for (Attendance.AttRow row : attendance.rows) if (row.name.equals(from)) row.name = to;
+            for (DailyLog l : logs) {
+                if (l.overtime != null) for (Overtime.OtRow row : l.overtime.rows) if (row.name.equals(from)) row.name = to;
+                if (l.attendance != null) for (Attendance.AttRow row : l.attendance.rows) if (row.name.equals(from)) row.name = to;
+            }
         }
 
         private static void replaceIn(List<String> list, String from, String to) {
@@ -1606,7 +1641,97 @@ public final class Models {
                 l.tasks.add(c);
             }
             logs.add(l);
+            startSheets(l);
             return l;
+        }
+
+        // ----- each day's overtime and attendance -----
+
+        private static boolean later(DailyLog a, DailyLog b) {
+            return b == null || a.date.compareTo(b.date) > 0 || (a.date.equals(b.date) && a.createdAt > b.createdAt);
+        }
+
+        /** The latest other day (on or before l's date if there is one) that has the sheet (overtime or attendance). */
+        private DailyLog sheetDay(DailyLog l, boolean overtimeSheet) {
+            DailyLog before = null, any = null;
+            for (DailyLog x : logs) {
+                if (x == l || (overtimeSheet ? x.overtime == null : x.attendance == null)) continue;
+                if (later(x, any)) any = x;
+                if (x.date.compareTo(l.date) <= 0 && later(x, before)) before = x;
+            }
+            return before != null ? before : any;
+        }
+
+        /**
+         * Gives a new day its own overtime and attendance, copied from the day before (or the older
+         * project-wide sheets): overtime as it was (sign-ups build up over the week), attendance with the
+         * names, notes and "include" kept but the answers and comments cleared for the new date.
+         */
+        public void startSheets(DailyLog l) {
+            DailyLog o = sheetDay(l, true), a = sheetDay(l, false);
+            l.overtime = (o != null ? o.overtime : overtime).copy();
+            l.attendance = (a != null ? a.attendance : attendance).copy();
+            l.attendance.startDay(l.date);
+        }
+
+        /** Makes sure l has its sheets (a day from before sheets moved into the day gets a fresh copy). */
+        public void ensureSheets(DailyLog l) {
+            if (l.overtime != null && l.attendance != null) return;
+            Overtime ot = l.overtime;
+            Attendance att = l.attendance;
+            startSheets(l);
+            if (ot != null) l.overtime = ot;
+            if (att != null) l.attendance = att;
+        }
+
+        /**
+         * What a day's report prints: this project with the day's own overtime and attendance (none for a
+         * day that never had them, so an old day never shows today's sheets). Shares everything else.
+         */
+        public Project forDay(DailyLog l) {
+            Project p = new Project();
+            p.id = id;
+            p.name = name;
+            p.location = location;
+            p.createdAt = createdAt;
+            p.crew = crew;
+            p.phones = phones;
+            p.logs = logs;
+            p.templates = templates;
+            p.notices = notices;
+            p.notes = notes;
+            p.emails = emails;
+            p.roles = roles;
+            p.groups = groups;
+            p.levels = levels;
+            p.trades = trades;
+            p.unionLocals = unionLocals;
+            p.employeeNumbers = employeeNumbers;
+            p.bpNumbers = bpNumbers;
+            p.disnNumbers = disnNumbers;
+            p.terms = terms;
+            p.assignTexts = assignTexts;
+            p.seaCans = seaCans;
+            p.seaCanInclude = seaCanInclude;
+            p.overtime = l.overtime != null ? l.overtime : new Overtime();
+            p.attendance = l.attendance != null ? l.attendance : new Attendance();
+            return p;
+        }
+
+        /**
+         * Before sheets moved into the day, they were one per project: give them to the day they belong to
+         * (attendance: the day of its date, else the latest day; overtime: the latest day). Only once.
+         */
+        void moveSheetsToDays() {
+            if (logs.isEmpty()) return;
+            for (DailyLog l : logs) if (l.overtime != null || l.attendance != null) return;
+            DailyLog latest = latestLog();
+            if (!overtime.rows.isEmpty() || !overtime.notes.trim().isEmpty()) latest.overtime = overtime.copy();
+            if (!attendance.rows.isEmpty() || !attendance.notes.trim().isEmpty()) {
+                DailyLog day = null;
+                for (DailyLog l : logs) if (l.date.equals(attendance.date) && (day == null || l.createdAt > day.createdAt)) day = l;
+                (day != null ? day : latest).attendance = attendance.copy();
+            }
         }
 
         JSONObject toJson() throws JSONException {
@@ -1741,6 +1866,7 @@ public final class Models {
                     if (x != null) p.notices.add(Notice.fromJson(x));
                 }
             }
+            p.moveSheetsToDays();
             return p;
         }
     }
