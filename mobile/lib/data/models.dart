@@ -440,18 +440,28 @@ class LinkReminder {
   };
 
   /// Minutes before the time that the phone alerts.
-  static const alerts = [0, 5, 15, 30, 60, 1440];
+  static const alerts = [0, 5, 15, 30, 60, 120, 1440, 2880, 10080];
   static String alertLabel(int m) => switch (m) {
         0 => 'At the time',
-        60 => '1 hour before',
-        1440 => '1 day before',
+        10080 => '1 week before',
+        _ when m % 1440 == 0 => m == 1440 ? '1 day before' : '${m ~/ 1440} days before',
+        _ when m % 60 == 0 => m == 60 ? '1 hour before' : '${m ~/ 60} hours before',
         _ => '$m minutes before',
       };
+
+  /// No second alert.
+  static const none = -1;
 
   /// When it (first) happens, in milliseconds.
   int start = 0;
   String repeat = once;
   int alert = 0;
+
+  /// A second alert (minutes before), or [none].
+  int alert2 = none;
+
+  /// The alerts to set in the calendar, in minutes before.
+  List<int> alertList() => [alert, if (alert2 >= 0 && alert2 != alert) alert2];
 
   /// The calendar event on this phone ('' if not saved there yet, e.g. after restoring on a new phone).
   String eventId = '';
@@ -469,12 +479,14 @@ class LinkReminder {
     };
   }
 
-  Map<String, dynamic> toJson() => {'start': start, 'repeat': repeat, 'alert': alert, 'eventId': eventId};
+  Map<String, dynamic> toJson() =>
+      {'start': start, 'repeat': repeat, 'alert': alert, 'alert2': alert2, 'eventId': eventId};
 
   static LinkReminder fromJson(Map<String, dynamic> o) => LinkReminder()
     ..start = _i(o, 'start')
     ..repeat = repeats.contains(o['repeat']) ? o['repeat'] as String : once
     ..alert = _i(o, 'alert')
+    ..alert2 = o['alert2'] is num ? (o['alert2'] as num).toInt() : none
     ..eventId = _s(o, 'eventId');
 }
 

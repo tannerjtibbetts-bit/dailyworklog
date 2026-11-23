@@ -94,7 +94,8 @@ class MainActivity : FlutterActivity() {
                                 call.argument<String>("notes") ?: "",
                                 (call.argument<Number>("start") ?: 0).toLong(),
                                 call.argument<String>("repeat") ?: "",
-                                (call.argument<Number>("alert") ?: 0).toInt(),
+                                call.argument<List<Number>>("alerts")?.map { it.toInt() }
+                                    ?: listOf((call.argument<Number>("alert") ?: 0).toInt()),
                             )
                             runOnUiThread { result.success(id) }
                         } catch (e: IllegalStateException) {

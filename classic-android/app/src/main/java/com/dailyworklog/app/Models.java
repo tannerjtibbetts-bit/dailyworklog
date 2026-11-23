@@ -532,16 +532,32 @@ public final class Models {
         public static final String[] REPEATS = {ONCE, DAILY, WEEKLY, MONTHLY, YEARLY};
         public static final String[] REPEAT_LABELS = {"One time only", "Every day", "Every week", "Every month", "Every year"};
         /** Minutes before the time that the phone alerts. */
-        public static final int[] ALERTS = {0, 5, 15, 30, 60, 1440};
+        public static final int[] ALERTS = {0, 5, 15, 30, 60, 120, 1440, 2880, 10080};
+        /** No second alert. */
+        public static final int NONE = -1;
 
         public static String alertLabel(int m) {
-            return m == 0 ? "At the time" : m == 60 ? "1 hour before" : m == 1440 ? "1 day before" : m + " minutes before";
+            if (m == 0) return "At the time";
+            if (m == 10080) return "1 week before";
+            if (m % 1440 == 0) return m == 1440 ? "1 day before" : (m / 1440) + " days before";
+            if (m % 60 == 0) return m == 60 ? "1 hour before" : (m / 60) + " hours before";
+            return m + " minutes before";
         }
 
         /** When it (first) happens, in milliseconds. */
         public long start;
         public String repeat = ONCE;
         public int alert;
+        /** A second alert (minutes before), or NONE. */
+        public int alert2 = NONE;
+
+        /** The alerts to set in the calendar, in minutes before. */
+        public java.util.List<Integer> alertList() {
+            java.util.List<Integer> out = new java.util.ArrayList<>();
+            out.add(alert);
+            if (alert2 >= 0 && alert2 != alert) out.add(alert2);
+            return out;
+        }
         /** The calendar event on this phone ("" if not saved there yet, e.g. after restoring on a new phone). */
         public String eventId = "";
 
@@ -564,6 +580,7 @@ public final class Models {
             o.put("start", start);
             o.put("repeat", repeat);
             o.put("alert", alert);
+            o.put("alert2", alert2);
             o.put("eventId", eventId);
             return o;
         }
@@ -574,6 +591,7 @@ public final class Models {
             String rep = o.optString("repeat", "");
             r.repeat = java.util.Arrays.asList(REPEATS).contains(rep) ? rep : ONCE;
             r.alert = o.optInt("alert", 0);
+            r.alert2 = o.optInt("alert2", NONE);
             r.eventId = o.optString("eventId", "");
             return r;
         }

@@ -45,7 +45,7 @@ object CalendarReminders {
     }
 
     /** Adds or updates the event and its alert. Returns its id, or throws IllegalStateException("no_calendar"). */
-    fun save(cr: ContentResolver, eventId: String, title: String, notes: String, start: Long, repeat: String, alert: Int): String {
+    fun save(cr: ContentResolver, eventId: String, title: String, notes: String, start: Long, repeat: String, alerts: List<Int>): String {
         val rule = rrule(repeat)
         val v = ContentValues().apply {
             put(CalendarContract.Events.TITLE, title)
@@ -73,13 +73,15 @@ object CalendarReminders {
             val uri = cr.insert(CalendarContract.Events.CONTENT_URI, v) ?: throw IllegalStateException("failed")
             id = ContentUris.parseId(uri)
         }
-        // One alert: replace whatever was there.
+        // The alerts: replace whatever was there.
         cr.delete(CalendarContract.Reminders.CONTENT_URI, "${CalendarContract.Reminders.EVENT_ID} = ?", arrayOf(id.toString()))
-        cr.insert(CalendarContract.Reminders.CONTENT_URI, ContentValues().apply {
-            put(CalendarContract.Reminders.EVENT_ID, id)
-            put(CalendarContract.Reminders.MINUTES, alert)
-            put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
-        })
+        for (minutes in alerts.distinct()) {
+            cr.insert(CalendarContract.Reminders.CONTENT_URI, ContentValues().apply {
+                put(CalendarContract.Reminders.EVENT_ID, id)
+                put(CalendarContract.Reminders.MINUTES, minutes)
+                put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
+            })
+        }
         return id.toString()
     }
 

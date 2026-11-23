@@ -1899,4 +1899,15 @@ class LinkReminderTest {
     c.set(2026, 10, 23, 19, 5); RichTest.eq(Fmt.time(c.getTimeInMillis()), "7:05 PM", "time");
     RichTest.eq(CalendarReminders.rrule("weekly") + "|" + CalendarReminders.rrule("yearly") + "|" + CalendarReminders.rrule(""), "FREQ=WEEKLY|FREQ=YEARLY|null", "rrule");
     RichTest.eq(CalendarReminders.notes(l), "Daily Work Log link: BBO\nhttps://example.com/bbo", "event notes");
+    RichTest.eq(Models.LinkReminder.alertLabel(120) + "|" + Models.LinkReminder.alertLabel(2880) + "|" + Models.LinkReminder.alertLabel(10080),
+        "2 hours before|2 days before|1 week before", "longer alerts");
+    RichTest.eq(String.valueOf(r.alert2), "-1", "no second alert");
+    r.alert2 = 1440;
+    try {
+      Models.LinkReminder back2 = Models.LinkReminder.fromJson(r.toJson());
+      RichTest.eq(String.valueOf(back2.alert2), "1440", "second alert saved");
+      RichTest.eq(back2.alertList().toString(), "[15, 1440]", "both alerts");
+      back2.alert2 = 15;
+      RichTest.eq(back2.alertList().toString(), "[15]", "same alert once");
+    } catch (Exception e) { throw new RuntimeException(e); }
     System.out.println("LINKREMINDER PASS"); } }

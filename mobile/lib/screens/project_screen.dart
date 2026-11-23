@@ -404,6 +404,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         : DateTime.fromMillisecondsSinceEpoch(had.start);
     var repeat = had?.repeat ?? LinkReminder.weekly;
     var alert = had?.alert ?? 0;
+    var alert2 = had?.alert2 ?? LinkReminder.none;
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => StatefulBuilder(
@@ -506,6 +507,17 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       ],
                       onChanged: (v) => set(() => alert = v ?? alert),
                     ),
+                    DropdownButtonFormField<int>(
+                      initialValue: LinkReminder.alerts.contains(alert2) ? alert2 : LinkReminder.none,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Second alert'),
+                      items: [
+                        const DropdownMenuItem(value: LinkReminder.none, child: Text('None')),
+                        for (final m in LinkReminder.alerts)
+                          DropdownMenuItem(value: m, child: Text(LinkReminder.alertLabel(m))),
+                      ],
+                      onChanged: (v) => set(() => alert2 = v ?? alert2),
+                    ),
                   ],
                 ],
               ),
@@ -532,7 +544,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
       l.reminder = (had ?? LinkReminder())
         ..start = when.millisecondsSinceEpoch
         ..repeat = repeat
-        ..alert = alert;
+        ..alert = alert
+        ..alert2 = alert2;
     } else {
       l.reminder = null;
     }

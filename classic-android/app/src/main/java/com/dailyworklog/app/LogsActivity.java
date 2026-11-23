@@ -613,6 +613,17 @@ public class LogsActivity extends AppCompatActivity {
         }
         alert.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, alertLabels));
         alert.setSelection(alertAt);
+        // Second alert: "None", then the same choices.
+        android.widget.Spinner alert2 = v.findViewById(R.id.alert2);
+        String[] alert2Labels = new String[alertLabels.length + 1];
+        alert2Labels[0] = "None";
+        System.arraycopy(alertLabels, 0, alert2Labels, 1, alertLabels.length);
+        int alert2At = 0;
+        for (int i = 0; i < Models.LinkReminder.ALERTS.length; i++) {
+            if (had != null && had.alert2 == Models.LinkReminder.ALERTS[i]) alert2At = i + 1;
+        }
+        alert2.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, alert2Labels));
+        alert2.setSelection(alert2At);
         remind.setOnCheckedChangeListener((b, on) -> reminderBox.setVisibility(on ? View.VISIBLE : View.GONE));
         remind.setChecked(had != null);
         reminderBox.setVisibility(had != null ? View.VISIBLE : View.GONE);
@@ -654,6 +665,8 @@ public class LogsActivity extends AppCompatActivity {
                 r.start = when.getTimeInMillis();
                 r.repeat = Models.LinkReminder.REPEATS[Math.max(0, repeat.getSelectedItemPosition())];
                 r.alert = Models.LinkReminder.ALERTS[Math.max(0, alert.getSelectedItemPosition())];
+                int second = alert2.getSelectedItemPosition();
+                r.alert2 = second <= 0 ? Models.LinkReminder.NONE : Models.LinkReminder.ALERTS[second - 1];
                 l.reminder = r;
             } else {
                 l.reminder = null;

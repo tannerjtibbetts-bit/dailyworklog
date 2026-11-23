@@ -2774,7 +2774,7 @@
             "Tick \"Remind me in my calendar\".",
             "Tap \"Date\" and \"Time\" to pick when. For a repeating reminder, this is the first one.",
             "Under \"Repeat\", pick \"One time only\", \"Every day\", \"Every week\", \"Every month\" or \"Every year\".",
-            "Under \"Alert\", pick when your phone alerts you: \"At the time\", or 5, 15 or 30 minutes, 1 hour or 1 day before.",
+            "Under \"Alert\", pick when your phone alerts you: \"At the time\", or 5, 15 or 30 minutes, 1 or 2 hours, 1 or 2 days, or 1 week before. For a second reminder, pick one under \"Second alert\" too, for example 1 day before and again at the time.",
             "Tap \"Save\". The first time, allow Daily Work Log to use your calendar. You see \"Reminder saved in your calendar\"."
           ]
         },

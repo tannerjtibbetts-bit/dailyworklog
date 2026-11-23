@@ -90,8 +90,9 @@ enum CalendarReminders {
           }
         }()
         event.recurrenceRules = frequency.map { [EKRecurrenceRule(recurrenceWith: $0, interval: 1, end: nil)] }
-        let minutes = (args["alert"] as? NSNumber)?.doubleValue ?? 0
-        event.alarms = [EKAlarm(relativeOffset: -minutes * 60)]
+        let minutes = (args["alerts"] as? [NSNumber])?.map { $0.doubleValue }
+          ?? [(args["alert"] as? NSNumber)?.doubleValue ?? 0]
+        event.alarms = minutes.map { EKAlarm(relativeOffset: -$0 * 60) }
         do {
           try store.save(event, span: .futureEvents, commit: true)
           result(event.eventIdentifier)

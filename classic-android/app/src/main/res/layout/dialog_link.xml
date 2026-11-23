@@ -125,6 +125,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:minHeight="44dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Second alert"
+                android:textColor="@color/grey"
+                android:textSize="13sp" />
+
+            <Spinner
+                android:id="@+id/alert2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="44dp" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

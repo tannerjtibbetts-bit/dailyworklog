@@ -24,6 +24,7 @@ class CalendarReminders {
         'start': r.start,
         'repeat': r.repeat,
         'alert': r.alert,
+        'alerts': r.alertList(),
       });
       if (id == null || id.isEmpty) return "Couldn't save the reminder in your calendar.";
       r.eventId = id;

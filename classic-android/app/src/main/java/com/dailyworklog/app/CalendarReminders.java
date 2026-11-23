@@ -103,13 +103,15 @@ final class CalendarReminders {
                 if (uri == null) return FAILED;
                 id = ContentUris.parseId(uri);
             }
-            // One alert: replace whatever was there.
+            // The alerts: replace whatever was there.
             cr.delete(CalendarContract.Reminders.CONTENT_URI, CalendarContract.Reminders.EVENT_ID + " = ?", new String[]{String.valueOf(id)});
-            ContentValues a = new ContentValues();
-            a.put(CalendarContract.Reminders.EVENT_ID, id);
-            a.put(CalendarContract.Reminders.MINUTES, r.alert);
-            a.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
-            cr.insert(CalendarContract.Reminders.CONTENT_URI, a);
+            for (int minutes : r.alertList()) {
+                ContentValues a = new ContentValues();
+                a.put(CalendarContract.Reminders.EVENT_ID, id);
+                a.put(CalendarContract.Reminders.MINUTES, minutes);
+                a.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
+                cr.insert(CalendarContract.Reminders.CONTENT_URI, a);
+            }
             r.eventId = String.valueOf(id);
             return null;
         } catch (SecurityException e) {

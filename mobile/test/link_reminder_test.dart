@@ -32,6 +32,15 @@ void main() {
     expect((r..repeat = LinkReminder.once).describe(), 'One time, Nov 23, 2026 at 7:00 AM');
     expect(LinkReminder.alertLabel(0), 'At the time');
     expect(LinkReminder.alertLabel(60), '1 hour before');
+    expect(LinkReminder.alertLabel(120), '2 hours before');
+    expect(LinkReminder.alertLabel(2880), '2 days before');
+    expect(LinkReminder.alertLabel(10080), '1 week before');
+    // A second alert: kept, and both go to the calendar.
+    expect(r.alert2, LinkReminder.none);
+    r.alert2 = 1440;
+    expect(Link.fromJson((back..reminder = r).toJson()).reminder!.alert2, 1440);
+    expect(r.alertList(), [15, 1440]);
+    expect((r..alert2 = 15).alertList(), [15]);
   });
 
   testWidgets('Edit link: tick "Remind me in my calendar" and it goes in the calendar', (tester) async {
@@ -73,6 +82,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls.single.method, 'save');
     expect((calls.single.arguments as Map)['repeat'], 'monthly');
+    expect((calls.single.arguments as Map)['alerts'], [0]);
     expect((calls.single.arguments as Map)['title'], 'BBO');
     expect(link.reminder!.repeat, 'monthly');
     expect(link.reminder!.eventId, 'event-7');
