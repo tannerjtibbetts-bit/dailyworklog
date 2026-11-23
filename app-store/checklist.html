@@ -1,0 +1,294 @@
+<title>App Store Launch Checklist</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one phone-width column of numbered stages; each step is a tick row with its how-to underneath. */
+:root{
+  --bg:#eef3f9; --card:#ffffff; --ink:#14233a; --muted:#5d6b7e; --line:#d8e0ea;
+  --accent:#1b4f9c; --accent-soft:#dde8f7; --done:#1a8a43; --done-soft:#e3f4e9; --warn:#a4570c; --warn-soft:#fbeedd;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1622; --card:#172234; --ink:#e7edf6; --muted:#9aa9bd; --line:#2a3850;
+  --accent:#86b2f2; --accent-soft:#1d2f4d; --done:#5fd08a; --done-soft:#173326; --warn:#f0b066; --warn-soft:#3a2a17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1622; --card:#172234; --ink:#e7edf6; --muted:#9aa9bd; --line:#2a3850;
+  --accent:#86b2f2; --accent-soft:#1d2f4d; --done:#5fd08a; --done-soft:#173326; --warn:#f0b066; --warn-soft:#3a2a17; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:700 2.3rem/1.05 var(--display);letter-spacing:.01em;margin:0 0 6px;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 16px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line);margin-bottom:18px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-variant-numeric:tabular-nums}
+.bar b{font:700 1.25rem var(--display)}
+.track{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}
+.fill{height:100%;background:var(--done);width:0;transition:width .3s}
+.save{font-size:.85rem;color:var(--muted)}
+.note{background:var(--warn-soft);color:var(--ink);border-radius:12px;padding:12px 14px;margin:0 0 18px;font-size:.95rem}
+.note b{color:var(--warn)}
+section{margin:26px 0}
+section h2{display:flex;align-items:baseline;gap:10px;font:700 1.55rem/1.1 var(--display);margin:0 0 4px}
+section h2 .n{color:var(--accent)}
+section h2 .count{margin-left:auto;font:600 .9rem var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+section h2 .count.all{color:var(--done)}
+.why{color:var(--muted);margin:0 0 10px;font-size:.95rem}
+ul.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+li.step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:30px 1fr;gap:4px 10px}
+li.step.done{background:var(--done-soft);border-color:transparent}
+li.step input[type=checkbox]{width:24px;height:24px;margin:2px 0 0;accent-color:var(--done)}
+li.step label{font-weight:600;cursor:pointer;min-width:0}
+li.step.done label{color:var(--done)}
+.how{grid-column:2;color:var(--ink);font-size:.95rem;min-width:0}
+.how ol,.how ul{margin:4px 0;padding-left:20px}
+.how li{margin:2px 0}
+.how code,.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--accent-soft);padding:1px 5px;border-radius:5px;word-break:break-all}
+.how a{color:var(--accent)}
+.copy{display:inline-flex;align-items:center;gap:6px;margin:6px 8px 0 0;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:6px 12px;font:600 .88rem var(--body);cursor:pointer}
+.copy:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.copy.ok{background:var(--done);border-color:var(--done);color:var(--card)}
+.del{grid-column:2;justify-self:start;background:none;border:0;color:var(--muted);font-size:.85rem;padding:2px 0;cursor:pointer;text-decoration:underline}
+.add{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.add input{flex:1 1 220px;min-width:0;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.add button,.btn{font:600 1rem var(--body);padding:10px 16px;border-radius:10px;border:0;background:var(--accent);color:var(--card);cursor:pointer}
+textarea.hidden-copy{position:absolute;left:-9999px}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+
+<div class="wrap">
+  <h1>Daily Work Log on the App Store</h1>
+  <p class="lede">Every step to get the iPhone app approved, in order. Tick each one as you finish it. Your ticks save on this page, so you can come back any day.</p>
+
+  <div class="bar" id="bar">
+    <div class="row"><b id="pct">0% done</b><span class="save" id="save">&nbsp;</span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <p class="note"><b>Good to know.</b> You don't need a Mac. Codemagic builds the iPhone app online from your project. Apple's websites, App Store Connect and Codemagic all work in your phone's web browser (Android is fine). To <b>test</b> the app before sending it to Apple you need an iPhone for a few minutes; borrow one if you don't have one. Costs: Apple charges US$99 a year (in your own currency). Codemagic's free plan is enough.</p>
+
+  <div id="stages"></div>
+
+  <section>
+    <h2><span class="n">+</span> My own steps</h2>
+    <p class="why">Add anything else you want to remember, like "ask Apple about the name" or "send link to the crew".</p>
+    <ul class="steps" id="custom"></ul>
+    <form class="add" id="addForm">
+      <input id="addText" placeholder="Type a step and tap Add" aria-label="New step">
+      <button type="submit">Add</button>
+    </form>
+  </section>
+</div>
+<textarea class="hidden-copy" id="copyArea" aria-hidden="true" tabindex="-1"></textarea>
+
+<script type="application/json" id="state">{"done":{},"custom":[]}</script>
+<script>
+(function(){
+const TEMPLATE = document.body.innerHTML;
+const HEAD_CSS = (document.head.querySelector('style')||{}).textContent || '';
+let state;
+try { state = JSON.parse(document.getElementById('state').textContent); } catch(e) { state = {done:{},custom:[]}; }
+state.done = state.done || {}; state.custom = state.custom || [];
+
+const TEXT = {
+policy: `# Daily Work Log — Privacy Policy
+
+Last updated: November 19, 2026
+
+Daily Work Log is an app for logging daily field work: checklists, crew, notes, overtime, attendance, sea can movements, links, contacts and documents.
+
+## What the app collects
+Nothing. Daily Work Log has no accounts and no servers. The developer does not collect, store, sell or share any of your information, and the app has no advertising or tracking.
+
+## Where your information is kept
+Everything you enter (projects, logs, crew names and phone numbers, notes, photos, documents, contacts) is saved only on your own phone, inside the app. It is removed if you delete the app. If you turn on iPhone backups (iCloud or computer), the app's data is included in your own backup.
+
+## Permissions the app asks for
+- Camera – to take photos of your work and of documents. Photos stay on your phone.
+- Photos – to add pictures you already have, and to save photos you take to a "Daily Work Log" album on your phone.
+- Microphone and Speech Recognition – only when you tap the mic to speak instead of typing. Speech is turned into text by Apple's speech recognition service.
+
+You can turn any of these off at any time in the iPhone Settings app.
+
+## Sharing
+The app only sends something when you choose to: for example when you text a crew member, email or share a report, or open a web link. These go through your phone's own Messages, Mail, share sheet or web browser, to the people and places you pick.
+
+## Children
+The app is meant for work use by adults and does not knowingly collect anything from children.
+
+## Changes
+If this policy changes, the new version will be posted at this same web address.
+
+## Contact
+Questions: YOUR-EMAIL-HERE`,
+subtitle: 'Field checklists, crew & notes',
+promo: "Log the day's field work in minutes: checklists with photos, crew assignments, overtime sign-ups, attendance, notes and sea can moves, then send a clean report.",
+description: `Daily Work Log keeps a foreman's whole day in one place and turns it into a clean report.
+
+• Daily checklists – tick off each field or task, add photos, mark delays and who completed it.
+• Crew – manage your crew in groups, with phone numbers, trade, level and union local. Text a crew member when you assign them.
+• Notify – send a note or photo to the crew, or a whole group at once.
+• Overtime – weekend sign-up sheet with Yes / No for each day, hours and confirmed. Confirmed people light up green (Yes) or red (No).
+• Attendance – who's here today, with comments.
+• Notes – tag notes as Safety concern, Training or Crew concern.
+• Sea can movements – log every move with can number, locations and weight.
+• Links, contacts and documents – keep web links, company contacts and photos or files of documents handy in every project.
+• Reports – export the day as PDF, Word or Excel and email or share it.
+
+Everything stays on your phone. No account and no sign-up needed.`,
+keywords: 'foreman,daily log,field report,construction,crew,checklist,overtime,attendance,site,jobsite',
+review: `No account or sign-in is needed. Open the app, tap + to make a project (type any name), then tap + inside it to start today's daily log. The tabs along the top (Notify, Links, Contacts, Overtime, Attendance, Notes, Sea Can Movements) are the other parts of the app. All data is stored on the device only. The user manual is under Support → User manual.`,
+bundle: 'com.dailyworklog.app',
+keyname: 'DailyWorkLog App Store',
+branch: 'ccr-464ae73f-9ni66t'
+};
+const cp = (k, label) => `<button type="button" class="copy" data-copy="${k}">Copy ${label}</button>`;
+const a = (href) => `<a href="${href}" target="_blank" rel="noopener">${href.replace('https://','')}</a>`;
+
+const STAGES = [
+ {title:'Apple account and membership', why:'Apple only lets members put apps on the App Store.', steps:[
+  ['apple-id','Have an Apple ID with two-step sign-in turned on',`If you don't have one, make it at ${a('https://account.apple.com')}. Turn on two-factor authentication with your phone number (Sign-In and Security).`],
+  ['enroll','Join the Apple Developer Program (US$99 a year)',`<ol><li>Go to ${a('https://developer.apple.com/programs/enroll/')} and tap <b>Start your enrollment</b>.</li><li>Sign in with your Apple ID.</li><li>Pick <b>Individual / Sole Proprietor</b>. Your own name shows as the seller. (Picking a company needs a D-U-N-S number and takes weeks.)</li><li>Fill in your legal name and address, then pay.</li></ol>`],
+  ['enroll-ok','Wait for the "Welcome to the Apple Developer Program" email','Usually within 48 hours. Nothing below works until it arrives.'],
+  ['agreements','Accept the agreements in App Store Connect',`Go to ${a('https://appstoreconnect.apple.com')}, sign in, and accept any agreement banner at the top. For a free app that's all. To charge money for the app, also fill in <b>Business</b> (Paid Apps agreement, bank and tax forms).`]
+ ]},
+ {title:'Privacy policy web page', why:'Apple requires a web address for a privacy policy. A free GitHub "gist" works and you already have GitHub.', steps:[
+  ['gist','Publish the privacy policy',`<ol><li>Copy the policy with the button below.</li><li>Open ${a('https://gist.github.com')} and sign in to GitHub.</li><li>File name: <code>privacy-policy.md</code>. Paste the text.</li><li>Change <code>YOUR-EMAIL-HERE</code> at the bottom to the email you want people to use.</li><li>Tap <b>Create public gist</b>.</li></ol>${cp('policy','privacy policy')}`],
+  ['gist-url','Save the gist web address','Copy the address from the browser bar (it starts with gist.github.com/). You paste it into App Store Connect twice: Privacy Policy URL and Support URL.']
+ ]},
+ {title:'Register the app with Apple', why:'This reserves the app\'s ID and gives Codemagic permission to upload builds for you.', steps:[
+  ['bundle','Register the app ID',`<ol><li>Open ${a('https://developer.apple.com/account/resources/identifiers/list')} (if the page is cramped, use your browser's <b>Desktop site</b> option).</li><li>Tap <b>+</b>, pick <b>App IDs</b>, then <b>App</b>.</li><li>Description: <code>Daily Work Log</code>. Bundle ID: <b>Explicit</b>, <code>com.dailyworklog.app</code> ${cp('bundle','ID')}</li><li>Leave the capabilities as they are. Tap <b>Continue</b>, then <b>Register</b>.</li></ol>`],
+  ['api-key','Make an App Store Connect API key for Codemagic',`<ol><li>In App Store Connect open <b>Users and Access</b>, then <b>Integrations</b>, then <b>App Store Connect API</b> (tap <b>Request Access</b> the first time).</li><li>Tap <b>+</b> (Generate API Key). Name: <code>Codemagic</code>. Access: <b>App Manager</b>. Tap <b>Generate</b>.</li><li>Tap <b>Download</b> next to the key. It's a <code>.p8</code> file and Apple lets you download it <b>only once</b>, so keep it safe.</li><li>Write down the <b>Issuer ID</b> (top of the page) and the <b>Key ID</b>.</li></ol>`],
+  ['app-record','Create the app in App Store Connect',`<ol><li>In ${a('https://appstoreconnect.apple.com/apps')} tap <b>+</b>, then <b>New App</b>.</li><li>Platform <b>iOS</b>. Name <code>Daily Work Log</code>. Primary language <b>English (Canada)</b> or English (U.S.).</li><li>Bundle ID: pick <b>com.dailyworklog.app</b>. SKU: <code>dailyworklog</code>. User access: <b>Full Access</b>. Tap <b>Create</b>.</li></ol>If Apple says the name is taken, try <code>Daily Work Log – Field Crew</code> or <code>Field Work Log</code>.`]
+ ]},
+ {title:'Codemagic: build the iPhone app online', why:'Codemagic turns the project into an iPhone app and sends it to Apple. The settings file is already in your project.', steps:[
+  ['cm-signup','Sign up at Codemagic with GitHub',`Go to ${a('https://codemagic.io/signup')}, tap <b>Sign up with GitHub</b>, and allow access to the <b>dailyworklog</b> repository.`],
+  ['cm-key','Add the Apple key to Codemagic',`<ol><li>In Codemagic open <b>Teams</b> (or your personal account), then <b>Integrations</b>, then <b>Developer Portal</b>, then <b>Manage keys</b>, then <b>Add key</b>.</li><li>App Store Connect API key name: type exactly <code>DailyWorkLog App Store</code> ${cp('keyname','name')}</li><li>Enter the Issuer ID and Key ID, upload the <code>.p8</code> file, and tap <b>Save</b>.</li></ol>`],
+  ['cm-cert','Make the signing certificate',`In Codemagic open <b>Code signing identities</b>, then <b>iOS certificates</b>, then <b>Generate certificate</b>. Type: <b>Apple Distribution</b>. Pick the key you just added. Give it a reference name and save.`],
+  ['profile','Make the App Store profile',`<ol><li>Back on ${a('https://developer.apple.com/account/resources/profiles/list')} tap <b>+</b>.</li><li>Under Distribution pick <b>App Store Connect</b>. Tap Continue.</li><li>App ID: <b>com.dailyworklog.app</b>. Certificate: the one Codemagic just made.</li><li>Profile name: <code>DailyWorkLog App Store</code>. Tap <b>Generate</b>.</li></ol>`],
+  ['cm-fetch','Load the profile into Codemagic','In Codemagic open <b>Code signing identities</b>, then <b>iOS provisioning profiles</b>, then <b>Fetch profiles</b>. Tick <b>DailyWorkLog App Store</b> and tap <b>Download selected</b>.'],
+  ['cm-app','Add the project in Codemagic','Open <b>Applications</b>, tap <b>Add application</b>, pick <b>GitHub</b>, then <b>dailyworklog</b>. If asked for the project type, pick <b>Flutter App</b>. Codemagic finds the settings file (codemagic.yaml) by itself.'],
+  ['cm-build','Start the first build',`<ol><li>Tap <b>Start new build</b>.</li><li>Branch: <code>ccr-464ae73f-9ni66t</code> ${cp('branch','branch')} (that's where all the app's work is).</li><li>Workflow: <b>iPhone app to TestFlight</b>. Tap <b>Start new build</b>.</li><li>It takes about 20 to 40 minutes. Green means it's uploaded to Apple.</li></ol>If it turns red, take a screenshot of the red step and send it to Claude.`]
+ ]},
+ {title:'Test it on an iPhone (TestFlight)', why:'Apple processes the build, then you can install it on an iPhone and try it before sending it for review.', steps:[
+  ['processed','Wait for Apple\'s "build has completed processing" email','Usually 10 to 30 minutes after Codemagic finishes.'],
+  ['tf-group','Add yourself as a tester',`In App Store Connect open your app, then the <b>TestFlight</b> tab. Under <b>Internal Testing</b> tap <b>+</b>, name the group <code>Me</code>, add yourself, and add the new build to the group. (No "export compliance" question should come up; the app already answers it.)`],
+  ['tf-install','Install TestFlight and the app on the iPhone','On the iPhone, get <b>TestFlight</b> from the App Store, sign in with the same Apple ID, open the invite email, and tap <b>Install</b>.'],
+  ['t-project','Test: make a project and start today\'s daily log','Tap + on the opening screen, name a project, then tap + inside it to start today\'s log.'],
+  ['t-field','Test: tick a field and add a photo','Allow the camera when asked. The photo should show under the field.'],
+  ['t-crew','Test: add a crew member and text them','⋯ at the top, then Manage crew. Add yourself with your phone number, assign yourself to a field, and check the text opens in Messages.'],
+  ['t-overtime','Test: Overtime boxes light up','Pick Yes for Confirmed (green box) and No (red box).'],
+  ['t-notes','Test: a note with a tag, a link, a document and a contact','Notes tab (tick Safety concern), Links tab (add a web link and open it), Documents (take a photo), Contacts (add one and tap Call).'],
+  ['t-export','Test: export the report and email it','Export as PDF, Word and Excel. Check the overtime rows are green or red in the PDF.'],
+  ['t-manual','Test: open the user manual','Support, then User manual. Open a topic and search for a word.'],
+  ['t-reopen','Test: close the app completely and open it again','Everything you entered should still be there.']
+ ]},
+ {title:'Fill in the App Store page', why:'All in App Store Connect, under your app. The screenshots are the files Claude sent you (7 pictures).', steps:[
+  ['l-info','App Information (left menu)',`<ul><li>Subtitle: ${cp('subtitle','subtitle')}</li><li>Category: Primary <b>Business</b>, Secondary <b>Productivity</b>.</li><li>Content Rights: <b>No, it does not contain third-party content</b>.</li><li>Age Rating: tap <b>Set up</b> and answer None or No to everything (4+).</li></ul>Tap <b>Save</b>.`],
+  ['l-privacy','App Privacy (left menu)',`<ol><li>Privacy Policy URL: paste the gist address. Save.</li><li>Under Data Collection tap <b>Get Started</b>, pick <b>No, we do not collect data from this app</b>, and Save.</li><li>Tap <b>Publish</b>.</li></ol>`],
+  ['l-price','Pricing and Availability (left menu)','Pick <b>Free</b> (or a price), and the countries (all, or just Canada). Save.'],
+  ['l-shots','Upload the screenshots','Open <b>iOS App</b>, the version marked Prepare for Submission. Under <b>iPhone 6.9" Display</b> upload the 7 pictures in order (1-projects to 7-notify).'],
+  ['l-text','Paste the store text',`${cp('promo','promotional text')}${cp('description','description')}${cp('keywords','keywords')}<br>Support URL: the gist address. Copyright: <code>2026 Tanner Tibbetts</code>.`],
+  ['l-build','Pick the build','Under <b>Build</b> tap <b>+</b> and pick the build you tested.'],
+  ['l-review','App Review Information',`Untick <b>Sign-in required</b>. Enter your name, phone and email. Notes: ${cp('review','reviewer notes')}`],
+  ['l-release','Version Release','Pick <b>Manually release this version</b>, so the app only goes live when you tap Release.']
+ ]},
+ {title:'Send it to Apple', why:'', steps:[
+  ['submit','Tap "Add for Review", then "Submit to App Review"','At the top right of the version page. Fix anything it lists as missing first.'],
+  ['in-review','Wait for Apple\'s answer by email','Usually 1 to 3 days. If Apple rejects it, copy their message and send it to Claude. Most fixes are small.'],
+  ['release','Approved: tap "Release This Version"','The app shows up on the App Store within about a day. Search "Daily Work Log" to see it.']
+ ]},
+ {title:'Later: sending an update', why:'Do these every time you want a new version on the App Store.', steps:[
+  ['u-change','Ask Claude for the change','Claude updates the app and the version number.'],
+  ['u-build','Start a new Codemagic build','Same branch and workflow as before.'],
+  ['u-version','Add a new version in App Store Connect','Tap <b>+</b> next to iOS App, type the new version number, pick the new build, write "What\'s New", and submit for review.']
+ ]}
+];
+
+const total = () => STAGES.reduce((n,s)=>n+s.steps.length,0) + state.custom.length;
+const doneCount = () => STAGES.reduce((n,s)=>n+s.steps.filter(x=>state.done[x[0]]).length,0) + state.custom.filter(c=>c.done).length;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  const host = document.getElementById('stages');
+  host.innerHTML = STAGES.map((s,i)=>{
+    const d = s.steps.filter(x=>state.done[x[0]]).length;
+    return `<section><h2><span class="n">${i+1}</span>${esc(s.title)}<span class="count${d===s.steps.length?' all':''}">${d} of ${s.steps.length}</span></h2>`+
+      (s.why?`<p class="why">${esc(s.why)}</p>`:'')+
+      `<ul class="steps">`+s.steps.map(([id,t,how])=>{
+        const on = !!state.done[id];
+        return `<li class="step${on?' done':''}"><input type="checkbox" id="c-${id}" data-id="${id}"${on?' checked':''}><label for="c-${id}">${esc(t)}</label><div class="how">${how}</div></li>`;
+      }).join('')+`</ul></section>`;
+  }).join('');
+  const cu = document.getElementById('custom');
+  cu.innerHTML = state.custom.map((c,i)=>`<li class="step${c.done?' done':''}"><input type="checkbox" id="u-${i}" data-custom="${i}"${c.done?' checked':''}><label for="u-${i}">${esc(c.text)}</label><button type="button" class="del" data-del="${i}">Remove</button></li>`).join('');
+  const t = total(), d = doneCount(), p = t ? Math.round(d*100/t) : 0;
+  document.getElementById('pct').textContent = `${p}% done · ${d} of ${t} steps`;
+  document.getElementById('fill').style.width = p + '%';
+}
+
+// ----- saving -----
+let art = null, readOnly = false, timer = null;
+const saveEl = document.getElementById('save');
+function local(write){
+  try {
+    if (write) localStorage.setItem('appstore-checklist', JSON.stringify(state));
+    else { const s = localStorage.getItem('appstore-checklist'); if (s) return JSON.parse(s); }
+  } catch(e) {}
+  return null;
+}
+function documentFor(){
+  const json = JSON.stringify(state).replace(/</g,'\\u003c');
+  const body = TEMPLATE.replace(/(<script type="application\/json" id="state">)[\s\S]*?(<\/script>)/, (m,a1,b1)=>a1+json+b1);
+  return '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>'+HEAD_CSS+'</style></head><body>'+body+'</body></html>';
+}
+function changed(){
+  render();
+  local(true);
+  if (!art || readOnly) { saveEl.textContent = readOnly ? 'View only: ticks save in this browser' : 'Saved in this browser'; return; }
+  saveEl.textContent = 'Saving…';
+  clearTimeout(timer);
+  timer = setTimeout(async ()=>{
+    try { await art.publish(documentFor()); saveEl.textContent = 'Saved'; }
+    catch(e){
+      const c = e && e.code;
+      if (c === 'not_writer' || c === 'not_granted') { readOnly = true; saveEl.textContent = 'View only: ticks save in this browser'; }
+      else if (c === 'conflict') { saveEl.textContent = 'Updated elsewhere, reloading…'; }
+      else { saveEl.textContent = 'Not saved. Tick again to retry.'; }
+    }
+  }, 1200);
+}
+
+document.addEventListener('change', e=>{
+  const el = e.target;
+  if (el.dataset && el.dataset.id) { if (el.checked) state.done[el.dataset.id] = true; else delete state.done[el.dataset.id]; changed(); }
+  else if (el.dataset && el.dataset.custom) { state.custom[+el.dataset.custom].done = el.checked; changed(); }
+});
+document.addEventListener('click', async e=>{
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.del) { state.custom.splice(+b.dataset.del,1); changed(); return; }
+  if (b.dataset.copy) {
+    const text = TEXT[b.dataset.copy]; const old = b.textContent;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch(err) {
+      const ta = document.getElementById('copyArea'); ta.value = text; ta.select();
+      try { ok = document.execCommand('copy'); } catch(e2) {}
+    }
+    b.textContent = ok ? 'Copied' : 'Press and hold to copy'; b.classList.toggle('ok', ok);
+    setTimeout(()=>{ b.textContent = old; b.classList.remove('ok'); }, 1800);
+  }
+});
+document.getElementById('addForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const inp = document.getElementById('addText'); const t = inp.value.trim();
+  if (!t) return;
+  state.custom.push({text:t, done:false}); inp.value = ''; changed();
+});
+
+render();
+saveEl.textContent = 'Ticks save automatically';
+if (window.claude && window.claude.use) {
+  window.claude.use('artifact').then(ns=>{ art = ns; if (!ns) { const s = local(false); if (s) { state = s; render(); } saveEl.textContent = 'Ticks save in this browser'; } });
+} else { const s = local(false); if (s) { state = s; state.done = state.done||{}; state.custom = state.custom||[]; render(); } }
+})();
+</script>

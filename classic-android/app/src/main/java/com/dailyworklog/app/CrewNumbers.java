@@ -1,0 +1,270 @@
+package com.dailyworklog.app;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/** "Paste crew numbers": rows copied from a crew list (Excel, a table, text) with names and Employee # / BP # / DISN #. */
+final class CrewNumbers {
+    private CrewNumbers() {}
+
+    static final class Row {
+        final String name, employeeNo, bp, disn;
+
+        Row(String name, String employeeNo, String bp, String disn) {
+            this.name = name;
+            this.employeeNo = employeeNo;
+            this.bp = bp;
+            this.disn = disn;
+        }
+
+        @Override
+        public String toString() {
+            return name + "|" + employeeNo + "|" + bp + "|" + disn;
+        }
+    }
+
+    static final class Applied {
+        final List<String> updated = new ArrayList<>();
+        /** Rows that match nobody on the crew. */
+        final List<Row> missing = new ArrayList<>();
+    }
+
+    /** A line's cells: on tabs, else "|", else ",", else runs of 2+ spaces; trimmed. */
+    static List<String> cells(String line) {
+        String[] parts;
+        if (line.contains("\t")) parts = line.split("\t", -1);
+        else if (line.contains("|")) parts = line.split("\\|", -1);
+        else if (line.contains(",")) parts = line.split(",", -1);
+        else parts = line.trim().split("\\s{2,}", -1);
+        List<String> out = new ArrayList<>();
+        for (String p : parts) out.add(p.trim());
+        return out;
+    }
+
+    private static int letters(String s) {
+        int n = 0;
+        for (int i = 0; i < s.length(); i++) if (Character.isLetter(s.charAt(i))) n++;
+        return n;
+    }
+
+    private static boolean hasDigit(String s) {
+        for (int i = 0; i < s.length(); i++) if (Character.isDigit(s.charAt(i))) return true;
+        return false;
+    }
+
+    private static String get(List<String> cells, int i) {
+        return i >= 0 && i < cells.size() ? cells.get(i) : "";
+    }
+
+    static List<Row> parse(String text) {
+        List<Row> out = new ArrayList<>();
+        int nameCol = -1, empCol = -1, bpCol = -1, disnCol = -1;
+        boolean headed = false;
+        for (String line : text.split("\\r?\\n")) {
+            if (line.trim().isEmpty()) continue;
+            List<String> cells = cells(line);
+            if (!headed) {
+                int n = -1, e = -1, b = -1, d = -1;
+                for (int i = 0; i < cells.size(); i++) {
+                    String c = cells.get(i).toLowerCase(Locale.ROOT);
+                    if (n < 0 && c.contains("name")) n = i;
+                    if (e < 0 && (c.contains("prnnr") || c.contains("employee") || c.startsWith("emp"))) e = i;
+                    if (b < 0 && c.startsWith("bp")) b = i;
+                    if (d < 0 && c.contains("disn")) d = i;
+                }
+                boolean numberHeading = false;
+                for (String c : cells) {
+                    String l = c.toLowerCase(Locale.ROOT);
+                    if (l.contains("prnnr") || l.contains("employee") || l.contains("emp") || l.contains("bp") || l.contains("disn")) numberHeading = true;
+                }
+                if (n >= 0 && numberHeading) {
+                    headed = true;
+                    nameCol = n;
+                    empCol = e;
+                    bpCol = b;
+                    disnCol = d;
+                    continue;
+                }
+            }
+            String name, emp, bp, disn;
+            if (headed) {
+                name = get(cells, nameCol);
+                emp = get(cells, empCol);
+                bp = get(cells, bpCol);
+                disn = get(cells, disnCol);
+            } else {
+                name = "";
+                for (String c : cells) {
+                    if (letters(c) >= 2 && !hasDigit(c) && c.contains(" ")) {
+                        name = c;
+                        break;
+                    }
+                }
+                if (name.isEmpty()) {
+                    for (String c : cells) {
+                        if (letters(c) >= 2 && !hasDigit(c)) {
+                            name = c;
+                            break;
+                        }
+                    }
+                }
+                List<String> numbers = new ArrayList<>();
+                for (String c : cells) if (c.matches("[0-9-]+") && hasDigit(c)) numbers.add(c);
+                emp = numbers.size() > 0 ? numbers.get(0) : "";
+                bp = numbers.size() > 1 ? numbers.get(1) : "";
+                disn = numbers.size() > 2 ? numbers.get(2) : "";
+            }
+            name = name.replaceAll("\\s+", " ").trim();
+            if (name.isEmpty()) continue;
+            out.add(new Row(name, emp.trim(), bp.trim(), disn.trim()));
+        }
+        return out;
+    }
+
+    /** For matching names: lower case, no ".", "'" or "-", single spaces. */
+    static String key(String name) {
+        return name.toLowerCase(Locale.ROOT).replaceAll("[.'’-]", "").replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * The crew member a listed name means: the same name (ignoring case, spaces and . ' -); else the only one with
+     * the same last name whose first name starts the other's ("Dan" / "Daniel"); else the only one at most 2 letters
+     * off ("Colby" / "Colbe", names of 6+ letters). Null when none or more than one fit.
+     */
+    static String match(List<String> crew, String name) {
+        String k = key(name);
+        for (String c : crew) if (key(c).equals(k)) return c;
+        String[] w = k.split(" ");
+        String found = null;
+        int n = 0;
+        if (w.length >= 2) {
+            for (String c : crew) {
+                String[] cw = key(c).split(" ");
+                if (cw.length < 2 || !cw[cw.length - 1].equals(w[w.length - 1])) continue;
+                if (cw[0].startsWith(w[0]) || w[0].startsWith(cw[0])) {
+                    found = c;
+                    n++;
+                }
+            }
+            if (n == 1) return found;
+        }
+        found = null;
+        n = 0;
+        if (k.length() >= 6) {
+            for (String c : crew) {
+                String ck = key(c);
+                if (ck.length() >= 6 && distance(ck, k) <= 2) {
+                    found = c;
+                    n++;
+                }
+            }
+        }
+        return n == 1 ? found : null;
+    }
+
+    /** Letters to change, add or remove to turn a into b. */
+    static int distance(String a, String b) {
+        int[] prev = new int[b.length() + 1], cur = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) prev[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            cur[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                cur[j] = Math.min(Math.min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + (a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1));
+            }
+            int[] t = prev;
+            prev = cur;
+            cur = t;
+        }
+        return prev[b.length()];
+    }
+
+    /** Puts the numbers on the matching crew members (non-empty numbers overwrite). */
+    static Applied apply(Models.Project p, List<Row> rows) {
+        Applied a = new Applied();
+        for (Row r : rows) {
+            String who = match(p.crew, r.name);
+            if (who == null) {
+                a.missing.add(r);
+                continue;
+            }
+            put(p, who, r);
+            if (!a.updated.contains(who)) a.updated.add(who);
+        }
+        return a;
+    }
+
+    static void put(Models.Project p, String who, Row r) {
+        if (!r.employeeNo.isEmpty()) p.employeeNumbers.put(who, r.employeeNo);
+        if (!r.bp.isEmpty()) p.bpNumbers.put(who, r.bp);
+        if (!r.disn.isEmpty()) p.disnNumbers.put(who, r.disn);
+    }
+
+    /** Adds the missing people to the crew (first group, no phone) with their numbers. */
+    static void addMissing(Models.Project p, List<Row> missing) {
+        for (Row r : missing) {
+            if (!p.crew.contains(r.name)) p.crew.add(r.name);
+            p.roles.put(r.name, p.groups.get(0).id);
+            put(p, r.name, r);
+        }
+    }
+
+    /** "Numbers added for 3 people." plus who isn't on the crew. */
+    static String summary(Applied a) {
+        String s = "Numbers added for " + Fmt.plural(a.updated.size(), "person", "people") + ".";
+        if (!a.missing.isEmpty()) {
+            List<String> names = new ArrayList<>();
+            for (Row r : a.missing) names.add(r.name);
+            s += "\n\nNot on this project's crew: " + String.join(", ", names) + ".";
+        }
+        return s;
+    }
+
+    /**
+     * A crew list built into this copy of the app (assets/crew_numbers.txt, added to the owner's own build, never
+     * to the shared code): fills in the matching crew members' numbers in every project, once for each new list.
+     * Returns how many people got numbers, or -1 when there's nothing new to do.
+     */
+    static int applyBuiltIn(android.content.Context c, Store store) {
+        String text;
+        try (java.io.InputStream in = c.getAssets().open("crew_numbers.txt")) {
+            text = new String(readAll(in), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return -1; // none in this build
+        }
+        // Every time the app opens: crew added since get their numbers too. Only EMPTY numbers are filled, so
+        // anything typed or changed in Manage Crew stays.
+        int filled = fillEmpty(store.projects, parse(text));
+        if (filled > 0) store.save();
+        return filled > 0 ? filled : -1;
+    }
+
+    /** Fills only empty Employee #, BP # and DISN # from the list; returns how many people got something. */
+    static int fillEmpty(List<Models.Project> projects, List<Row> rows) {
+        java.util.Set<String> people = new java.util.HashSet<>();
+        for (Models.Project p : projects) {
+            for (Row r : rows) {
+                String who = match(p.crew, r.name);
+                if (who == null) continue;
+                boolean any = false;
+                if (!r.employeeNo.isEmpty() && empty(p.employeeNumbers.get(who))) { p.employeeNumbers.put(who, r.employeeNo); any = true; }
+                if (!r.bp.isEmpty() && empty(p.bpNumbers.get(who))) { p.bpNumbers.put(who, r.bp); any = true; }
+                if (!r.disn.isEmpty() && empty(p.disnNumbers.get(who))) { p.disnNumbers.put(who, r.disn); any = true; }
+                if (any) people.add(key(who));
+            }
+        }
+        return people.size();
+    }
+
+    private static boolean empty(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private static byte[] readAll(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] b = new byte[8192];
+        int n;
+        while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        return out.toByteArray();
+    }
+}
