@@ -152,7 +152,7 @@ async function icon(Comp, color, size = 256) {
   let s = pres.addSlide({ masterName: "Title dark", sectionTitle: "Introduction" });
   s.addText("Daily Work Log", { placeholder: "title" });
   s.addText("Field work, logged on your phone", { placeholder: "body" });
-  s.addText("How the app works: the flow, every feature, and the user manual\nVersion 4.55  ·  November 2026  ·  Created by Tanner Tibbetts", {
+  s.addText("How the app works: the flow, every feature, and the user manual\nVersion 4.57  ·  November 2026  ·  Created by Tanner Tibbetts", {
     x: 0.7, y: 4.8, w: 7.4, h: 0.9, fontSize: 15, color: C.accent5, isTextBox: true, margin: 0, valign: "top", objectName: nm("subtitle"),
   });
   phone(s, "intro.png", 9.3, 0.7, 6.1);
@@ -181,9 +181,9 @@ async function icon(Comp, color, size = 256) {
   s = pres.addSlide({ masterName: "Content", sectionTitle: "Introduction" });
   s.addText("Two versions, one set of work", { placeholder: "title" });
   const cols = [
-    [icons.phone, "Classic Android app", "Version 4.55", ["The original app, written in Java", "Built on your own phone in Termux from a zip", "Owner approval: new phones ask you for access", "Your crew numbers built in"]],
-    [icons.sync, "Shared by both", "Same data, same manual", ["Same worklog file and backup file", "A backup from one opens in the other", "The same 69-topic user manual", "Every feature goes into both"]],
-    [icons.apple, "New app", "iPhone and Android, version 5.22", ["Written in Flutter", "Ready for the App Store (built by Codemagic)", "Installs over the classic app as an update", "App Store copy needs no sign-in"]],
+    [icons.phone, "Classic Android app", "Version 4.57", ["The original app, written in Java", "Built on your own phone in Termux from a zip", "Owner approval: new phones ask you for access", "Your crew numbers built in"]],
+    [icons.sync, "Shared by both", "Same data, same manual", ["Same worklog file and backup file", "A backup from one opens in the other", "The same 70-topic user manual", "Every feature goes into both"]],
+    [icons.apple, "New app", "iPhone and Android, version 5.24", ["Written in Flutter", "Ready for the App Store (built by Codemagic)", "Installs over the classic app as an update", "App Store copy needs no sign-in"]],
   ];
   cols.forEach(([ic, h, sub, items], i) => {
     const x = 0.6 + i * 4.1, mid = i === 1;
@@ -251,7 +251,7 @@ async function icon(Comp, color, size = 256) {
   const tabs = [
     ["Checklists", "your daily logs, newest first"],
     ["Notify", "text crew a note or photo"],
-    ["Links", "web links, plus the Documents button"],
+    ["Links", "web links with calendar reminders, and Documents"],
     ["Contacts", "company contacts not on your crew"],
     ["Notes", "your notes and photos, with tags"],
     ["Sea Can Movements", "where each sea can came from and went"],
@@ -314,6 +314,25 @@ async function icon(Comp, color, size = 256) {
     s.addText(z, { x, y: 5.4, w: 1.45, h: 0.7, fontSize: 15, bold: true, color: C.text1, align: "center", valign: "middle", isTextBox: true, margin: 0, objectName: nm("zone label") });
   });
   s.addNotes("From the manual, Field card colours: South cards are pale pink, North pale blue, Unzoned pale yellow, no area white. When a field is done, the card gets a green border. Small labels show Load secured, the area, Next shift and Photos Required. Delays show in red, cleared delays in green, and words marked 'on hold' are highlighted.");
+
+  // ----- your own area names -----
+  s = pres.addSlide({ masterName: "Content", sectionTitle: "The daily log" });
+  s.addText("Your own names for the areas", { placeholder: "title" });
+  phone(s, "rename_areas.png", 0.75, 1.45, 5.15, "Rename areas");
+  phone(s, "renamed_log.png", 3.45, 1.45, 5.15, "Cards with the new names");
+  bullets(s, [
+    [{ text: "Fit the work front: ", options: { bold: true } }, "South, North and Unzoned can become Garage 1, Garage 2, Yard, or any name"],
+    [{ text: "Each project has its own: ", options: { bold: true } }, "different sites can use different names"],
+    [{ text: "Colours stay: ", options: { bold: true } }, "pink, blue and yellow, so the cards still read at a glance"],
+    [{ text: "Everywhere: ", options: { bold: true } }, "field cards, the area boxes, and the report headings in PDF, Word and Excel"],
+  ], { x: 6.35, y: 1.5, w: 6.35, h: 2.9, fontSize: 16, paraSpaceAfter: 10 });
+  box = manualBox(s, "From the manual: Renaming the areas", 6.35, 4.45, 6.35, 2.3);
+  steps(s, [
+    'Tap "Rename areas" in the project ⋯ menu, beside "Area" on a field, or in "New field".',
+    "Type the new names. Leave a box empty to keep the usual name.",
+    'Tap "Save". "Use usual names" brings back South, North and Unzoned.',
+  ], { ...box, fontSize: 14 });
+  s.addNotes("New in version 4.57. Fields keep their area when you rename it; only the names change. The renaming is per project, so one job can use Garage 1 and Garage 2 while another keeps North and South.");
 
   // ----- working a field -----
   s = pres.addSlide({ masterName: "Content", sectionTitle: "The daily log" });
@@ -400,7 +419,7 @@ async function icon(Comp, color, size = 256) {
   pres.addSection({ title: "Tracking" });
   s = pres.addSlide({ masterName: "Section", sectionTitle: "Tracking" });
   s.addText("Tracking the day", { placeholder: "title" });
-  s.addText("Overtime, attendance, notes, documents, contacts and sea cans", { placeholder: "body" });
+  s.addText("Overtime, attendance, notes, documents, contacts, sea cans and link reminders", { placeholder: "body" });
 
   // ----- overtime -----
   s = pres.addSlide({ masterName: "Content", sectionTitle: "Tracking" });
@@ -454,6 +473,27 @@ async function icon(Comp, color, size = 256) {
   });
   s.addNotes("Notes save by themselves; tick 'Include in today's report' to put a note in the day's report, and a tagged note shows its tag in orange bold. Documents are reached from the Documents button on the Links tab. The sea can list can be exported to PDF, Excel, CSV or Word, and added to the daily report.");
 
+  // ----- link reminders -----
+  s = pres.addSlide({ masterName: "Content", sectionTitle: "Tracking" });
+  s.addText("Link reminders in your calendar", { placeholder: "title" });
+  box = manualBox(s, "From the manual: Reminders on a link", 0.6, 1.5, 6.3, 3.05);
+  steps(s, [
+    'Tap ⋮ on the link and tap "Edit link".',
+    'Tick "Remind me in my calendar".',
+    'Pick the "Date" and "Time".',
+    'Under "Repeat": One time only, Every day, Every week, Every month or Every year.',
+    'Pick an "Alert", and a "Second alert" if you want two.',
+    'Tap "Save". The first time, allow calendar access.',
+  ], { ...box, fontSize: 14 });
+  bullets(s, [
+    "The app writes it straight into the phone's calendar, with the link in its notes",
+    "Alerts from at the time up to 1 week before, so a BBO never gets missed",
+    "Edit it to update the calendar; untick it or delete the link to take it out",
+  ], { x: 0.6, y: 4.85, w: 6.3, h: 1.8, fontSize: 15, paraSpaceAfter: 8 });
+  phone(s, "link_reminder.png", 7.6, 1.45, 5.15, "Setting a weekly reminder");
+  phone(s, "link_reminder_card.png", 10.3, 1.45, 5.15, "The reminder on the link");
+  s.addNotes("New in version 4.56. Works on Android and iPhone. A repeating reminder keeps the same time of day when the clocks change. If calendar access was turned off, the app says so: turn on Calendar for Daily Work Log in the phone's Settings and tap Save again.");
+
   // ===================== Section: Reports & ownership =====================
   pres.addSection({ title: "Reports and ownership" });
   s = pres.addSlide({ masterName: "Section", sectionTitle: "Reports and ownership" });
@@ -504,13 +544,13 @@ async function icon(Comp, color, size = 256) {
   // ----- manual -----
   s = pres.addSlide({ masterName: "Content", sectionTitle: "Reports and ownership" });
   s.addText("The user manual is built in", { placeholder: "title" });
-  const groups = [["Fields", 15], ["Projects & checklists", 14], ["Getting started", 11], ["Tabs", 9], ["Help", 7], ["Crew & texting", 5], ["App owner", 5], ["Reports", 3]];
+  const groups = [["Projects & checklists", 15], ["Fields", 15], ["Getting started", 11], ["Tabs", 9], ["Help", 7], ["Crew & texting", 5], ["App owner", 5], ["Reports", 3]];
   s.addChart(pres.charts.BAR, [{ name: "Topics", labels: groups.map((g) => g[0]), values: groups.map((g) => g[1]) }], {
     x: 0.5, y: 1.45, w: 6.6, h: 5.3, barDir: "bar",
     chartColors: [HEX.dk2], showValue: true, dataLabelPosition: "outEnd", dataLabelColor: HEX.dk1, dataLabelFontSize: 12, dataLabelFontFace: "+mn-lt",
     catAxisOrientation: "maxMin", catAxisLabelColor: HEX.dk1, catAxisLabelFontSize: 13, catAxisLabelFontFace: "+mn-lt",
     valAxisHidden: true, valGridLine: { style: "none" }, catGridLine: { style: "none" }, showLegend: false,
-    showTitle: true, title: "69 topics in 8 groups", titleColor: HEX.dk1, titleFontSize: 16, titleFontFace: "+mn-lt",
+    showTitle: true, title: "70 topics in 8 groups", titleColor: HEX.dk1, titleFontSize: 16, titleFontFace: "+mn-lt",
     objectName: nm("manual chart"),
   });
   box = manualBox(s, "From the manual: Using this user manual", 7.5, 1.5, 5.25, 2.6);
@@ -550,7 +590,7 @@ async function icon(Comp, color, size = 256) {
   s = pres.addSlide({ masterName: "Title dark", sectionTitle: "Reports and ownership" });
   s.addText("Everything stays on your phone", { placeholder: "title" });
   s.addText("One place for the whole shift, from the first tick to the emailed report", { placeholder: "body" });
-  const close = [["2", "apps, one set of work"], ["69", "manual topics"], ["4.55", "current version"]];
+  const close = [["2", "apps, one set of work"], ["70", "manual topics"], ["4.57", "current version"]];
   close.forEach(([v, t], i) => {
     const x = 0.7 + i * 2.55;
     s.addText([{ text: v, options: { fontSize: 40, bold: true, color: C.accent1, breakLine: true } }, { text: t, options: { fontSize: 14, color: C.accent5 } }],
