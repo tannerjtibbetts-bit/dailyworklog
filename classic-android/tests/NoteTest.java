@@ -168,6 +168,25 @@ class SideTest { public static void main(String[] a) throws Exception {
   Models.DailyLog uz = new Models.DailyLog(); Models.Task u = new Models.Task(); u.side = "unzoned"; uz.tasks.add(u);
   NoteTest.check(Models.Task.reportGroups(uz.tasks).get(0).getKey().equals("Unzoned"), "unzoned only = gets its heading");
   System.out.println("SIDE PASS"); } }
+class AreaNamesTest { public static void main(String[] a) throws Exception {
+  Models.Project p = new Models.Project();
+  p.areaNames.put("south", "Garage 1"); p.areaNames.put("north", "Garage 2");
+  NoteTest.check(p.areaName("south").equals("Garage 1") && p.areaName("north").equals("Garage 2")
+    && p.areaName("unzoned").equals("Unzoned") && Models.Task.sideLabel("south").equals("South"), "own names in labels");
+  java.util.List<Models.Task> ts = new java.util.ArrayList<>();
+  for (String s : new String[]{"north", "south", "unzoned", ""}) { Models.Task t = new Models.Task(); t.side = s; ts.add(t); }
+  StringBuilder sb = new StringBuilder();
+  for (java.util.Map.Entry<String, java.util.List<Models.Task>> g : Models.Task.reportGroups(ts, p.areaNames)) sb.append(g.getKey()).append(",");
+  NoteTest.check(sb.toString().equals("Garage 1,Garage 2,Unzoned,Other,"), "report headings " + sb);
+  Models.Project q = Models.Project.fromJson(p.toJson());
+  NoteTest.check(q.areaNames.size() == 2 && "Garage 1".equals(q.areaNames.get("south")) && "Garage 2".equals(q.areaNames.get("north")), "saved and loaded");
+  Models.DailyLog l = new Models.DailyLog(); l.date = "2026-11-23";
+  NoteTest.check("Garage 1".equals(q.forDay(l).areaNames.get("south")), "day copy keeps names");
+  org.json.JSONObject o = p.toJson(); o.put("areaNames", new org.json.JSONObject().put("south", "  ").put("east", "X"));
+  NoteTest.check(Models.Project.fromJson(o).areaNames.isEmpty(), "junk keys and empty names dropped");
+  org.json.JSONObject old = p.toJson(); old.remove("areaNames");
+  NoteTest.check(Models.Project.fromJson(old).areaName("south").equals("South"), "old data loads");
+  System.out.println("AREA NAMES PASS"); } }
 class TextTest { public static void main(String[] a) throws Exception {
   Models.Project p = new Models.Project(); p.name="B44 Zone 2"; Models.DailyLog l = new Models.DailyLog(); l.date="2026-10-05";
   Models.Task t = new Models.Task(); t.title="Pack up sea can";

@@ -476,6 +476,7 @@ public class LogsActivity extends AppCompatActivity {
         items.add(new Ui.SheetItem(R.drawable.ic_person_add, "Manage crew", () ->
                 AssignSheet.manage(this, project)));
         items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> chooseTabs(this, this::rebuild)));
+        items.add(new Ui.SheetItem(R.drawable.ic_edit, "Rename areas", () -> AreaNames.rename(this, project, this::rebuild)));
         Ui.menu(this, project.name, items);
     }
 

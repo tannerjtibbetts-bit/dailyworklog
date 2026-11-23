@@ -165,12 +165,22 @@
                 android:paddingTop="10dp"
                 android:paddingBottom="6dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- "Rename areas" button is added on the right in code -->
+                <LinearLayout
+                    android:id="@+id/areaHead"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Area"
-                    android:textColor="@color/navy"
-                    android:textSize="21sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Area"
+                        android:textColor="@color/navy"
+                        android:textSize="21sp" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"

@@ -124,7 +124,7 @@ final class ReportXlsx {
             s.row();
             for (int i = 0; i < 10; i++) s.text(i, i == 1 ? "No fields" : "", CELL);
         }
-        for (Map.Entry<String, List<Models.Task>> g : Models.Task.reportGroups(log.tasks)) {
+        for (Map.Entry<String, List<Models.Task>> g : Models.Task.reportGroups(log.tasks, p.areaNames)) {
             for (Models.Task t : g.getValue()) {
                 s.row();
                 s.text(0, g.getKey(), AREA);

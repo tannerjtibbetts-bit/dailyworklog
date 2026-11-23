@@ -72,7 +72,7 @@ final class ReportDocx {
         if (!people.isEmpty()) run("     Crew: " + Fmt.join(people), false, 11, GREY, null);
         body.append("</w:p>");
 
-        for (java.util.Map.Entry<String, List<Models.Task>> g : Models.Task.reportGroups(log.tasks)) {
+        for (java.util.Map.Entry<String, List<Models.Task>> g : Models.Task.reportGroups(log.tasks, p.areaNames)) {
             if (!g.getKey().isEmpty()) {
                 body.append("<w:p><w:pPr><w:keepNext/><w:spacing w:before=\"240\" w:after=\"120\"/></w:pPr>");
                 run(g.getKey() + " (" + g.getValue().size() + ")", true, 14, NAVY, null);

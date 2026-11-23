@@ -125,6 +125,8 @@ public class TaskActivity extends AppCompatActivity {
         nextShift = findViewById(R.id.nextShift);
         nextShift.setChecked(task.nextShift);
         bindSide(findViewById(R.id.sideSouth), findViewById(R.id.sideNorth), findViewById(R.id.sideUnzoned));
+        ((LinearLayout) findViewById(R.id.areaHead)).addView(AreaNames.button(this, project, () ->
+                bindSide(findViewById(R.id.sideSouth), findViewById(R.id.sideNorth), findViewById(R.id.sideUnzoned))));
         bindDoneText();
         findViewById(R.id.doneTextRow).setOnClickListener(v -> chooseDoneText());
 
@@ -346,6 +348,10 @@ public class TaskActivity extends AppCompatActivity {
 
     /** Three ticks that act as one choice: South, North, Unzoned, or none. */
     private void bindSide(CheckBox south, CheckBox north, CheckBox unzoned) {
+        // The project's own names for the areas (Rename areas)
+        south.setText(project.areaName(Models.Task.SOUTH));
+        north.setText(project.areaName(Models.Task.NORTH));
+        unzoned.setText(project.areaName(Models.Task.UNZONED));
         south.setOnCheckedChangeListener(null);
         north.setOnCheckedChangeListener(null);
         unzoned.setOnCheckedChangeListener(null);

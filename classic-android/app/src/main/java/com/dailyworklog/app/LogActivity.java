@@ -482,11 +482,11 @@ public class LogActivity extends AppCompatActivity {
         et.setHint("e.g. Pack up sea can 317503 and send out of zone 2");
         et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         android.widget.CheckBox south = new android.widget.CheckBox(this);
-        south.setText("South");
+        south.setText(project.areaName(Models.Task.SOUTH));
         android.widget.CheckBox north = new android.widget.CheckBox(this);
-        north.setText("North");
+        north.setText(project.areaName(Models.Task.NORTH));
         android.widget.CheckBox unzoned = new android.widget.CheckBox(this);
-        unzoned.setText("Unzoned");
+        unzoned.setText(project.areaName(Models.Task.UNZONED));
         // One of them (or none)
         south.setOnCheckedChangeListener((b, on) -> { if (on) { north.setChecked(false); unzoned.setChecked(false); } });
         north.setOnCheckedChangeListener((b, on) -> { if (on) { south.setChecked(false); unzoned.setChecked(false); } });
@@ -506,6 +506,13 @@ public class LogActivity extends AppCompatActivity {
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         slp.topMargin = Ui.dp(this, 8);
         box.addView(sides, slp);
+        // Rename areas, then show the new names on the ticks
+        box.addView(AreaNames.button(this, project, () -> {
+            south.setText(project.areaName(Models.Task.SOUTH));
+            north.setText(project.areaName(Models.Task.NORTH));
+            unzoned.setText(project.areaName(Models.Task.UNZONED));
+            if (adapter != null) adapter.notifyDataSetChanged();
+        }), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         androidx.appcompat.app.AlertDialog d = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle("New field").setView(box)
                 .setPositiveButton("Add", null).setNegativeButton("Cancel", null).create();
@@ -886,7 +893,7 @@ public class LogActivity extends AppCompatActivity {
             if (t.delayed && t.delayCleared) delayCleared.setText(clearedChip(t.delayClearedAt));
             nextShift.setVisibility(t.nextShift ? View.VISIBLE : View.GONE);
             side.setVisibility(t.side.isEmpty() ? View.GONE : View.VISIBLE);
-            side.setText(Models.Task.sideLabel(t.side));
+            side.setText(project.areaName(t.side));
             required.setVisibility(t.photosRequired ? View.VISIBLE : View.GONE);
             boolean missing = t.photosRequired && t.photos.isEmpty() && !t.done;
             int reqColor = missing ? getColor(R.color.red) : getColor(R.color.text);

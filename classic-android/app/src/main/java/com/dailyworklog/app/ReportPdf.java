@@ -109,7 +109,7 @@ final class ReportPdf {
         c.drawLine(M, y, W - M, y, line);
         y += 16;
 
-        for (java.util.Map.Entry<String, List<Models.Task>> g : Models.Task.reportGroups(log.tasks)) {
+        for (java.util.Map.Entry<String, List<Models.Task>> g : Models.Task.reportGroups(log.tasks, p.areaNames)) {
             if (!g.getKey().isEmpty()) {
                 ensure(70);
                 text(g.getKey() + " (" + g.getValue().size() + ")", heading, M, W - 2 * M, 8);

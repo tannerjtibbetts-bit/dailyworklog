@@ -160,8 +160,19 @@ public final class Models {
 
         public static final String SOUTH = "south", NORTH = "north", UNZONED = "unzoned";
 
+        /** The three areas in checklist order. */
+        public static final List<String> AREAS = java.util.Collections.unmodifiableList(
+                java.util.Arrays.asList(SOUTH, NORTH, UNZONED));
+
         public static String sideLabel(String side) {
             return SOUTH.equals(side) ? "South" : NORTH.equals(side) ? "North" : UNZONED.equals(side) ? "Unzoned" : "";
+        }
+
+        /** The area's name: the project's own name for it (see Project.areaNames), else South, North or Unzoned. */
+        public static String sideLabel(String side, Map<String, String> names) {
+            String own = names == null ? null : names.get(side);
+            if (own != null && !own.trim().isEmpty()) return own.trim();
+            return sideLabel(side);
         }
 
         /** South first, then North, then Unzoned, then fields with no area (checklist and report order). */
@@ -174,6 +185,11 @@ public final class Models {
          * Order within each group is kept. Returns one group with no heading if no areas are set.
          */
         public static List<Map.Entry<String, List<Task>>> reportGroups(List<Task> tasks) {
+            return reportGroups(tasks, null);
+        }
+
+        /** As above, with the project's own area names as headings. */
+        public static List<Map.Entry<String, List<Task>>> reportGroups(List<Task> tasks, Map<String, String> names) {
             List<Task> south = new ArrayList<>(), north = new ArrayList<>(), unzoned = new ArrayList<>(), other = new ArrayList<>();
             for (Task t : tasks) {
                 (SOUTH.equals(t.side) ? south : NORTH.equals(t.side) ? north : UNZONED.equals(t.side) ? unzoned : other).add(t);
@@ -183,9 +199,9 @@ public final class Models {
                 out.add(new java.util.AbstractMap.SimpleEntry<>("", other));
                 return out;
             }
-            if (!south.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>("South", south));
-            if (!north.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>("North", north));
-            if (!unzoned.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>("Unzoned", unzoned));
+            if (!south.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>(sideLabel(SOUTH, names), south));
+            if (!north.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>(sideLabel(NORTH, names), north));
+            if (!unzoned.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>(sideLabel(UNZONED, names), unzoned));
             if (!other.isEmpty()) out.add(new java.util.AbstractMap.SimpleEntry<>("Other", other));
             return out;
         }
@@ -1452,6 +1468,17 @@ public final class Models {
         public Map<String, String> employeeNumbers = new LinkedHashMap<>();
         /** BP # and DISN # by name. */
         public Map<String, String> bpNumbers = new LinkedHashMap<>(), disnNumbers = new LinkedHashMap<>();
+        /**
+         * This project's own names for the areas (keys south, north, unzoned), e.g. {"south": "Garage 1"}.
+         * Missing or empty: South, North, Unzoned. The colours stay the same.
+         */
+        public Map<String, String> areaNames = new LinkedHashMap<>();
+
+        /** The name of an area in this project. */
+        public String areaName(String side) {
+            return Task.sideLabel(side, areaNames);
+        }
+
         /** An apprentice's term ("1st term" to "4th term"), by name. */
         public Map<String, String> terms = new LinkedHashMap<>();
         public static final List<String> TERMS = java.util.Collections.unmodifiableList(
@@ -1785,6 +1812,7 @@ public final class Models {
             p.employeeNumbers = employeeNumbers;
             p.bpNumbers = bpNumbers;
             p.disnNumbers = disnNumbers;
+            p.areaNames = areaNames;
             p.terms = terms;
             p.assignTexts = assignTexts;
             p.seaCans = seaCans;
@@ -1844,6 +1872,7 @@ public final class Models {
             o.put("employeeNumbers", mapJson(employeeNumbers));
             o.put("bpNumbers", mapJson(bpNumbers));
             o.put("disnNumbers", mapJson(disnNumbers));
+            o.put("areaNames", mapJson(areaNames));
             o.put("terms", mapJson(terms));
             o.put("assignTexts", toArray(new ArrayList<>(assignTexts)));
             JSONArray nt = new JSONArray();
@@ -1917,6 +1946,8 @@ public final class Models {
             readMap(o.optJSONObject("employeeNumbers"), p.employeeNumbers);
             readMap(o.optJSONObject("bpNumbers"), p.bpNumbers);
             readMap(o.optJSONObject("disnNumbers"), p.disnNumbers);
+            readMap(o.optJSONObject("areaNames"), p.areaNames);
+            p.areaNames.keySet().retainAll(Task.AREAS);
             readMap(o.optJSONObject("terms"), p.terms);
             p.terms.values().removeIf(v -> !TERMS.contains(v));
             p.assignTexts.addAll(fromArray(o.optJSONArray("assignTexts")));
