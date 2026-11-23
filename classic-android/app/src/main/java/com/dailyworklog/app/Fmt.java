@@ -86,6 +86,28 @@ final class Fmt {
     }
 
     /** "Tue Oct 27, 2026" */
+    /** "7:00 AM" */
+    static String time(long ms) {
+        return new SimpleDateFormat("h:mm a", Locale.US).format(new Date(ms));
+    }
+
+    /** "Mon" */
+    static String weekday(long ms) {
+        return new SimpleDateFormat("EEE", Locale.US).format(new Date(ms));
+    }
+
+    /** "Nov 20" */
+    static String monthDay(long ms) {
+        return new SimpleDateFormat("MMM d", Locale.US).format(new Date(ms));
+    }
+
+    /** 1 -> "1st", 22 -> "22nd", 13 -> "13th" */
+    static String ordinal(int n) {
+        boolean teen = n % 100 >= 11 && n % 100 <= 13;
+        int last = n % 10;
+        return n + (teen ? "th" : last == 1 ? "st" : last == 2 ? "nd" : last == 3 ? "rd" : "th");
+    }
+
     static String longDay(String iso) {
         try {
             Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(iso);

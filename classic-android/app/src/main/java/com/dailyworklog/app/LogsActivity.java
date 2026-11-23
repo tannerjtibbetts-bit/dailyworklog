@@ -42,6 +42,9 @@ public class LogsActivity extends AppCompatActivity {
     private static final int MODE_LOGS = 0, MODE_TEMPLATES = 1, MODE_LINKS = 2, MODE_NOTIFY = 3, MODE_OVERTIME = 4, MODE_NOTES = 5, MODE_SEACANS = 6, MODE_ATTENDANCE = 7, MODE_CONTACTS = 8;
     private static final int TYPE_CARD = 0, TYPE_LINK = 1, TYPE_NOTICE = 2, TYPE_NOTE = 3, TYPE_CONTACT = 4, TYPE_REPORT_CARDS = 5, TYPE_HEADING = 6, TYPE_DOC = 7;
     private int mode = MODE_LOGS;
+    /** Asking for calendar access for a link's reminder: that link's id. */
+    private androidx.activity.result.ActivityResultLauncher<String[]> calendarAccess;
+    private String pendingReminder;
     private String query = "";
     private final List<Object> rows = new ArrayList<>();
     /** While searching: the match lines for each checklist shown. */
@@ -73,6 +76,16 @@ public class LogsActivity extends AppCompatActivity {
             return;
         }
         exporter = new ExportHelper(this);
+        if (savedInstanceState != null) pendingReminder = savedInstanceState.getString("pendingReminder");
+        calendarAccess = registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions(), res -> {
+            String id = pendingReminder;
+            pendingReminder = null;
+            Models.Link l = null;
+            for (Models.Link x : store.links) if (x.id.equals(id)) l = x;
+            if (l == null || l.reminder == null) return;
+            if (CalendarReminders.allowed(this)) writeReminder(l);
+            else Toast.makeText(this, CalendarReminders.DENIED, Toast.LENGTH_LONG).show();
+        });
 
         title = findViewById(R.id.title);
         location = findViewById(R.id.location);
@@ -136,6 +149,7 @@ public class LogsActivity extends AppCompatActivity {
     protected void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putInt("mode", mode);
+        out.putString("pendingReminder", pendingReminder);
     }
 
     /** Tab ids for "Show or hide tabs"; Checklists can't be hidden. */
@@ -560,6 +574,48 @@ public class LogsActivity extends AppCompatActivity {
         View v = LayoutInflater.from(this).inflate(R.layout.dialog_link, null);
         EditText url = v.findViewById(R.id.url);
         EditText name = v.findViewById(R.id.name);
+        // The reminder in the phone's calendar: date, time, repeat and alert.
+        final Models.LinkReminder had = existing == null ? null : existing.reminder;
+        CheckBox remind = v.findViewById(R.id.remind);
+        View reminderBox = v.findViewById(R.id.reminderBox);
+        TextView dateValue = v.findViewById(R.id.dateValue), timeValue = v.findViewById(R.id.timeValue);
+        android.widget.Spinner repeat = v.findViewById(R.id.repeat), alert = v.findViewById(R.id.alert);
+        final Calendar when = Calendar.getInstance();
+        if (had != null) {
+            when.setTimeInMillis(had.start);
+        } else {
+            when.add(Calendar.HOUR_OF_DAY, 1);  // the next whole hour
+            when.set(Calendar.MINUTE, 0);
+        }
+        when.set(Calendar.SECOND, 0);
+        when.set(Calendar.MILLISECOND, 0);
+        Runnable showWhen = () -> {
+            dateValue.setText(Fmt.longDay(Fmt.iso(when.get(Calendar.YEAR), when.get(Calendar.MONTH), when.get(Calendar.DAY_OF_MONTH))));
+            timeValue.setText(Fmt.time(when.getTimeInMillis()));
+        };
+        showWhen.run();
+        v.findViewById(R.id.dateRow).setOnClickListener(x -> new DatePickerDialog(this, (dp, y, m, dd) -> {
+            when.set(y, m, dd);
+            showWhen.run();
+        }, when.get(Calendar.YEAR), when.get(Calendar.MONTH), when.get(Calendar.DAY_OF_MONTH)).show());
+        v.findViewById(R.id.timeRow).setOnClickListener(x -> new android.app.TimePickerDialog(this, (tp, h, min) -> {
+            when.set(Calendar.HOUR_OF_DAY, h);
+            when.set(Calendar.MINUTE, min);
+            showWhen.run();
+        }, when.get(Calendar.HOUR_OF_DAY), when.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(this)).show());
+        repeat.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, Models.LinkReminder.REPEAT_LABELS));
+        repeat.setSelection(java.util.Arrays.asList(Models.LinkReminder.REPEATS).indexOf(had == null ? Models.LinkReminder.WEEKLY : had.repeat));
+        String[] alertLabels = new String[Models.LinkReminder.ALERTS.length];
+        int alertAt = 0;
+        for (int i = 0; i < alertLabels.length; i++) {
+            alertLabels[i] = Models.LinkReminder.alertLabel(Models.LinkReminder.ALERTS[i]);
+            if (had != null && had.alert == Models.LinkReminder.ALERTS[i]) alertAt = i;
+        }
+        alert.setAdapter(new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, alertLabels));
+        alert.setSelection(alertAt);
+        remind.setOnCheckedChangeListener((b, on) -> reminderBox.setVisibility(on ? View.VISIBLE : View.GONE));
+        remind.setChecked(had != null);
+        reminderBox.setVisibility(had != null ? View.VISIBLE : View.GONE);
         if (existing != null) {
             url.setText(existing.url);
             name.setText(existing.title);
@@ -592,15 +648,50 @@ public class LogsActivity extends AppCompatActivity {
             }
             l.url = u;
             l.title = n.isEmpty() ? hostOf(u) : n;
+            boolean on = remind.isChecked();
+            if (on) {
+                Models.LinkReminder r = had != null ? had : new Models.LinkReminder();
+                r.start = when.getTimeInMillis();
+                r.repeat = Models.LinkReminder.REPEATS[Math.max(0, repeat.getSelectedItemPosition())];
+                r.alert = Models.LinkReminder.ALERTS[Math.max(0, alert.getSelectedItemPosition())];
+                l.reminder = r;
+            } else {
+                l.reminder = null;
+            }
             store.save();
             d.dismiss();
             rebuild();
+            if (!on) {
+                if (had != null) {
+                    CalendarReminders.remove(this, had);
+                    Toast.makeText(this, "Reminder taken out of your calendar", Toast.LENGTH_SHORT).show();
+                }
+            } else if (CalendarReminders.allowed(this)) {
+                writeReminder(l);
+            } else {
+                pendingReminder = l.id;  // asks once; the answer comes back to calendarAccess
+                calendarAccess.launch(CalendarReminders.PERMISSIONS);
+            }
         }));
         if (d.getWindow() != null) {
             d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         }
         d.show();
         (url.getText().length() == 0 ? url : name).requestFocus();
+    }
+
+    /** Writes a link's reminder into the phone's calendar (in the background), then says how it went. */
+    private void writeReminder(Models.Link l) {
+        PhotoUtil.BG.execute(() -> {
+            String problem = CalendarReminders.save(this, l);
+            runOnUiThread(() -> {
+                store.save();  // keeps the calendar event's id
+                if (isFinishing() || isDestroyed()) return;
+                Toast.makeText(this, problem != null ? problem : "Reminder saved in your calendar: " + l.reminder.describe(),
+                        problem != null ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
+                rebuild();
+            });
+        });
     }
 
     // ----- Formstack form: fill in your usual answers -----
@@ -764,7 +855,9 @@ public class LogsActivity extends AppCompatActivity {
             startActivity(Intent.createChooser(i, "Share link"));
         }));
         items.add(new Ui.SheetItem(R.drawable.ic_delete, "Delete link", () ->
-                Ui.confirm(this, "Delete this link?", l.title + " will be removed from every project.", "Delete", () -> {
+                Ui.confirm(this, "Delete this link?", l.title + " will be removed from every project"
+                        + (l.reminder == null ? "" : ", and its reminder from your calendar") + ".", "Delete", () -> {
+                    CalendarReminders.remove(this, l.reminder);
                     store.links.remove(l);
                     store.save();
                     rebuild();
@@ -903,12 +996,13 @@ public class LogsActivity extends AppCompatActivity {
         }
 
         class LinkVH extends RecyclerView.ViewHolder {
-            final TextView title, url;
+            final TextView title, url, reminder;
             final CheckBox include;
             final View more;
 
             LinkVH(View v) {
                 super(v);
+                reminder = v.findViewById(R.id.reminder);
                 more = v.findViewById(R.id.more);
                 if (android.os.Build.VERSION.SDK_INT >= 26) more.setTooltipText("More");
                 title = v.findViewById(R.id.title);
@@ -1029,6 +1123,8 @@ public class LogsActivity extends AppCompatActivity {
                 LinkVH lh = (LinkVH) holder;
                 lh.title.setText(l.title);
                 lh.url.setText(l.url.replaceFirst("(?i)^https?://(www\\.)?", ""));
+                lh.reminder.setVisibility(l.reminder == null ? View.GONE : View.VISIBLE);
+                if (l.reminder != null) lh.reminder.setText(l.reminder.describe());
                 bindInclude(lh.include, Models.Extra.LINK, l.id, l.title, l.url, null, 0);
                 lh.itemView.setOnClickListener(v -> openLink(l));
                 lh.itemView.setOnLongClickListener(v -> {

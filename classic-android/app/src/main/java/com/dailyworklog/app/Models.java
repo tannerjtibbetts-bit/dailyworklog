@@ -503,12 +503,15 @@ public final class Models {
         public String id = newId();
         public String title = "";
         public String url = "";
+        /** A reminder for this link in the phone's calendar, or null. */
+        public LinkReminder reminder;
 
         JSONObject toJson() throws JSONException {
             JSONObject o = new JSONObject();
             o.put("id", id);
             o.put("title", title);
             o.put("url", url);
+            if (reminder != null) o.put("reminder", reminder.toJson());
             return o;
         }
 
@@ -517,7 +520,62 @@ public final class Models {
             l.id = o.optString("id", newId());
             l.title = o.optString("title", "");
             l.url = o.optString("url", "");
+            JSONObject r = o.optJSONObject("reminder");
+            if (r != null) l.reminder = LinkReminder.fromJson(r);
             return l;
+        }
+    }
+
+    /** A link's reminder in the phone's calendar: when, how often, and how long before it alerts. */
+    public static class LinkReminder {
+        public static final String ONCE = "", DAILY = "daily", WEEKLY = "weekly", MONTHLY = "monthly", YEARLY = "yearly";
+        public static final String[] REPEATS = {ONCE, DAILY, WEEKLY, MONTHLY, YEARLY};
+        public static final String[] REPEAT_LABELS = {"One time only", "Every day", "Every week", "Every month", "Every year"};
+        /** Minutes before the time that the phone alerts. */
+        public static final int[] ALERTS = {0, 5, 15, 30, 60, 1440};
+
+        public static String alertLabel(int m) {
+            return m == 0 ? "At the time" : m == 60 ? "1 hour before" : m == 1440 ? "1 day before" : m + " minutes before";
+        }
+
+        /** When it (first) happens, in milliseconds. */
+        public long start;
+        public String repeat = ONCE;
+        public int alert;
+        /** The calendar event on this phone ("" if not saved there yet, e.g. after restoring on a new phone). */
+        public String eventId = "";
+
+        /** "Every week, Mon at 7:00 AM", "One time, Nov 20, 2026 at 7:00 AM". */
+        public String describe() {
+            String time = Fmt.time(start);
+            java.util.Calendar c = java.util.Calendar.getInstance();
+            c.setTimeInMillis(start);
+            switch (repeat) {
+                case DAILY: return "Every day at " + time;
+                case WEEKLY: return "Every week, " + Fmt.weekday(start) + " at " + time;
+                case MONTHLY: return "Every month on the " + Fmt.ordinal(c.get(java.util.Calendar.DAY_OF_MONTH)) + " at " + time;
+                case YEARLY: return "Every year, " + Fmt.monthDay(start) + " at " + time;
+                default: return "One time, " + Fmt.monthDay(start) + ", " + c.get(java.util.Calendar.YEAR) + " at " + time;
+            }
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject o = new JSONObject();
+            o.put("start", start);
+            o.put("repeat", repeat);
+            o.put("alert", alert);
+            o.put("eventId", eventId);
+            return o;
+        }
+
+        static LinkReminder fromJson(JSONObject o) {
+            LinkReminder r = new LinkReminder();
+            r.start = o.optLong("start", 0L);
+            String rep = o.optString("repeat", "");
+            r.repeat = java.util.Arrays.asList(REPEATS).contains(rep) ? rep : ONCE;
+            r.alert = o.optInt("alert", 0);
+            r.eventId = o.optString("eventId", "");
+            return r;
         }
     }
 

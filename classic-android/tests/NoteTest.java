@@ -1871,3 +1871,32 @@ class OwnershipTest {
     NoteTest.check(Ownership.coreXml("A & B", "Jo", 0L).contains("<dc:title>A &amp; B</dc:title><dc:creator>Jo</dc:creator>")
         && Ownership.coreXml("x", "", 0L).contains("1970-01-01T00:00:00Z"), "core.xml");
     System.out.println("OWNERSHIP PASS"); } }
+
+class LinkReminderTest {
+  public static void main(String[] a) throws Exception {
+    java.util.Calendar c = java.util.Calendar.getInstance(); c.clear(); c.set(2026, 10, 23, 7, 0);
+    Models.Link l = new Models.Link(); l.title = "BBO"; l.url = "https://example.com/bbo";
+    Models.LinkReminder r = new Models.LinkReminder(); r.start = c.getTimeInMillis(); r.repeat = Models.LinkReminder.WEEKLY; r.alert = 15; r.eventId = "42";
+    l.reminder = r;
+    org.json.JSONObject o = new org.json.JSONObject(l.toJson().toString());
+    RichTest.eq(o.getJSONObject("reminder").toString().length() > 0 && o.getJSONObject("reminder").getLong("start") == r.start, true, "saved in worklog.json");
+    Models.Link back = Models.Link.fromJson(o);
+    RichTest.eq(back.reminder.repeat + "/" + back.reminder.alert + "/" + back.reminder.eventId, "weekly/15/42", "read back");
+    RichTest.eq(back.reminder.describe(), "Every week, Mon at 7:00 AM", "weekly");
+    NoteTest.check(Models.Link.fromJson(new org.json.JSONObject("{\"title\":\"x\",\"url\":\"y\"}")).reminder == null, "no reminder");
+    NoteTest.check(!new Models.Link().toJson().has("reminder"), "written only when set");
+    NoteTest.check(Models.Link.fromJson(new org.json.JSONObject("{\"reminder\":{\"start\":5,\"repeat\":\"hourly\"}}")).reminder.repeat.equals(""), "unknown repeat is one time");
+    r = back.reminder;
+    r.repeat = Models.LinkReminder.DAILY; RichTest.eq(r.describe(), "Every day at 7:00 AM", "daily");
+    r.repeat = Models.LinkReminder.MONTHLY; RichTest.eq(r.describe(), "Every month on the 23rd at 7:00 AM", "monthly");
+    r.repeat = Models.LinkReminder.YEARLY; RichTest.eq(r.describe(), "Every year, Nov 23 at 7:00 AM", "yearly");
+    r.repeat = Models.LinkReminder.ONCE; RichTest.eq(r.describe(), "One time, Nov 23, 2026 at 7:00 AM", "once");
+    RichTest.eq(Models.LinkReminder.alertLabel(0) + "|" + Models.LinkReminder.alertLabel(5) + "|" + Models.LinkReminder.alertLabel(60) + "|" + Models.LinkReminder.alertLabel(1440),
+        "At the time|5 minutes before|1 hour before|1 day before", "alert labels");
+    RichTest.eq(String.join(",", Models.LinkReminder.REPEAT_LABELS), "One time only,Every day,Every week,Every month,Every year", "repeat labels");
+    RichTest.eq(Fmt.ordinal(1) + Fmt.ordinal(2) + Fmt.ordinal(3) + Fmt.ordinal(11) + Fmt.ordinal(12) + Fmt.ordinal(13) + Fmt.ordinal(21) + Fmt.ordinal(22) + Fmt.ordinal(111),
+        "1st2nd3rd11th12th13th21st22nd111th", "ordinals");
+    c.set(2026, 10, 23, 19, 5); RichTest.eq(Fmt.time(c.getTimeInMillis()), "7:05 PM", "time");
+    RichTest.eq(CalendarReminders.rrule("weekly") + "|" + CalendarReminders.rrule("yearly") + "|" + CalendarReminders.rrule(""), "FREQ=WEEKLY|FREQ=YEARLY|null", "rrule");
+    RichTest.eq(CalendarReminders.notes(l), "Daily Work Log link: BBO\nhttps://example.com/bbo", "event notes");
+    System.out.println("LINKREMINDER PASS"); } }
