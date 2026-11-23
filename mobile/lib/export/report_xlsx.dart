@@ -43,7 +43,7 @@ class ReportXlsx {
     if (log.tasks.isEmpty) {
       b.cells([for (var i = 0; i < 10; i++) _c(i == 1 ? 'No fields' : '', _cell)]);
     }
-    for (final g in Task.reportGroups(log.tasks)) {
+    for (final g in Task.reportGroups(log.tasks, p.areaNames)) {
       for (final t in g.value) {
         final secured = t.loadSecured
             ? ['Yes', t.securedBy, if (t.securedAt > 0) Fmt.stamp(t.securedAt)].where((s) => s.isNotEmpty).join(', ') +

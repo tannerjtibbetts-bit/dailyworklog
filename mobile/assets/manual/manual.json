@@ -819,6 +819,7 @@
             "\"Report email list\": who gets the emailed report.",
             "\"Manage crew\": your crew list, phone numbers and who gets texts.",
             "\"Show or hide tabs\": choose which tabs you see in every project.",
+            "\"Rename areas\": give South, North and Unzoned your own names for this project.",
             "\"My form details\": your usual answers for forms (new app; in the classic app it is in a form link's menu).",
             "\"Delete project\" (new app; in the classic app press and hold the project on the project list)."
           ]
@@ -1198,6 +1199,70 @@
       ]
     },
     {
+      "id": "renaming-areas",
+      "title": "Renaming the areas (South, North, Unzoned)",
+      "group": "Projects & checklists",
+      "summary": "Give the areas your own names, like Garage 1 or Location 2. The colours stay the same.",
+      "keywords": [
+        "area",
+        "areas",
+        "rename",
+        "south",
+        "north",
+        "unzoned",
+        "zone",
+        "work front",
+        "garage",
+        "location",
+        "personalize"
+      ],
+      "newAppOnly": false,
+      "classicOnly": false,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Each field can belong to one of three areas, shown by the card colour: pink, blue or yellow. They start as \"South\", \"North\" and \"Unzoned\". You can rename them to fit your work, for example \"Garage 1\", \"Garage 2\" and \"Yard\". Each project has its own names."
+        },
+        {
+          "type": "image",
+          "file": "rename_areas.png",
+          "caption": "The Rename areas box"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Open the project, tap the three dots (⋯) at the top right and tap \"Rename areas\". Or tap \"Rename areas\" beside \"Area\" on a field, or under the area boxes in \"New field\".",
+            "Type a new name in \"South area\", \"North area\" or \"Unzoned area\". Leave a box empty to keep the usual name.",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "type": "image",
+          "file": "renamed_log.png",
+          "caption": "Field cards with the new names"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "The colours don't change: the first area is always pink, the second blue and the third yellow.",
+            "The new names show on the field cards, the area boxes on a field and in \"New field\", and as the headings in your PDF, Word and Excel reports.",
+            "Fields keep their area when you rename it. Nothing else changes.",
+            "To go back, open \"Rename areas\", tap \"Use usual names\", then \"Save\"."
+          ]
+        },
+        {
+          "type": "see",
+          "id": "field-card-colours",
+          "text": "Related: Field card colours"
+        },
+        {
+          "type": "see",
+          "id": "editing-a-field",
+          "text": "Related: Editing a field: title, notes and area"
+        }
+      ]
+    },
+    {
       "id": "checklist-crew",
       "title": "The checklist crew",
       "group": "Projects & checklists",
@@ -1394,6 +1459,10 @@
           ]
         },
         {
+          "type": "tip",
+          "text": "You can rename the areas, for example to Garage 1 and Garage 2. The colours stay the same. See \"Renaming the areas\"."
+        },
+        {
           "type": "text",
           "text": "When a field is done, the card gets a green border and a green bar on the left. A done field with no area turns pale green."
         },
@@ -1405,6 +1474,11 @@
           "type": "see",
           "id": "completing-a-field",
           "text": "Related: Completing a field"
+        },
+        {
+          "type": "see",
+          "id": "renaming-areas",
+          "text": "Related: Renaming the areas"
         }
       ]
     },

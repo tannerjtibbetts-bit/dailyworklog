@@ -80,7 +80,7 @@ class ReportDocx {
     if (people.isNotEmpty) _run('     Crew: ${Fmt.join(people)}', false, 11, _grey);
     _body.write('</w:p>');
 
-    for (final g in Task.reportGroups(log.tasks)) {
+    for (final g in Task.reportGroups(log.tasks, p.areaNames)) {
       if (g.key.isNotEmpty) {
         _body.write('<w:p><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/></w:pPr>');
         _run('${g.key} (${g.value.length})', true, 14, _navy);

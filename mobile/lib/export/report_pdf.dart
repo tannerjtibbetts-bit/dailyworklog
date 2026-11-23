@@ -172,7 +172,7 @@ class ReportPdf {
     _hLine(_m, _w - _m, _y);
     _y += 16;
 
-    for (final g in Task.reportGroups(log.tasks)) {
+    for (final g in Task.reportGroups(log.tasks, p.areaNames)) {
       if (g.key.isNotEmpty) {
         // Keep the area heading with its first field.
         final first = g.value.first;

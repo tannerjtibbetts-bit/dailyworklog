@@ -133,13 +133,22 @@ class Task {
   String doneTextName = '';
   String doneTextPhone = '';
 
-  static String sideLabel(String side) => side == south
-      ? 'South'
-      : side == north
-          ? 'North'
-          : side == unzoned
-              ? 'Unzoned'
-              : '';
+  /// The area's name: the project's own name for it ([names], see Project.areaNames), else South, North
+  /// or Unzoned.
+  static String sideLabel(String side, [Map<String, String> names = const {}]) {
+    final own = (names[side] ?? '').trim();
+    if (own.isNotEmpty) return own;
+    return side == south
+        ? 'South'
+        : side == north
+            ? 'North'
+            : side == unzoned
+                ? 'Unzoned'
+                : '';
+  }
+
+  /// The three areas in checklist order.
+  static const areas = [south, north, unzoned];
 
   /// South first, then North, then Unzoned, then fields with no area (checklist and report order).
   static int areaRank(String side) => side == south
@@ -152,7 +161,7 @@ class Task {
 
   /// Fields grouped for the report: South, North, Unzoned, then any without an area.
   /// Returns one group with no heading if no areas are set.
-  static List<MapEntry<String, List<Task>>> reportGroups(List<Task> tasks) {
+  static List<MapEntry<String, List<Task>>> reportGroups(List<Task> tasks, [Map<String, String> names = const {}]) {
     final s = <Task>[], n = <Task>[], u = <Task>[], other = <Task>[];
     for (final t in tasks) {
       (t.side == south
@@ -166,9 +175,9 @@ class Task {
     }
     if (s.isEmpty && n.isEmpty && u.isEmpty) return [MapEntry('', other)];
     return [
-      if (s.isNotEmpty) MapEntry('South', s),
-      if (n.isNotEmpty) MapEntry('North', n),
-      if (u.isNotEmpty) MapEntry('Unzoned', u),
+      if (s.isNotEmpty) MapEntry(sideLabel(south, names), s),
+      if (n.isNotEmpty) MapEntry(sideLabel(north, names), n),
+      if (u.isNotEmpty) MapEntry(sideLabel(unzoned, names), u),
       if (other.isNotEmpty) MapEntry('Other', other),
     ];
   }
@@ -866,6 +875,13 @@ class Project {
 
   /// Crew phone numbers by name, used for texting.
   Map<String, String> phones = {};
+
+  /// This project's own names for the areas (keys south, north, unzoned), e.g. {"south": "Garage 1"}.
+  /// Missing or empty: South, North, Unzoned. The colours stay the same.
+  Map<String, String> areaNames = {};
+
+  /// The name of an area in this project.
+  String areaName(String side) => Task.sideLabel(side, areaNames);
   List<DailyLog> logs = [];
   List<Template> templates = [];
   List<Notice> notices = [];
@@ -1025,6 +1041,7 @@ class Project {
     ..name = name
     ..location = location
     ..crew = crew
+    ..areaNames = areaNames
     ..overtime = l.overtime ?? Overtime()
     ..attendance = l.attendance ?? Attendance()
     ..notes = notes
@@ -1186,6 +1203,7 @@ class Project {
         'employeeNumbers': employeeNumbers,
         'bpNumbers': bpNumbers,
         'disnNumbers': disnNumbers,
+        'areaNames': areaNames,
         'assignTexts': assignTexts.toList(),
         'notes': [for (final n in notes) n.toJson()],
         'seaCans': [for (final m in seaCans) m.toJson()],
@@ -1213,6 +1231,7 @@ class Project {
     ..employeeNumbers = (_stringMap(o['employeeNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
     ..bpNumbers = (_stringMap(o['bpNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
     ..disnNumbers = (_stringMap(o['disnNumbers'])..removeWhere((k, v) => v.trim().isEmpty))
+    ..areaNames = (_stringMap(o['areaNames'])..removeWhere((k, v) => !Task.areas.contains(k) || v.trim().isEmpty))
     ..assignTexts = _strings(o['assignTexts']).toSet()
     ..notes = _objects(o['notes'], Note.fromJson)
     ..notices = _objects(o['notices'], Notice.fromJson)

@@ -17,6 +17,7 @@ import '../data/rich.dart';
 import '../ui/common.dart';
 import '../ui/rich_text.dart';
 import '../ui/theme.dart';
+import 'area_names.dart';
 import 'assign_sheet.dart';
 import 'load_secure_sheet.dart';
 import 'field_widgets.dart';
@@ -707,14 +708,13 @@ class _TaskScreenState extends State<TaskScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Area', style: TextStyle(color: C.navy, fontSize: 21)),
+          Row(children: [
+            const Expanded(child: Text('Area', style: TextStyle(color: C.navy, fontSize: 21))),
+            renameAreasButton(context, p, changed: () => setState(() {})),
+          ]),
           Wrap(
             spacing: 12,
-            children: [
-              _side(t, Task.south, 'South'),
-              _side(t, Task.north, 'North'),
-              _side(t, Task.unzoned, 'Unzoned'),
-            ],
+            children: [for (final a in Task.areas) _side(t, a, p.areaName(a))],
           ),
         ],
       ),

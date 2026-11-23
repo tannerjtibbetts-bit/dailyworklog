@@ -245,6 +245,7 @@ class Export {
   static Project _slim(Project p) => Project()
     ..name = p.name
     ..location = p.location
+    ..areaNames = p.areaNames
     ..overtime = p.overtime
     ..attendance = p.attendance
     ..notes = p.notes // Notes-tab notes in "Also today" keep their formatting

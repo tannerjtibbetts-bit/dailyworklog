@@ -17,6 +17,7 @@ import '../services/sms.dart';
 import '../ui/common.dart';
 import '../ui/rich_text.dart';
 import '../ui/theme.dart';
+import 'area_names.dart';
 import 'assign_sheet.dart';
 import 'field_widgets.dart' show ProgressRing;
 import 'log_screen.dart';
@@ -316,6 +317,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       SheetItem(Icons.send_outlined, 'Report email list', () => Export.editEmailList(context, p)),
       SheetItem(Icons.person_add_alt_1, 'Manage crew', () => showManageCrew(context, p)),
       SheetItem(Icons.tab_outlined, 'Show or hide tabs', () => chooseTabs(context)),
+      SheetItem(Icons.edit_location_alt_outlined, 'Rename areas', () => renameAreas(context, p)),
       SheetItem(Icons.badge_outlined, 'My form details', () => FormPrefill.editDetails(context)),
       SheetItem(Icons.delete_outline, 'Delete project', () {
         confirm(

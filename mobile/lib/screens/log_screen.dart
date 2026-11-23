@@ -15,6 +15,7 @@ import '../services/photos.dart';
 import '../ui/common.dart';
 import '../ui/rich_text.dart';
 import '../ui/theme.dart';
+import 'area_names.dart';
 import 'assign_sheet.dart';
 import 'day_sheet_screen.dart';
 import 'field_widgets.dart';
@@ -289,12 +290,16 @@ class _LogScreenState extends State<LogScreen> {
                 const SizedBox(height: 8),
                 // One of them (or none)
                 Wrap(children: [
-                  tick(Task.south, 'South'),
-                  const SizedBox(width: 8),
-                  tick(Task.north, 'North'),
-                  const SizedBox(width: 8),
-                  tick(Task.unzoned, 'Unzoned'),
+                  for (final a in Task.areas) ...[
+                    tick(a, project?.areaName(a) ?? Task.sideLabel(a)),
+                    const SizedBox(width: 8),
+                  ],
                 ]),
+                if (project != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: renameAreasButton(c, project!, changed: () => set(() {})),
+                  ),
               ],
             ),
             actions: [
@@ -812,7 +817,7 @@ class _LogScreenState extends State<LogScreen> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 12),
                                         child: FieldChip(
-                                          Task.sideLabel(t.side),
+                                          Task.sideLabel(t.side, project?.areaNames ?? const {}),
                                           bg: const Color(0xFFEEF4FB),
                                           fg: C.navy,
                                           border: const Color(0xFFC7D7EA),
