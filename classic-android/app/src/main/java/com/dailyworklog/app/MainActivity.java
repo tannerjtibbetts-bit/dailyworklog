@@ -176,11 +176,10 @@ public class MainActivity extends AppCompatActivity {
     /** Approvals (app owner), the user manual and Sign out. */
     private void profileMore() {
         List<Ui.SheetItem> items = new ArrayList<>();
-        // Only when this build has the owner key: without it there's nothing to approve.
-        if (Access.builtInOwnerKey(this) != null) {
-            items.add(new Ui.SheetItem(R.drawable.ic_person_add, Access.isOwner(this) ? "Approvals / hand over" : "App owner / Approvals",
-                    () -> startActivity(new Intent(this, ApprovalsActivity.class))));
-        }
+        // Always shown: on a build without the owner key it's where the owner does the one-time setup
+        // ("Set up this phone as the owner"); once the key is built in, it's where people are approved.
+        items.add(new Ui.SheetItem(R.drawable.ic_person_add, Access.isOwner(this) ? "Approvals / hand over" : "App owner / Approvals",
+                () -> startActivity(new Intent(this, ApprovalsActivity.class))));
         items.add(new Ui.SheetItem(R.drawable.ic_reorder, "Show or hide tabs", () -> LogsActivity.chooseTabs(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_send, "Email sending", () -> LoadEmail.setup(this, null)));
         items.add(new Ui.SheetItem(R.drawable.ic_template, "User manual", () -> ManualActivity.open(this)));

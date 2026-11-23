@@ -3773,6 +3773,54 @@
       ]
     },
     {
+      "id": "setting-up-as-owner",
+      "title": "Setting up your phone as the app owner (once)",
+      "group": "App owner",
+      "summary": "Once only: make your phone the owner, rebuild in Termux, and from then on other phones need your approval.",
+      "keywords": [
+        "owner",
+        "owner key",
+        "set up",
+        "approval",
+        "approve",
+        "access",
+        "become the app owner",
+        "key file",
+        "termux"
+      ],
+      "newAppOnly": false,
+      "classicOnly": true,
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Until your phone is set up as the owner, anyone who installs your build of the app goes straight in, and there is nothing to approve. Do this once to turn approvals on."
+        },
+        {
+          "type": "steps",
+          "items": [
+            "On the \"Projects\" screen, tap the person icon, then \"More…\", then \"App owner / Approvals\".",
+            "Tap \"Set up this phone as the owner\". You see \"Saved dailyworklog-owner-key.txt to Downloads\".",
+            "In Termux, run: bash ~/DailyWorkLog/build-termux.sh",
+            "It says \"Owner key included: other phones will need your approval.\" and asks once for the email that access requests should go to. Type your email and press Enter.",
+            "Install the new DailyWorkLog.apk from Downloads and tap \"Update\"."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Now the menu item says \"Approvals / hand over\", and every other phone that installs your build must ask you for access. Your own phone is the owner and goes straight in."
+        },
+        {
+          "type": "tip",
+          "text": "Keep dailyworklog-owner-key.txt (a copy is also kept inside Termux). Every future build needs it. To build on another phone, use \"Save build key file\" on the Approvals page."
+        },
+        {
+          "type": "see",
+          "id": "approving-requests",
+          "text": "Related: Approving a request"
+        }
+      ]
+    },
+    {
       "id": "approving-requests",
       "title": "Approving a request",
       "group": "App owner",
@@ -3791,6 +3839,10 @@
       "newAppOnly": false,
       "classicOnly": false,
       "blocks": [
+        {
+          "type": "tip",
+          "text": "Don't see \"Approvals / hand over\"? Your phone isn't set up as the owner yet. See \"Setting up your phone as the app owner (once)\"."
+        },
         {
           "type": "text",
           "text": "Only the app owner's phone can approve people. Each approval lasts one year."
@@ -3827,6 +3879,11 @@
           "type": "see",
           "id": "hand-over-ownership",
           "text": "Related: Handing over ownership"
+        },
+        {
+          "type": "see",
+          "id": "setting-up-as-owner",
+          "text": "Related: Setting up your phone as the app owner"
         }
       ]
     },
