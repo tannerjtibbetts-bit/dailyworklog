@@ -26,6 +26,22 @@ class Fmt {
   static String longStamp(int t) =>
       DateFormat("MMM d, yyyy 'at' h:mm a", 'en_US').format(DateTime.fromMillisecondsSinceEpoch(t));
 
+  /// "7:00 AM"
+  static String time(DateTime d) => DateFormat('h:mm a', 'en_US').format(d);
+
+  /// "Mon"
+  static String weekday(DateTime d) => DateFormat('EEE', 'en_US').format(d);
+
+  /// "Nov 20"
+  static String monthDay(DateTime d) => DateFormat('MMM d', 'en_US').format(d);
+
+  /// 1 -> "1st", 22 -> "22nd", 13 -> "13th"
+  static String ordinal(int n) {
+    final teen = n % 100 >= 11 && n % 100 <= 13;
+    final suffix = teen ? 'th' : switch (n % 10) { 1 => 'st', 2 => 'nd', 3 => 'rd', _ => 'th' };
+    return '$n$suffix';
+  }
+
   /// month is 1-based here (Dart dates).
   static String iso(int year, int month, int day) =>
       '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';

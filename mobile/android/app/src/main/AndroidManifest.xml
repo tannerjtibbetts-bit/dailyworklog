@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Assignment texts and Notify notes are sent straight from the phone -->
     <uses-permission android:name="android.permission.SEND_SMS"/>
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Speaking answers on report forms -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>

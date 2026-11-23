@@ -410,12 +410,72 @@ class Link {
   String title = '';
   String url = '';
 
-  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'url': url};
+  /// A reminder for this link in the phone's calendar, or null.
+  LinkReminder? reminder;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'url': url,
+        if (reminder != null) 'reminder': reminder!.toJson(),
+      };
 
   static Link fromJson(Map<String, dynamic> o) => Link()
     ..id = _s(o, 'id', newId())
     ..title = _s(o, 'title')
-    ..url = _s(o, 'url');
+    ..url = _s(o, 'url')
+    ..reminder = o['reminder'] is Map ? LinkReminder.fromJson(Map<String, dynamic>.from(o['reminder'] as Map)) : null;
+}
+
+/// A link's reminder in the phone's calendar: when, how often, and how long before it alerts.
+class LinkReminder {
+  static const once = '', daily = 'daily', weekly = 'weekly', monthly = 'monthly', yearly = 'yearly';
+  static const repeats = [once, daily, weekly, monthly, yearly];
+  static const repeatLabels = {
+    once: 'One time only',
+    daily: 'Every day',
+    weekly: 'Every week',
+    monthly: 'Every month',
+    yearly: 'Every year',
+  };
+
+  /// Minutes before the time that the phone alerts.
+  static const alerts = [0, 5, 15, 30, 60, 1440];
+  static String alertLabel(int m) => switch (m) {
+        0 => 'At the time',
+        60 => '1 hour before',
+        1440 => '1 day before',
+        _ => '$m minutes before',
+      };
+
+  /// When it (first) happens, in milliseconds.
+  int start = 0;
+  String repeat = once;
+  int alert = 0;
+
+  /// The calendar event on this phone ('' if not saved there yet, e.g. after restoring on a new phone).
+  String eventId = '';
+
+  /// "Every week, Mon at 7:00 AM", "One time, Nov 20, 2026 at 7:00 AM".
+  String describe() {
+    final d = DateTime.fromMillisecondsSinceEpoch(start);
+    final time = Fmt.time(d);
+    return switch (repeat) {
+      daily => 'Every day at $time',
+      weekly => 'Every week, ${Fmt.weekday(d)} at $time',
+      monthly => 'Every month on the ${Fmt.ordinal(d.day)} at $time',
+      yearly => 'Every year, ${Fmt.monthDay(d)} at $time',
+      _ => 'One time, ${Fmt.monthDay(d)}, ${d.year} at $time',
+    };
+  }
+
+  Map<String, dynamic> toJson() => {'start': start, 'repeat': repeat, 'alert': alert, 'eventId': eventId};
+
+  static LinkReminder fromJson(Map<String, dynamic> o) => LinkReminder()
+    ..start = _i(o, 'start')
+    ..repeat = repeats.contains(o['repeat']) ? o['repeat'] as String : once
+    ..alert = _i(o, 'alert')
+    ..eventId = _s(o, 'eventId');
 }
 
 /// Someone on the Contacts tab (not on the crew). Shared by every project.

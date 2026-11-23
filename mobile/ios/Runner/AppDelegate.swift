@@ -1,3 +1,4 @@
+import EventKit
 import Flutter
 import Photos
 import UIKit
@@ -28,6 +29,90 @@ import UIKit
           DispatchQueue.main.async { result(ok) }
         }
       }
+    }
+    // Link reminders in the Calendar app.
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DailyWorkLogCalendar") {
+      let channel = FlutterMethodChannel(name: "dailyworklog/calendar", binaryMessenger: registrar.messenger())
+      channel.setMethodCallHandler { call, result in
+        let args = call.arguments as? [String: Any] ?? [:]
+        switch call.method {
+        case "save": CalendarReminders.save(args, result: result)
+        case "delete": CalendarReminders.delete(args, result: result)
+        default: result(FlutterMethodNotImplemented)
+        }
+      }
+    }
+  }
+}
+
+/// Link reminders written straight into the Calendar app, after asking once for access.
+enum CalendarReminders {
+  static let store = EKEventStore()
+
+  private static func access(_ done: @escaping (Bool) -> Void) {
+    if #available(iOS 17.0, *) {
+      store.requestFullAccessToEvents { ok, _ in done(ok) }
+    } else {
+      store.requestAccess(to: .event) { ok, _ in done(ok) }
+    }
+  }
+
+  static func save(_ args: [String: Any], result: @escaping FlutterResult) {
+    access { ok in
+      DispatchQueue.main.async {
+        guard ok else {
+          result(FlutterError(code: "denied", message: nil, details: nil))
+          return
+        }
+        let id = args["eventId"] as? String ?? ""
+        let event = (id.isEmpty ? nil : store.event(withIdentifier: id)) ?? EKEvent(eventStore: store)
+        if event.calendar == nil {
+          guard let calendar = store.defaultCalendarForNewEvents else {
+            result(FlutterError(code: "no_calendar", message: nil, details: nil))
+            return
+          }
+          event.calendar = calendar
+        }
+        let start = Date(timeIntervalSince1970: ((args["start"] as? NSNumber)?.doubleValue ?? 0) / 1000)
+        event.title = args["title"] as? String ?? ""
+        event.notes = args["notes"] as? String
+        if let link = args["url"] as? String { event.url = URL(string: link) }
+        event.timeZone = TimeZone.current
+        event.startDate = start
+        event.endDate = start.addingTimeInterval(30 * 60)
+        let frequency: EKRecurrenceFrequency? = {
+          switch args["repeat"] as? String ?? "" {
+          case "daily": return .daily
+          case "weekly": return .weekly
+          case "monthly": return .monthly
+          case "yearly": return .yearly
+          default: return nil
+          }
+        }()
+        event.recurrenceRules = frequency.map { [EKRecurrenceRule(recurrenceWith: $0, interval: 1, end: nil)] }
+        let minutes = (args["alert"] as? NSNumber)?.doubleValue ?? 0
+        event.alarms = [EKAlarm(relativeOffset: -minutes * 60)]
+        do {
+          try store.save(event, span: .futureEvents, commit: true)
+          result(event.eventIdentifier)
+        } catch {
+          result(FlutterError(code: "failed", message: error.localizedDescription, details: nil))
+        }
+      }
+    }
+  }
+
+  static func delete(_ args: [String: Any], result: @escaping FlutterResult) {
+    let id = args["eventId"] as? String ?? ""
+    guard !id.isEmpty, let event = store.event(withIdentifier: id) else {
+      result(false)
+      return
+    }
+    do {
+      try store.remove(event, span: .futureEvents, commit: true)
+      result(true)
+    } catch {
+      result(false)
     }
   }
 }

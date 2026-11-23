@@ -12,6 +12,7 @@ import '../data/rich.dart';
 import '../data/store.dart';
 import '../export/export.dart';
 import '../services/form_prefill.dart';
+import '../services/calendar_reminders.dart';
 import '../services/sms.dart';
 import '../ui/common.dart';
 import '../ui/rich_text.dart';
@@ -394,10 +395,56 @@ class _ProjectScreenState extends State<ProjectScreen> {
       if (!mounted) return;
     }
     String? error;
+    // The reminder in the phone's calendar.
+    final had = existing?.reminder;
+    var remind = had != null;
+    final soon = DateTime.now().add(const Duration(hours: 1));
+    var when = had == null
+        ? DateTime(soon.year, soon.month, soon.day, soon.hour)
+        : DateTime.fromMillisecondsSinceEpoch(had.start);
+    var repeat = had?.repeat ?? LinkReminder.weekly;
+    var alert = had?.alert ?? 0;
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => StatefulBuilder(
         builder: (c, set) {
+          Future<void> pickDay() async {
+            final now = DateTime.now();
+            final d = await showDatePicker(
+              context: c,
+              initialDate: when.isBefore(DateTime(now.year - 1)) ? now : when,
+              firstDate: DateTime(now.year - 1),
+              lastDate: DateTime(now.year + 10),
+            );
+            if (d != null) set(() => when = DateTime(d.year, d.month, d.day, when.hour, when.minute));
+          }
+
+          Future<void> pickTime() async {
+            final t = await showTimePicker(context: c, initialTime: TimeOfDay.fromDateTime(when));
+            if (t != null) set(() => when = DateTime(when.year, when.month, when.day, t.hour, t.minute));
+          }
+
+          Widget pickRow(String label, String value, VoidCallback onTap) => InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 74,
+                    child: Text(label, style: const TextStyle(color: C.grey, fontSize: 15)),
+                  ),
+                  Expanded(
+                    child: Text(
+                      value,
+                      style: const TextStyle(color: C.blue, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+
           void submit() {
             final u = normalizeUrl(url.text);
             if (u.isEmpty || hostOf(u).isEmpty) {
@@ -409,24 +456,59 @@ class _ProjectScreenState extends State<ProjectScreen> {
 
           return AlertDialog(
             title: Text(existing == null ? 'Add link' : 'Edit link'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: url,
-                  autofocus: url.text.isEmpty,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(hintText: 'Web address, e.g. https://…', errorText: error),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: name,
-                  autofocus: url.text.isNotEmpty,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(hintText: 'Name (optional), e.g. Tool tracking portal'),
-                  onSubmitted: (_) => submit(),
-                ),
-              ],
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: url,
+                    autofocus: url.text.isEmpty,
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(hintText: 'Web address, e.g. https://…', errorText: error),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: name,
+                    autofocus: url.text.isNotEmpty,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(hintText: 'Name (optional), e.g. Tool tracking portal'),
+                    onSubmitted: (_) => submit(),
+                  ),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: remind,
+                    title: const Text('Remind me in my calendar', style: TextStyle(fontSize: 16)),
+                    onChanged: (v) => set(() => remind = v ?? false),
+                  ),
+                  if (remind) ...[
+                    pickRow('Date', Fmt.longDay(Fmt.isoOf(when)), pickDay),
+                    pickRow('Time', Fmt.time(when), pickTime),
+                    DropdownButtonFormField<String>(
+                      initialValue: repeat,
+                    isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Repeat'),
+                      items: [
+                        for (final r in LinkReminder.repeats)
+                          DropdownMenuItem(value: r, child: Text(LinkReminder.repeatLabels[r]!)),
+                      ],
+                      onChanged: (v) => set(() => repeat = v ?? repeat),
+                    ),
+                    DropdownButtonFormField<int>(
+                      initialValue: LinkReminder.alerts.contains(alert) ? alert : 0,
+                    isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Alert'),
+                      items: [
+                        for (final m in LinkReminder.alerts)
+                          DropdownMenuItem(value: m, child: Text(LinkReminder.alertLabel(m))),
+                      ],
+                      onChanged: (v) => set(() => alert = v ?? alert),
+                    ),
+                  ],
+                ],
+              ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
@@ -446,7 +528,26 @@ class _ProjectScreenState extends State<ProjectScreen> {
     }
     l.url = u;
     l.title = n.isEmpty ? hostOf(u) : n;
+    if (remind) {
+      l.reminder = (had ?? LinkReminder())
+        ..start = when.millisecondsSinceEpoch
+        ..repeat = repeat
+        ..alert = alert;
+    } else {
+      l.reminder = null;
+    }
     store.save();
+    if (!remind) {
+      if (had != null) {
+        await CalendarReminders.remove(had);
+        if (mounted) toast(context, 'Reminder taken out of your calendar');
+      }
+      return;
+    }
+    final problem = await CalendarReminders.save(l);
+    store.save();
+    if (!mounted) return;
+    toast(context, problem ?? 'Reminder saved in your calendar: ${l.reminder!.describe()}', long: problem != null);
   }
 
   void _linkMenu(Link l) {
@@ -470,10 +571,17 @@ class _ProjectScreenState extends State<ProjectScreen> {
         SharePlus.instance.share(ShareParams(text: l.url, subject: l.title, title: 'Share link'));
       }),
       SheetItem(Icons.delete_outline, 'Delete link', () {
-        confirm(context, 'Delete this link?', '${l.title} will be removed from every project.', 'Delete', () {
-          store.links.remove(l);
-          store.save();
-        });
+        confirm(
+          context,
+          'Delete this link?',
+          '${l.title} will be removed from every project${l.reminder == null ? '' : ', and its reminder from your calendar'}.',
+          'Delete',
+          () {
+            CalendarReminders.remove(l.reminder);
+            store.links.remove(l);
+            store.save();
+          },
+        );
       }, danger: true),
     ]);
   }
@@ -767,22 +875,25 @@ class _ProjectScreenState extends State<ProjectScreen> {
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.of(context)
-            .push(MaterialPageRoute<void>(builder: (_) => DocumentsScreen(projectId: widget.projectId)))
-            .then((_) {
-              if (mounted) setState(() {});
-            }),
+        onTap: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute<void>(builder: (_) => DocumentsScreen(projectId: widget.projectId)))
+                .then((_) {
+                  if (mounted) setState(() {});
+                }),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          child: Column(children: [
-            Icon(Icons.folder_outlined, color: Colors.white, size: 30),
-            SizedBox(height: 6),
-            Text(
-              'Documents',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ]),
+          child: Column(
+            children: [
+              Icon(Icons.folder_outlined, color: Colors.white, size: 30),
+              SizedBox(height: 6),
+              Text(
+                'Documents',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -834,6 +945,22 @@ class _ProjectScreenState extends State<ProjectScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: C.blue, fontSize: 15),
                   ),
+                  if (l.reminder != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.alarm, size: 17, color: C.deepBlue),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              l.reminder!.describe(),
+                              style: const TextStyle(color: C.deepBlue, fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   _include(Extra.link, l.id, l.title, l.url, null, 0),
                 ],
               ),
@@ -973,7 +1100,11 @@ class _ProjectScreenState extends State<ProjectScreen> {
           if (links.isEmpty)
             Padding(
               padding: const EdgeInsets.all(24),
-              child: Text(_emptyText(), textAlign: TextAlign.center, style: const TextStyle(color: C.grey, fontSize: 18)),
+              child: Text(
+                _emptyText(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: C.grey, fontSize: 18),
+              ),
             ),
         ];
       default:

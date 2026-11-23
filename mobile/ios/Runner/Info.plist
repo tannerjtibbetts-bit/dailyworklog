@@ -28,6 +28,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Reminders you set on a link are added to your calendar.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Reminders you set on a link are added to your calendar.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera is used to take photos of your work and of task lists.</string>
 	<key>NSMicrophoneUsageDescription</key>

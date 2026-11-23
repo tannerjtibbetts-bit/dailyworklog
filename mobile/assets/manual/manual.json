@@ -1,6 +1,6 @@
 {
   "title": "Daily Work Log — User manual",
-  "updated": "2026-11-20",
+  "updated": "2026-11-23",
   "sections": [
     {
       "id": "what-the-app-does",
@@ -2701,7 +2701,7 @@
       "id": "links-tab",
       "title": "Links: saving and opening web links",
       "group": "Tabs",
-      "summary": "Save web links, and open Documents (photos of paper documents and files).",
+      "summary": "Save web links, set calendar reminders for them, and open Documents (photos of paper documents and files).",
       "keywords": [
         "links",
         "web",
@@ -2712,7 +2712,14 @@
         "share link",
         "bookmark",
         "document",
-        "documents"
+        "documents",
+        "reminder",
+        "calendar",
+        "alarm",
+        "alert",
+        "repeat",
+        "BBO",
+        "every week"
       ],
       "newAppOnly": false,
       "classicOnly": false,
@@ -2750,6 +2757,44 @@
         {
           "type": "text",
           "text": "When you open a link, \"Link used: …\" is added to today's \"Also today\" list. Tick \"Include in today's report\" under the link to put it in the report."
+        },
+        {
+          "type": "text",
+          "text": "Reminders: any link can have a reminder in your phone's calendar, for example a BBO you fill in every week."
+        },
+        {
+          "type": "image",
+          "file": "link_reminder.png",
+          "caption": "A weekly reminder on the BBO link"
+        },
+        {
+          "type": "steps",
+          "items": [
+            "Tap ⋮ on the link and tap \"Edit link\" (or set it up while adding a new link).",
+            "Tick \"Remind me in my calendar\".",
+            "Tap \"Date\" and \"Time\" to pick when. For a repeating reminder, this is the first one.",
+            "Under \"Repeat\", pick \"One time only\", \"Every day\", \"Every week\", \"Every month\" or \"Every year\".",
+            "Under \"Alert\", pick when your phone alerts you: \"At the time\", or 5, 15 or 30 minutes, 1 hour or 1 day before.",
+            "Tap \"Save\". The first time, allow Daily Work Log to use your calendar. You see \"Reminder saved in your calendar\"."
+          ]
+        },
+        {
+          "type": "image",
+          "file": "link_reminder_card.png",
+          "caption": "The reminder shows under the link"
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "The reminder goes in your phone's calendar with the link in its notes, so you can open it from the alert.",
+            "To change it, open \"Edit link\" again, change it and tap \"Save\". The calendar reminder is updated.",
+            "To stop it, untick \"Remind me in my calendar\" and tap \"Save\". It is taken out of your calendar. Deleting the link takes it out too.",
+            "A repeating reminder stays at the same time of day when the clocks change."
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "If you see \"Calendar access is off\", open your phone's Settings, find Daily Work Log, turn on Calendar, then tap \"Save\" on the link again."
         },
         {
           "type": "see",
